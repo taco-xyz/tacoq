@@ -128,6 +128,18 @@ wheels = [
 ]
 
 [[package]]
+name = "click"
+version = "8.1.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "platform_system == 'Windows'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/96/d3/f04c7bfcf5c1862a2a5b845c6b2b360488cf47af55dfa79c98f6a6bf98b5/click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de", size = 336121 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/2e/d53fa4befbf2cfa713304affc7ca780ce4fc1fd8710527771b58311a3229/click-8.1.7-py3-none-any.whl", hash = "sha256:ae74fb96c20a0277a1d615f1e4d73c8414f5a98db8b799a7931d1582f3390c28", size = 97941 },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -344,9 +356,14 @@ dependencies = [
     { name = "aio-pika" },
     { name = "aiohttp" },
     { name = "aioredis" },
+    { name = "click" },
+    { name = "uuid" },
+]
+
+[package.dev-dependencies]
+dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
-    { name = "uuid" },
 ]
 
 [package.metadata]
@@ -354,9 +371,14 @@ requires-dist = [
     { name = "aio-pika", specifier = ">=9.5.3" },
     { name = "aiohttp", specifier = ">=3.11.8" },
     { name = "aioredis", specifier = ">=2.0.1" },
+    { name = "click", specifier = ">=8.1.7" },
+    { name = "uuid", specifier = ">=1.30" },
+]
+
+[package.metadata.requires-dev]
+dev = [
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", specifier = ">=0.24.0" },
-    { name = "uuid", specifier = ">=1.30" },
 ]
 
 [[package]]
