@@ -48,3 +48,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "3200" # Collection
+      - "4317:4317" # OTLP gRPC - We keep these ports open so that we can run the app outside the container
+      - "4318:4318" # OTLP HTTP
+    <<: *shared_network
