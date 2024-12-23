@@ -75,7 +75,7 @@ services:
     image: grafana/grafana:latest
     volumes:
       - type: bind
-        source: ./grafana-datasources.yaml
+        source: ./config/grafana-datasources.yaml
         target: /etc/grafana/provisioning/datasources/datasources.yaml
         read_only: true
     environment:
@@ -83,4 +83,4 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
     ports:
-      - "3000:3000" # Grafana UI
+      - "3001:3000" # Grafana UI
