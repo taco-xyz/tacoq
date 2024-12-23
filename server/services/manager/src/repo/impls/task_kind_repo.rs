@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::models::TaskKind;
+use tracing::{instrument, Instrument};
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskKindRepository};
@@ -18,6 +19,7 @@ impl PgTaskKindRepository {
 
 #[async_trait]
 impl TaskKindRepository for PgTaskKindRepository {
+    #[instrument(skip(self, name), fields(name = %name))]
     async fn get_or_create_task_kind(&self, name: String) -> Result<TaskKind, sqlx::Error> {
         let row = sqlx::query!(
             r#"
@@ -38,6 +40,7 @@ impl TaskKindRepository for PgTaskKindRepository {
         })
     }
 
+    #[instrument(skip(self))]
     async fn _get_all_task_kinds(&self) -> Result<Vec<TaskKind>, sqlx::Error> {
         let rows = sqlx::query!(
             r#"

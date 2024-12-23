@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::models::{TaskKind, Worker};
 use std::time::SystemTime;
+use tracing::{instrument, Instrument};
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, WorkerRepository};
@@ -18,6 +19,7 @@ impl PgWorkerRepository {
 
 #[async_trait]
 impl WorkerRepository for PgWorkerRepository {
+    #[instrument(skip(self, id, name, task_kinds), fields(id = %id, name = %name))]
     async fn register_worker(
         &self,
         id: Uuid,
@@ -96,6 +98,7 @@ impl WorkerRepository for PgWorkerRepository {
         })
     }
 
+    #[instrument(skip(self, id), fields(id = %id))]
     async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error> {
         let worker = sqlx::query!(
             r#"
@@ -133,6 +136,7 @@ impl WorkerRepository for PgWorkerRepository {
         })
     }
 
+    #[instrument(skip(self))]
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
         let workers = sqlx::query!(
             r#"
@@ -175,6 +179,7 @@ impl WorkerRepository for PgWorkerRepository {
         Ok(result)
     }
 
+    #[instrument(skip(self, worker_id, active), fields(worker_id = %worker_id, active = %active))]
     async fn set_worker_active(&self, worker_id: &Uuid, active: bool) -> Result<(), sqlx::Error> {
         let result = sqlx::query!(
             r#"
@@ -193,6 +198,7 @@ impl WorkerRepository for PgWorkerRepository {
         Ok(())
     }
 
+    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"
@@ -207,6 +213,7 @@ impl WorkerRepository for PgWorkerRepository {
         Ok(())
     }
 
+    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error> {
         let row = sqlx::query!(
             r#"
