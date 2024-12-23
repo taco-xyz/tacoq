@@ -75,7 +75,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: server/services/galactus/Dockerfile
+          file: server/services/manager/Dockerfile
           target: builder
           load: true
           tags: app-builder:latest
@@ -120,10 +120,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: server/services/galactus/Dockerfile
+          file: server/services/manager/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/galactus:latest
-            ghcr.io/${{ github.repository }}/galactus:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/manager:latest
+            ghcr.io/${{ github.repository }}/manager:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

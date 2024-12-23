@@ -1,5 +1,5 @@
 [package]
-name = "galactus"
+name = "manager"
 version = "0.1.0"
 edition = "2021"
 description = "Galactus is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."

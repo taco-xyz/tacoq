@@ -6,7 +6,7 @@ services:
   fasttq:
     build:
       context: .
-      dockerfile: server/services/galactus/Dockerfile
+      dockerfile: server/services/manager/Dockerfile
     ports:
       - "3000:3000"
     depends_on:
@@ -15,7 +15,7 @@ services:
       postgres:
         condition: service_healthy
     env_file:
-      - server/services/galactus/.env.docker
+      - server/services/manager/.env.docker
 
   rabbitmq:
     image: rabbitmq:4-management
