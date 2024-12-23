@@ -10,6 +10,7 @@ use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer}
 use common::brokers::Broker;
 use sqlx::PgPool;
 use tokio::sync::RwLock;
+use tracing::{info, info_span};
 
 use config::Config;
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
@@ -76,7 +77,7 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 /// * `broker` - The broker
 async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
     let app_state = setup_app_state(db_pools, broker).await;
-    tracing::info!("App state created");
+    info!("App state created");
 
     // Create base router with routes and state
     Router::new()
@@ -92,27 +93,24 @@ async fn main() {
     let config = Config::new();
     let _guard = init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers().unwrap();
 
-    // setup_tracing_subscriber().await;
-    // setup_logger().await;
-
-    tracing::info!("Starting Galactus");
-
-    tracing::info_span!("main").in_scope(|| {
-        tracing::info!("Starting Galactus");
-    });
+    let span = info_span!("manager_startup_real").entered();
 
     let db_pools = setup_db_pools(&config).await;
-    tracing::info!("Database connection pools created");
+    info!("Database connection pools created");
 
     let broker = setup_broker(&config).await;
-    tracing::info!("Broker initialized");
+    info!("Broker initialized");
 
     let app = setup_app(db_pools, broker).await;
-    tracing::info!("App created");
+    info!("App created");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    tracing::info!("Listening on {}", addr);
+    info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    info!("Listener created");
+
+    span.exit();
+
     axum::serve(listener, app).await.unwrap();
 }
