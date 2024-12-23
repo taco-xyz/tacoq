@@ -5,6 +5,7 @@
 
 # Python related files
 .venv
+.pytest_cache
 
 # General files
 .env

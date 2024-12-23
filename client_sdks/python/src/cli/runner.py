@@ -1,5 +1,6 @@
 import asyncio
 import signal
+import traceback
 from typing import Optional
 from contextlib import AsyncExitStack
 from worker.client import WorkerApplication
@@ -54,9 +55,20 @@ class ApplicationRunner:
         logger.info("Application started successfully")
 
         try:
-            await self._shutdown_event.wait()
-        except Exception as e:
-            logger.error(f"Application runtime error: {e}")
+            # Wait for either shutdown signal or task completion
+            done, pending = await asyncio.wait(
+                [asyncio.create_task(self._shutdown_event.wait()), self._task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            # If task completed first and has an exception, propagate it
+            if self._task in done and self._task.exception():
+                raise self._task.exception()
+
+        except Exception:
+            logger.error("Application crashed with traceback:")
+            traceback.print_exc()
+            raise
         finally:
             await self.shutdown()
 
