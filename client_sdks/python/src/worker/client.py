@@ -96,15 +96,15 @@ class WorkerApplication:
             raise ValueError("Worker is not registered.")
 
         try:
-            await self._manager_client.unregister_worker(self._id)
-        except Exception as e:
-            raise ValueError(f"Error during worker unregister: {e}")
-
-        try:
             if self._broker_client:
                 await self._broker_client.disconnect()
         except Exception as e:
             raise ValueError(f"Error during broker disconnect: {e}")
+
+        try:
+            await self._manager_client.unregister_worker(self._id)
+        except Exception as e:
+            raise ValueError(f"Error during worker unregister: {e}")
 
     async def _execute_task(self, kind: str, input_data: TaskInput, task_id: str):
         """Execute a task and update its status in the manager.

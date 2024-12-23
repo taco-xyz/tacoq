@@ -6,6 +6,12 @@ class ImportFromStringError(Exception):
 
 
 def import_from_string(import_str: str):
+    """Import an object from a string in the format "<module>:<attribute>".
+
+    ### Parameters
+        - `import_str`: String in the format "<module>:<attribute>
+    """
+
     module_str, _, attrs_str = import_str.partition(":")
 
     if not module_str or not attrs_str:

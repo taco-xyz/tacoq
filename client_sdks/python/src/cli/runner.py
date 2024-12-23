@@ -1,9 +1,9 @@
 import asyncio
 import signal
-import click
 from typing import Optional
 from contextlib import AsyncExitStack
 from worker.client import WorkerApplication
+from cli.logger import logger
 
 
 class ApplicationRunner:
@@ -37,7 +37,7 @@ class ApplicationRunner:
 
     async def _signal_handler(self):
         """Handle shutdown signals"""
-        click.echo("\nShutdown signal received...", err=True)
+        logger.warning("Shutdown signal received...")
         self._shutdown_event.set()
 
     async def startup(self, reload: bool = False):
@@ -47,16 +47,16 @@ class ApplicationRunner:
         ### Args:
             `reload`: Enable hot reload mode
         """
-        click.echo("Initializing application...")
+        logger.info("Initializing application...")
         self._handle_signals()
 
         self._task = asyncio.create_task(self.app.entrypoint())
-        click.echo("Application started successfully")
+        logger.info("Application started successfully")
 
         try:
             await self._shutdown_event.wait()
         except Exception as e:
-            click.secho(f"ERROR: Application runtime error: {e}", fg="red", err=True)
+            logger.error(f"Application runtime error: {e}")
         finally:
             await self.shutdown()
 
@@ -64,18 +64,16 @@ class ApplicationRunner:
         """Gracefully shutdown the application"""
         if self._task and not self._task.done():
             try:
-                click.echo("Initiating graceful shutdown...")
+                logger.info("Initiating graceful shutdown...")
                 self._task.cancel()
                 await asyncio.wait_for(self._task, timeout=5.0)
-                click.echo("Shutdown completed successfully")
+                logger.info("Shutdown completed successfully")
             except asyncio.TimeoutError:
-                click.secho(
-                    "Warning: Application shutdown timed out", fg="yellow", err=True
-                )
+                logger.warning("Application shutdown timed out")
             except asyncio.CancelledError:
-                click.echo("Application shutdown complete")
+                logger.info("Application shutdown complete")
             except Exception as e:
-                click.secho(f"ERROR: Shutdown error: {e}", fg="red", err=True)
+                logger.error(f"Shutdown error: {e}")
 
 
 async def run_application(
