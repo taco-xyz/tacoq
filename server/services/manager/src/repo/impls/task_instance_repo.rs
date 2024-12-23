@@ -3,7 +3,7 @@ use common::{
     models::{TaskInstance, TaskResult},
     TaskKind, TaskStatus,
 };
-use tracing::{instrument, Instrument};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskInstanceRepository};

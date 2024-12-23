@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::models::{TaskKind, Worker};
 use std::time::SystemTime;
-use tracing::{instrument, Instrument};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, WorkerRepository};

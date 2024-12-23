@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::models::TaskKind;
-use tracing::{instrument, Instrument};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskKindRepository};
