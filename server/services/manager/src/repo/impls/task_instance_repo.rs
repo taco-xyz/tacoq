@@ -3,6 +3,7 @@ use common::{
     models::{TaskInstance, TaskResult},
     TaskKind, TaskStatus,
 };
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskInstanceRepository};
@@ -20,6 +21,7 @@ impl PgTaskInstanceRepository {
 
 #[async_trait]
 impl TaskInstanceRepository for PgTaskInstanceRepository {
+    #[instrument(skip(self, input_data), fields(task_kind_id = %task_kind_id))]
     async fn create_task(
         &self,
         task_kind_id: Uuid,
@@ -66,6 +68,7 @@ impl TaskInstanceRepository for PgTaskInstanceRepository {
         Ok(task)
     }
 
+    #[instrument(skip(self, task_id, worker_id), fields(task_id = %task_id, worker_id = %worker_id))]
     async fn assign_task_to_worker(
         &self,
         task_id: &Uuid,
@@ -87,6 +90,7 @@ impl TaskInstanceRepository for PgTaskInstanceRepository {
         Ok(())
     }
 
+    #[instrument(skip(self, id, include_result), fields(id = %id, include_result = %include_result))]
     async fn get_task_by_id(
         &self,
         id: &Uuid,
@@ -151,6 +155,7 @@ impl TaskInstanceRepository for PgTaskInstanceRepository {
         })
     }
 
+    #[instrument(skip(self, task_id, status), fields(task_id = %task_id, status = %status))]
     async fn update_task_status(
         &self,
         task_id: &Uuid,
@@ -171,6 +176,7 @@ impl TaskInstanceRepository for PgTaskInstanceRepository {
         Ok(())
     }
 
+    #[instrument(skip(self, task_id, worker_id, error), fields(task_id = %task_id, worker_id = %worker_id))]
     async fn upload_task_error(
         &self,
         task_id: &Uuid,
@@ -215,6 +221,7 @@ impl TaskInstanceRepository for PgTaskInstanceRepository {
         })
     }
 
+    #[instrument(skip(self, task_id, worker_id, output), fields(task_id = %task_id, worker_id = %worker_id))]
     async fn upload_task_result(
         &self,
         task_id: &Uuid,

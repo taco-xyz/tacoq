@@ -3,6 +3,9 @@ volumes:
   postgres_data: {}
 
 services:
+  
+  # Main App
+  
   fasttq:
     build:
       context: .
@@ -16,6 +19,8 @@ services:
         condition: service_healthy
     env_file:
       - server/services/manager/.env.docker
+
+  # Queue
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -33,6 +38,8 @@ services:
       timeout: 5s
       retries: 5
 
+  # Storage
+
   postgres:
     image: postgres:latest
     environment:
@@ -48,3 +55,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Observability
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - type: bind
+        source: ./config/tempo.yaml
+        target: /etc/tempo.yaml
+        read_only: true
+    ports:
+      - "3200" # Collection
+      - "4317:4317" # OTLP gRPC - We keep these ports open so that we can run the app outside the container
+      - "4318:4318" # OTLP HTTP
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - type: bind
+        source: ./config/grafana-datasources.yaml
+        target: /etc/grafana/provisioning/datasources/datasources.yaml
+        read_only: true
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3001:3000" # Grafana UI

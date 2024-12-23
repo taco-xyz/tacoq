@@ -6,26 +6,14 @@ mod testing;
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::Router;
+use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use common::brokers::Broker;
 use sqlx::PgPool;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{info, info_span};
 
 use config::Config;
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
-
-/// Initializes the logger
-async fn setup_logger() {
-    tracing_subscriber::fmt()
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_file(true)
-        .with_line_number(true)
-        .with_target(true)
-        .init();
-
-    info!("Logger initialized");
-}
 
 /// Represents the shared application state that can be accessed by all routes
 ///
@@ -81,6 +69,8 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 
 /// Initializes the application router
 ///
+/// Also injects it with tracing middleware to create spans across the application
+///
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
@@ -88,16 +78,22 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
-    Router::new().merge(api::routes()).with_state(app_state)
+
+    // Create base router with routes and state
+    Router::new()
+        .merge(api::routes())
+        .with_state(app_state)
+        .layer(OtelInResponseLayer)
+        .layer(OtelAxumLayer::default())
 }
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().ok();
     let config = Config::new();
+    let _guard = init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers().unwrap();
 
-    setup_logger().await;
-
-    info!("Starting Galactus");
+    let span = info_span!("manager_startup_real").entered();
 
     let db_pools = setup_db_pools(&config).await;
     info!("Database connection pools created");
@@ -112,7 +108,9 @@ async fn main() {
     info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app.into_make_service())
-        .await
-        .unwrap();
+    info!("Listener created");
+
+    span.exit();
+
+    axum::serve(listener, app).await.unwrap();
 }
