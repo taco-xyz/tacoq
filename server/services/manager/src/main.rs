@@ -83,7 +83,7 @@ async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
     Router::new()
         .merge(api::routes())
         .with_state(app_state)
-        .layer(OtelInResponseLayer::default())
+        .layer(OtelInResponseLayer)
         .layer(OtelAxumLayer::default())
 }
 
