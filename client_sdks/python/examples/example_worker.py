@@ -10,9 +10,7 @@ from worker import WorkerApplication, WorkerApplicationConfig
 
 # Both the publisher and the worker need to know about the manager.
 manager_config = ManagerConfig(url="http://localhost:3000")
-broker_config = BrokerConfig(
-    url="amqp://user:password@localhost:5672", username="user", password="password"
-)
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 
 # Both the publisher and the worker need to know about the task kinds and
 # should have unified names for them.

@@ -7,8 +7,7 @@ Description-Content-Type: text/markdown
 Requires-Dist: aio-pika>=9.5.3
 Requires-Dist: aiohttp>=3.11.8
 Requires-Dist: aioredis>=2.0.1
-Requires-Dist: pytest>=8.3.4
-Requires-Dist: pytest-asyncio>=0.24.0
+Requires-Dist: click>=8.1.7
 Requires-Dist: uuid>=1.30
 
 # TODO - Implement this

@@ -95,9 +95,16 @@ class WorkerApplication:
         if self._id is None:
             raise ValueError("Worker is not registered.")
 
-        await self._manager_client.unregister_worker(self._id)
-        if self._broker_client:
-            await self._broker_client.disconnect()
+        try:
+            if self._broker_client:
+                await self._broker_client.disconnect()
+        except Exception as e:
+            raise ValueError(f"Error during broker disconnect: {e}")
+
+        try:
+            await self._manager_client.unregister_worker(self._id)
+        except Exception as e:
+            raise ValueError(f"Error during worker unregister: {e}")
 
     async def _execute_task(self, kind: str, input_data: TaskInput, task_id: str):
         """Execute a task and update its status in the manager.
@@ -135,8 +142,11 @@ class WorkerApplication:
         if not self._broker_client:
             raise RuntimeError("Broker client is not initialized.")
 
-        async for input_data, task_id, task_kind in self._broker_client.listen():
-            await self._execute_task(task_kind, input_data, task_id)
+        try:
+            async for input_data, task_id, task_kind in self._broker_client.listen():
+                await self._execute_task(task_kind, input_data, task_id)
+        except asyncio.CancelledError:
+            await self._broker_client.disconnect()
 
     async def entrypoint(self):
         """Start the worker application.
@@ -145,8 +155,9 @@ class WorkerApplication:
         and handles graceful shutdown.
         """
         await self._register_worker()
+
         try:
-            await self._listen
+            await self._listen()
         except asyncio.CancelledError:
             pass
         finally:
