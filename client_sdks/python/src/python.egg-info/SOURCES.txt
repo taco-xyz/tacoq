@@ -6,7 +6,7 @@ src/broker/config.py
 src/broker/core.py
 src/broker/rabbitmq.py
 src/cli/__init__.py
-src/cli/main.py
+src/cli/cli.py
 src/manager/__init__.py
 src/manager/client.py
 src/manager/config.py

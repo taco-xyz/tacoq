@@ -27,4 +27,4 @@ dev = [
 ]
 
 [project.scripts]
-tacoq = "cli:main"
+tacoq = "cli.cli:main"
