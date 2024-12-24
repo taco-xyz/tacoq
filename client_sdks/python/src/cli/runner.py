@@ -5,6 +5,8 @@ from typing import Optional
 from contextlib import AsyncExitStack
 from worker.client import WorkerApplication
 from cli.logger import logger
+from cli.reloader import ModuleReloader
+from cli.importer import import_from_string
 
 
 class ApplicationRunner:
@@ -51,7 +53,11 @@ class ApplicationRunner:
         logger.info("Initializing application...")
         self._handle_signals()
 
-        self._task = asyncio.create_task(self.app.entrypoint())
+        if reload:
+            self._task = asyncio.create_task(self._run_with_reload())
+        else:
+            self._task = asyncio.create_task(self.app.entrypoint())
+
         logger.info("Application started successfully")
 
         try:
@@ -72,6 +78,64 @@ class ApplicationRunner:
         finally:
             await self.shutdown()
 
+    async def _run_with_reload(self):
+        """Run the application with hot reload support"""
+        reloader = ModuleReloader(self.app.__module__)
+        app_task = None
+        reload_task = None
+
+        while True:
+            if app_task is None:
+                app_task = asyncio.create_task(self.app.entrypoint())
+
+            if reload_task is None:
+                reload_task = asyncio.create_task(reloader.watch_and_reload())
+                reload_task = asyncio.shield(reload_task)
+
+            try:
+                done, pending = await asyncio.wait(
+                    [reload_task, app_task], return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if app_task in done:
+                    # If app task completed or crashed, clean up and propagate the result
+                    if reload_task and not reload_task.done():
+                        reload_task.cancel()
+                    return app_task.result()
+
+                # At this point, the reload task must have completed
+                if reload_task in done:
+                    reload_occurred = reload_task.result()
+                    reload_task = None  # Reset for next iteration
+
+                    if reload_occurred:
+                        logger.info("Detected changes, reloading application...")
+                        # Cancel the current app task
+                        if app_task and not app_task.done():
+                            app_task.cancel()
+                            try:
+                                await app_task
+                            except asyncio.CancelledError:
+                                pass
+
+                        # Re-import the application class
+                        self.app = import_from_string(
+                            f"{self.app.__module__}:{self.app.__class__.__name__}"
+                        )
+                        app_task = None  # Will be recreated in next iteration
+                        continue
+
+            except asyncio.CancelledError:
+                # Handle external cancellation (e.g., SIGINT)
+                for task in [app_task, reload_task]:
+                    if task and not task.done():
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                raise
+
     async def shutdown(self):
         """Gracefully shutdown the application"""
         if self._task and not self._task.done():
@@ -89,7 +153,7 @@ class ApplicationRunner:
 
 
 async def run_application(
-    app: WorkerApplication,
+    app_import_string: str,
     reload: bool = False,
 ) -> None:
     """
@@ -98,9 +162,13 @@ async def run_application(
     Manages the complete lifecycle of a worker application.
 
     ### Args:
-        `app`: WorkerApplication instance to run
+        `app_import_string`: Import string for the WorkerApplication instance
         `reload`: Enable hot reload mode for development
     """
     async with AsyncExitStack():
+        app = import_from_string(app_import_string)
+        if not isinstance(app, WorkerApplication):
+            raise TypeError("Application must be an instance of WorkerApplication")
+
         runner = ApplicationRunner(app)
         await runner.startup(reload)
