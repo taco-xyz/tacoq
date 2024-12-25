@@ -19,14 +19,16 @@ class ApplicationRunner:
     - Application startup and teardown
     """
 
-    def __init__(self, app: WorkerApplication):
+    def __init__(self, app: WorkerApplication, import_string: str):
         """
         Initialize Application Runner
 
         ### Args:
             - `app`: WorkerApplication instance to manage
+            - `import_string`: Import string for the WorkerApplication instance
         """
         self.app = app
+        self._import_string = import_string
         self._shutdown_event = asyncio.Event()
         self._task: Optional[asyncio.Task] = None
         self._loop = asyncio.get_event_loop()
@@ -78,6 +80,22 @@ class ApplicationRunner:
         finally:
             await self.shutdown()
 
+    async def _cleanup_app_task(self, app_task: asyncio.Task) -> None:
+        """Helper method to cleanup running application"""
+        if not app_task.done():
+            try:
+                # Try graceful shutdown first
+                if hasattr(self.app, "shutdown"):
+                    await self.app.shutdown()
+
+                # Cancel the task and wait for it
+                app_task.cancel()
+                await asyncio.wait_for(app_task, timeout=5.0)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                pass  # Suppress cleanup logs
+            except Exception as e:
+                logger.error(f"Error during cleanup: {e}")
+
     async def _run_with_reload(self):
         """Run the application with hot reload support"""
         reloader = ModuleReloader(self.app.__module__)
@@ -85,8 +103,12 @@ class ApplicationRunner:
         reload_task = None
 
         while True:
+            # Reset shutdown event for new instance
+            self._shutdown_event.clear()
+
             if app_task is None:
                 app_task = asyncio.create_task(self.app.entrypoint())
+                logger.info("Application started successfully")
 
             if reload_task is None:
                 reload_task = asyncio.create_task(reloader.watch_and_reload())
@@ -109,19 +131,12 @@ class ApplicationRunner:
                     reload_task = None  # Reset for next iteration
 
                     if reload_occurred:
-                        logger.info("Detected changes, reloading application...")
-                        # Cancel the current app task
-                        if app_task and not app_task.done():
-                            app_task.cancel()
-                            try:
-                                await app_task
-                            except asyncio.CancelledError:
-                                pass
+                        logger.info("Changes detected, restarting application...")
+                        if app_task:
+                            await self._cleanup_app_task(app_task)
 
-                        # Re-import the application class
-                        self.app = import_from_string(
-                            f"{self.app.__module__}:{self.app.__class__.__name__}"
-                        )
+                        # Re-import the application instance using the original import string
+                        self.app = import_from_string(self._import_string)
                         app_task = None  # Will be recreated in next iteration
                         continue
 
@@ -170,5 +185,5 @@ async def run_application(
         if not isinstance(app, WorkerApplication):
             raise TypeError("Application must be an instance of WorkerApplication")
 
-        runner = ApplicationRunner(app)
+        runner = ApplicationRunner(app, app_import_string)
         await runner.startup(reload)

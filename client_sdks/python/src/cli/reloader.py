@@ -13,7 +13,8 @@ class ModuleReloader:
         self.import_path = import_path
         module_name = import_path.split(":")[0]
         self.base_module = sys.modules[module_name]
-        self.base_path = Path(self.base_module.__file__).parent.resolve()
+        # Change to include parent directories so other folders like "examples" are watched
+        self.base_path = Path(self.base_module.__file__).parents[2].resolve()
         self.watched_modules: Dict[str, float] = {}
         self._update_dependency_tree()
 
