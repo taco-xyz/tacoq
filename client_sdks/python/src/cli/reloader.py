@@ -65,19 +65,19 @@ class ModuleReloader:
         except ValueError:
             pass  # Path not relative to base_path
 
+    def _handle_file_change(self, path: str) -> bool:
+        """Handle a single file change and return if reload is needed"""
+        if not path.endswith(".py"):
+            return False
+
+        self._reload_module(path)
+        self._update_dependency_tree()
+        return True
+
     async def watch_and_reload(self) -> bool:
         """Watch for changes and reload modules. Returns True if changes detected."""
         async for changes in awatch(self.base_path):
-            reload_needed = False
-
             for _, path in changes:
-                if path.endswith(".py"):
-                    self._reload_module(path)
-                    reload_needed = True
-
-            if reload_needed:
-                # Update dependency tree to catch new imports
-                self._update_dependency_tree()
-                return True
-
+                if self._handle_file_change(path):
+                    return True
         return False

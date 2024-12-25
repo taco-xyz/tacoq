@@ -59,8 +59,7 @@ class ApplicationRunner:
             self._task = asyncio.create_task(self._run_with_reload())
         else:
             self._task = asyncio.create_task(self.app.entrypoint())
-
-        logger.info("Application started successfully")
+            logger.info("Application started successfully")
 
         try:
             # Wait for either shutdown signal or task completion
@@ -96,52 +95,62 @@ class ApplicationRunner:
             except Exception as e:
                 logger.error(f"Error during cleanup: {e}")
 
+    async def _create_and_run_app_task(self) -> asyncio.Task:
+        """Create and start the application task"""
+        return asyncio.create_task(self.app.entrypoint())
+
+    async def _handle_task_result(self, task: asyncio.Task) -> None:
+        """Handle task completion and propagate exceptions"""
+        if task.done() and task.exception():
+            raise task.exception()
+
+    async def _wait_for_completion(self, *tasks: asyncio.Task) -> set[asyncio.Task]:
+        """Wait for any task to complete and return completed tasks"""
+        done, _ = await asyncio.wait(
+            tasks,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        return done
+
     async def _run_with_reload(self):
         """Run the application with hot reload support"""
         reloader = ModuleReloader(self.app.__module__)
         app_task = None
         reload_task = None
+        logger.info("Application started successfully")
 
         while True:
-            # Reset shutdown event for new instance
             self._shutdown_event.clear()
 
             if app_task is None:
-                app_task = asyncio.create_task(self.app.entrypoint())
-                logger.info("Application started successfully")
+                app_task = await self._create_and_run_app_task()
 
             if reload_task is None:
-                reload_task = asyncio.create_task(reloader.watch_and_reload())
-                reload_task = asyncio.shield(reload_task)
-
-            try:
-                done, pending = await asyncio.wait(
-                    [reload_task, app_task], return_when=asyncio.FIRST_COMPLETED
+                reload_task = asyncio.shield(
+                    asyncio.create_task(reloader.watch_and_reload())
                 )
 
+            try:
+                done = await self._wait_for_completion(reload_task, app_task)
+
                 if app_task in done:
-                    # If app task completed or crashed, clean up and propagate the result
                     if reload_task and not reload_task.done():
                         reload_task.cancel()
-                    return app_task.result()
+                    await self._handle_task_result(app_task)
+                    return
 
-                # At this point, the reload task must have completed
-                if reload_task in done:
-                    reload_occurred = reload_task.result()
-                    reload_task = None  # Reset for next iteration
+                if reload_task in done and reload_task.result():
+                    logger.info("Changes detected, restarting application...")
+                    if app_task:
+                        await self._cleanup_app_task(app_task)
 
-                    if reload_occurred:
-                        logger.info("Changes detected, restarting application...")
-                        if app_task:
-                            await self._cleanup_app_task(app_task)
-
-                        # Re-import the application instance using the original import string
-                        self.app = import_from_string(self._import_string)
-                        app_task = None  # Will be recreated in next iteration
-                        continue
+                    self.app = import_from_string(self._import_string)
+                    app_task = None
+                    reload_task = None
+                    logger.info("Application started successfully")
+                    continue
 
             except asyncio.CancelledError:
-                # Handle external cancellation (e.g., SIGINT)
                 for task in [app_task, reload_task]:
                     if task and not task.done():
                         task.cancel()
