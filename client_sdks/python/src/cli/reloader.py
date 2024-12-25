@@ -9,6 +9,29 @@ from cli.logger import logger
 
 
 class ModuleReloader:
+    """
+    # Module Reloader
+
+    Reloads modules and their dependencies when changes are detected
+
+    ### Args:
+        - `import_path`: Import path of the main module
+
+    ### Attributes:
+        - `import_path`: Import path of the main module
+        - `base_module`: Base module of the application
+        - `base_path`: Base path of the application
+        - `watched_modules`: Modules currently being watched
+
+    ### Methods:
+        - `_update_dependency_tree`: Update the full dependency tree of the application
+        - `_is_valid_module`: Check if a module should be tracked
+        - `_is_project_module`: Check if a module path belongs to our project
+        - `_reload_module`: Reload a specific module and its dependencies
+        - `_handle_file_change`: Handle a single file change and return if reload is needed
+        - `watch_and_reload`: Watch for changes and reload modules. Returns True if changes detected
+    """
+
     def __init__(self, import_path: str):
         self.import_path = import_path
         module_name = import_path.split(":")[0]
@@ -38,7 +61,14 @@ class ModuleReloader:
         self.watched_modules = new_modules
 
     def _is_valid_module(self, module: ModuleType | None) -> bool:
-        """Check if a module should be tracked"""
+        """Check if a module should be tracked
+
+        ### Args:
+            - `module`: Module to check
+
+        ### Returns:
+            - `bool`: True if module should be tracked
+        """
         return (
             module is not None
             and hasattr(module, "__file__")
@@ -47,7 +77,14 @@ class ModuleReloader:
         )
 
     def _is_project_module(self, mod_path: Path) -> bool:
-        """Check if a module path belongs to our project"""
+        """Check if a module path belongs to our project
+
+        ### Args:
+            - `mod_path`: Path to the module
+
+        ### Returns:
+            - `bool`: True if module is part of our project
+        """
         try:
             return mod_path.is_relative_to(self.base_path)
         except ValueError:
@@ -66,7 +103,14 @@ class ModuleReloader:
             pass  # Path not relative to base_path
 
     def _handle_file_change(self, path: str) -> bool:
-        """Handle a single file change and return if reload is needed"""
+        """Handle a single file change and return if reload is needed
+
+        ### Args:
+            - `path`: Path of the changed file
+
+        ### Returns:
+            - `bool`: True if reload is needed
+        """
         if not path.endswith(".py"):
             return False
 
@@ -75,7 +119,11 @@ class ModuleReloader:
         return True
 
     async def watch_and_reload(self) -> bool:
-        """Watch for changes and reload modules. Returns True if changes detected."""
+        """Watch for changes and reload modules. Returns True if changes detected.
+
+        ### Returns:
+            - `bool`: True if changes detected
+        """
         async for changes in awatch(self.base_path):
             for _, path in changes:
                 if self._handle_file_change(path):

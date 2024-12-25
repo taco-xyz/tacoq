@@ -17,6 +17,28 @@ class ApplicationRunner:
     - Signal handling
     - Graceful shutdown
     - Application startup and teardown
+
+    ### Args:
+        - `app`: WorkerApplication instance to manage
+        - `import_string`: Import string for the WorkerApplication instance
+
+    ### Attributes:
+        - `app`: WorkerApplication instance
+        - `_import_string`: Import string for the WorkerApplication instance
+        - `_shutdown_event`: Event to signal shutdown
+        - `_task`: Task for running the application
+        - `_loop`: Event loop for the application
+
+    ### Methods:
+        - `_handle_signals`: Configure signal handlers for graceful shutdown
+        - `_signal_handler`: Handle shutdown signals
+        - `startup`: Initialize and start the worker application
+        - `_cleanup_app_task`: Helper method to cleanup running application
+        - `_create_and_run_app_task`: Create and start the application task
+        - `_handle_task_result`: Handle task completion and propagate exceptions
+        - `_wait_for_completion`: Wait for any task to complete and return completed tasks
+        - `_run_with_reload`: Run the application with hot reload support
+        - `shutdown`: Gracefully shutdown the application
     """
 
     def __init__(self, app: WorkerApplication, import_string: str):
@@ -80,7 +102,11 @@ class ApplicationRunner:
             await self.shutdown()
 
     async def _cleanup_app_task(self, app_task: asyncio.Task) -> None:
-        """Helper method to cleanup running application"""
+        """Helper method to cleanup running application
+
+        ### Args:
+            - `app_task`: Task running the worker application
+        """
         if not app_task.done():
             try:
                 # Try graceful shutdown first
@@ -98,16 +124,28 @@ class ApplicationRunner:
                 logger.error(f"Error during cleanup: {e}")
 
     async def _create_and_run_app_task(self) -> asyncio.Task:
-        """Create and start the application task"""
+        """Create and start the application task
+
+        ### Returns:
+            - `asyncio.Task`: Task running the worker application
+        """
         return asyncio.create_task(self.app.entrypoint())
 
     async def _handle_task_result(self, task: asyncio.Task) -> None:
-        """Handle task completion and propagate exceptions"""
+        """Handle task completion and propagate exceptions
+
+        ### Args:
+            - `task`: Task to handle, can be any of the reload or worker tasks
+        """
         if task.done() and task.exception():
             raise task.exception()
 
     async def _wait_for_completion(self, *tasks: asyncio.Task) -> set[asyncio.Task]:
-        """Wait for any task to complete and return completed tasks"""
+        """Wait for any task to complete and return completed tasks
+
+        ### Args:
+            - `tasks`: Tasks to wait for
+        """
         done, _ = await asyncio.wait(
             tasks,
             return_when=asyncio.FIRST_COMPLETED,
