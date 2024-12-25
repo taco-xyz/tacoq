@@ -90,8 +90,10 @@ class ApplicationRunner:
                 # Cancel the task and wait for it
                 app_task.cancel()
                 await asyncio.wait_for(app_task, timeout=5.0)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
+            except asyncio.CancelledError:
                 pass  # Suppress cleanup logs
+            except asyncio.TimeoutError:
+                logger.warning("Application cleanup timed out")
             except Exception as e:
                 logger.error(f"Error during cleanup: {e}")
 
