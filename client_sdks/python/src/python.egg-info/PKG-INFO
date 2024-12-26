@@ -9,5 +9,6 @@ Requires-Dist: aiohttp>=3.11.8
 Requires-Dist: aioredis>=2.0.1
 Requires-Dist: click>=8.1.7
 Requires-Dist: uuid>=1.30
+Requires-Dist: watchfiles>=1.0.3
 
 # TODO - Implement this

@@ -106,6 +106,10 @@ class WorkerApplication:
         except Exception as e:
             raise ValueError(f"Error during worker unregister: {e}")
 
+        # Clear local variables state
+        # Important for hot reloading code
+        self.cleanup()
+
     async def _execute_task(self, kind: str, input_data: TaskInput, task_id: str):
         """Execute a task and update its status in the manager.
 
@@ -162,3 +166,14 @@ class WorkerApplication:
             pass
         finally:
             await self._unregister_worker()
+
+    def cleanup(self):
+        """Cleanup the worker application.
+
+        This method is called when the worker is shutting down. Used for cleaning internal state.
+        """
+        self._broker_client = None
+        self._manager_client = None
+        self._registered_tasks = {}
+        self._id = None
+        self._config = None
