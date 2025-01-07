@@ -121,6 +121,15 @@ jobs:
           cd client_sdks
           docker compose -f docker-compose.test.yml up -d --wait
 
+      - name: Migrate database
+        run: |
+          cd client_sdks
+          docker compose -f docker-compose.test.yml exec tacoq /bin/bash -c "
+            cargo install sqlx-cli --no-default-features --features postgres &&
+            cargo sqlx database create &&
+            cargo sqlx migrate run --source ./server/libs/db-common/migrations
+          "
+
       - name: Run end-to-end tests
         env:
           MANAGER_TEST_URL: http://localhost:3000
