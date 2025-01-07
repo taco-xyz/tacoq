@@ -1,23 +1,27 @@
 services:
   tacoq:
-    image: app-builder:latest
-    entrypoint: ["/app/target/release/manager"]
+    image: tacoq-manager:latest
+    entrypoint: [/app/target/release/manager]
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgres://user:password@postgres:5432/tacoq
-      - AMQP_URL=amqp://user:password@rabbitmq:5672/
+      - DATABASE_URL=postgresql://user:password@postgres:5432/tacoq
+      - TACOQ_BROKER_ADDR=amqp://user:password@rabbitmq:5672
+      - TACOQ_DATABASE_READER_URL=postgresql://user:password@postgres:5432/tacoq
+      - TACOQ_DATABASE_WRITER_URL=postgresql://user:password@postgres:5432/tacoq
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 6
-      start_period: 10s
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     depends_on:
       rabbitmq:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    networks:
+      - app-network
 
   postgres:
     image: postgres:latest
@@ -32,6 +36,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -46,3 +52,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

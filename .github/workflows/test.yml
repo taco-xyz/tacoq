@@ -23,9 +23,9 @@ jobs:
         with:
           context: .
           file: server/services/manager/Dockerfile
-          target: builder
+          target: release # Changed from 'builder' to 'release'
           outputs: type=docker,dest=/tmp/app-image.tar
-          tags: app-builder:latest
+          tags: tacoq-manager:latest # Changed tag name to be more specific
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
