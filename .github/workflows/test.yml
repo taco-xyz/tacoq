@@ -23,9 +23,9 @@ jobs:
         with:
           context: .
           file: server/services/manager/Dockerfile
-          target: release # Changed from 'builder' to 'release'
+          target: builder
           outputs: type=docker,dest=/tmp/app-image.tar
-          tags: tacoq-manager:latest # Changed tag name to be more specific
+          tags: tacoq-manager:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -73,7 +73,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            app-builder /bin/bash -c "
+            tacoq-manager /bin/bash -c "
               cargo install sqlx-cli --no-default-features --features postgres &&
               cargo sqlx database create &&
               cargo sqlx migrate run --source ./server/libs/db-common/migrations
@@ -83,7 +83,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            app-builder cargo test --all-features
+            tacoq-manager cargo test --all-features
 
   e2e-test:
     name: End-to-end tests
