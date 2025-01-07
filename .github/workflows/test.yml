@@ -18,16 +18,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker images
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: server/services/manager/Dockerfile
-          target: tester
+          target: builder
           outputs: type=docker,dest=/tmp/app-image.tar
-          tags: |
-            app-builder:latest
-            app-tester:latest
+          tags: app-builder:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -75,7 +73,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            app-tester /bin/bash -c "
+            app-builder /bin/bash -c "
               cargo install sqlx-cli --no-default-features --features postgres &&
               cargo sqlx database create &&
               cargo sqlx migrate run --source ./server/libs/db-common/migrations
@@ -85,7 +83,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            app-tester cargo test --all-features
+            app-builder cargo test --all-features
 
   e2e-test:
     name: End-to-end tests

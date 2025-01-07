@@ -1,7 +1,7 @@
 services:
   tacoq:
     image: app-tester:latest
-    entrypoint: ["/app/manager"]
+    entrypoint: ["/app/target/release/manager"]
     ports:
       - "3000:3000"
     environment:
