@@ -1,8 +1,6 @@
 services:
   fasttq:
-    build:
-      context: ..
-      dockerfile: server/services/manager/Dockerfile
+    image: app-builder:latest
     ports:
       - "3000:3000"
     environment:
