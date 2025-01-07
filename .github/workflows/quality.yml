@@ -1,0 +1,34 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check code formatting
+        run: cargo fmt --all -- --check
+
+      - name: Check clippy
+        run: cargo clippy --all-features --tests -- -D warnings
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features native-tls,postgres
+
+      - name: Run sqlx prepare
+        run: cargo sqlx prepare --workspace --check
+        env:
+          SQLX_OFFLINE: true

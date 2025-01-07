@@ -7,9 +7,9 @@ src/broker/core.py
 src/broker/rabbitmq.py
 src/cli/__init__.py
 src/cli/cli.py
-src/cli/hot_reload.py
 src/cli/importer.py
 src/cli/logger.py
+src/cli/reloader.py
 src/cli/runner.py
 src/manager/__init__.py
 src/manager/client.py
