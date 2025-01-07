@@ -37,6 +37,17 @@ RUN cargo build --release --bin manager
 # Strip the binary
 RUN strip target/release/manager
 
+# Tester stage
+FROM rust:1.82.0 AS tester
+WORKDIR /app
+
+# Install curl for health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Copy dependencies and build files from builder
+COPY --from=builder /app/target/release/manager .
+COPY --from=builder /app/target/ ./target/
+
 # Final stage
 FROM gcr.io/distroless/cc-debian12:nonroot AS release
 WORKDIR /app
