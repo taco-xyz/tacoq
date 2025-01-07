@@ -119,8 +119,7 @@ jobs:
       - name: Start test environment
         run: |
           cd client_sdks
-          docker compose -f docker-compose.test.yml up -d
-          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:3000/health)" != "200" ]]; do sleep 1; done' || false
+          docker compose -f docker-compose.test.yml up -d --wait
 
       - name: Run end-to-end tests
         run: |

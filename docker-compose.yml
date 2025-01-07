@@ -3,10 +3,9 @@ volumes:
   postgres_data: {}
 
 services:
-  
   # Main App
-  
-  fasttq:
+
+  tacoq:
     build:
       context: .
       dockerfile: server/services/manager/Dockerfile
