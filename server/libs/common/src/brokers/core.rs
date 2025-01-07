@@ -2,10 +2,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait BrokerCore: Send + Sync {
-    async fn register_exchange(
-        &self,
-        exchange: &str,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>>;
 
     async fn register_queue(
         &self,

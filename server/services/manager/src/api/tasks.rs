@@ -307,8 +307,8 @@ async fn update_task_result(
 #[cfg(test)]
 mod test {
     use axum::http::StatusCode;
-    use common::{TaskInstance, TaskKind, Worker};
     use common::brokers::testing::get_mock_broker;
+    use common::{TaskInstance, TaskKind, Worker};
     use serde_json::json;
     use sqlx::PgPool;
     use tracing::info;
@@ -320,7 +320,6 @@ mod test {
         },
         testing::test::{get_test_server, init_test_logger},
     };
-
 
     // This runs before any test in this module
     #[ctor::ctor]
