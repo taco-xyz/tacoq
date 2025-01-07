@@ -3,8 +3,12 @@ from worker import WorkerApplication, WorkerApplicationConfig
 from broker import BrokerConfig
 import pytest
 
-MANAGER_TEST_URL = "http://localhost:3000"
-BROKER_TEST_URL = "amqp://user:password@localhost:5672/"
+import os
+
+MANAGER_TEST_URL = os.environ.get("MANAGER_TEST_URL", "http://localhost:3000")
+BROKER_TEST_URL = os.environ.get(
+    "BROKER_TEST_URL", "amqp://user:password@localhost:5672/"
+)
 
 WORKER_NAME = "test_worker"
 

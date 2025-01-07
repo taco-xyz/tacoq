@@ -122,9 +122,11 @@ jobs:
           docker compose -f docker-compose.test.yml up -d --wait
 
       - name: Run end-to-end tests
+        env:
+          MANAGER_TEST_URL: http://localhost:3000
+          BROKER_TEST_URL: amqp://user:password@localhost:5672
         run: |
           cd client_sdks/python
-          source .venv/bin/activate
           uv run pytest
 
       - name: Cleanup test environment
