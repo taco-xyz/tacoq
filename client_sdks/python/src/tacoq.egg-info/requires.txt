@@ -1,0 +1,6 @@
+aio-pika>=9.5.3
+aiohttp>=3.11.8
+aioredis>=2.0.1
+click>=8.1.7
+uuid>=1.30
+watchfiles>=1.0.3

@@ -2,15 +2,16 @@ name: Publish
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - v*
+    branches: [main]
+    tags: ["v*"]
 
 jobs:
   publish_manager:
     name: Publish Docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     env:
       REGISTRY: ghcr.io
@@ -67,8 +68,10 @@ jobs:
 
       - name: Build package
         run: |
+          cd client_sdks/python
           uv build
 
       - name: Publish package to PyPI
         run: |
+          cd client_sdks/python
           uv publish

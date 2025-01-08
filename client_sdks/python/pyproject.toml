@@ -1,5 +1,5 @@
 [project]
-name = "python"
+name = "tacoq"
 version = "0.1.0"
 description = "Python SDK to interact with the TacoQ Service API"
 readme = "README.md"

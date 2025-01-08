@@ -1,5 +1,5 @@
 Metadata-Version: 2.2
-Name: python
+Name: tacoq
 Version: 0.1.0
 Summary: Python SDK to interact with the TacoQ Service API
 Author: Manuel Costa, Pedro Ribeiro
