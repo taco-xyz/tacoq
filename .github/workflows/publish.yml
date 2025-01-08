@@ -8,6 +8,9 @@ jobs:
   publish_manager:
     name: Publish Docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     env:
       REGISTRY: ghcr.io
@@ -49,7 +52,6 @@ jobs:
     permissions:
       id-token: write # Required for trusted publishing
       contents: read
-      packages: write
 
     steps:
       - uses: actions/checkout@v4

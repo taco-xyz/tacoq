@@ -1,0 +1,132 @@
+Metadata-Version: 2.2
+Name: tacoq
+Version: 0.1.0
+Summary: Python SDK to interact with the TacoQ Service API
+Author: Manuel Costa, Pedro Ribeiro
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: aio-pika>=9.5.3
+Requires-Dist: aiohttp>=3.11.8
+Requires-Dist: aioredis>=2.0.1
+Requires-Dist: click>=8.1.7
+Requires-Dist: uuid>=1.30
+Requires-Dist: watchfiles>=1.0.3
+
+# TacoQ Python SDK
+
+TacoQ Python SDK provides a simple and efficient way to create distributed task workers and publishers. This SDK allows you to build scalable task processing systems with minimal boilerplate.
+
+## Installation
+
+```bash
+pip install tacoq
+```
+
+## Quick Start
+
+The SDK provides two main components:
+
+- **Worker**: Processes tasks
+- **Publisher**: Submits tasks for processing
+
+### Creating a Worker
+
+Workers are created by defining task handlers and registering them with a `WorkerApplication`:
+
+```python
+from worker import WorkerApplication, WorkerApplicationConfig
+from broker import BrokerConfig
+from manager.config import ManagerConfig
+
+# Configure the worker
+config = WorkerApplicationConfig(
+    name="my_worker",
+    manager_config=ManagerConfig(url="http://localhost:3000"),
+    broker_config=BrokerConfig(url="amqp://user:password@localhost:5672")
+)
+
+# Create application
+app = WorkerApplication(config)
+
+# Register task handlers
+@app.task("my_task")
+async def handle_task(input_data: dict) -> dict:
+    return {"result": input_data["value"] * 2}
+```
+
+### Publishing Tasks
+
+Tasks can be published using the `PublisherClient`:
+
+```python
+from publisher.client import PublisherClient
+from manager.config import ManagerConfig
+
+# Create publisher
+publisher = PublisherClient(ManagerConfig(url="http://localhost:3000"))
+
+# Publish task
+task = await publisher.publish_task("my_task", {"value": 42})
+
+# Check result
+result = await publisher.get_task(task.id)
+print(result)
+```
+
+## Running Workers
+
+There are multiple ways to run your worker application:
+
+### 1. Direct Execution
+
+```python
+if __name__ == "__main__":
+    asyncio.run(app.entrypoint())
+```
+
+### 2. Using CLI
+
+```bash
+# Run worker in production mode
+tacoq run "path.to.module:worker_application"
+
+# Run worker in development mode with auto-reload
+tacoq run "path.to.module:worker_application" --reload
+```
+
+## Complete Examples
+
+Check out the `examples/` directory for complete working examples:
+
+- `example_worker.py`: Demonstrates worker setup with multiple task handlers
+- `example_producer.py`: Shows how to publish tasks and retrieve results
+
+## Configuration
+
+### Worker Configuration
+
+- `name`: Unique identifier for the worker
+- `manager_config`: Connection details for the TacoQ manager
+- `broker_config`: Connection details for the message broker
+
+### Manager Configuration
+
+- `url`: URL of the TacoQ manager service
+
+### Broker Configuration
+
+- `url`: AMQP URL for the message broker
+
+## Best Practices
+
+1. Share task names between workers and publishers using constants
+2. Handle errors appropriately in task handlers
+3. Use development mode (`--reload`) for faster development iterations
+4. Keep task handlers focused and modular
+
+## License
+
+MIT License - See LICENSE file for details
