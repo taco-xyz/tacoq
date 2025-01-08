@@ -8,7 +8,7 @@ from worker import WorkerApplication, WorkerApplicationConfig
 # GENERAL CONFIGURATION _______________________________________________________
 # These configs should be shared across both the publisher and the worker.
 
-# Both the publisher and the worker need to know about the manager.
+# The worker needs to know about the manager and the broker.
 manager_config = ManagerConfig(url="http://localhost:3000")
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 
@@ -29,9 +29,8 @@ worker_config = WorkerApplicationConfig(
 # 3. Create a worker application
 worker_application = WorkerApplication(worker_config)
 
+
 # 4. Create tasks and register them with the worker application
-
-
 @worker_application.task(TASK_1_NAME)
 async def task_1(input_data: dict[Any, Any]) -> dict[Any, Any]:
     await asyncio.sleep(1)
@@ -44,4 +43,5 @@ async def task_2(input_data: dict[Any, Any]) -> dict[Any, Any]:
 
 
 if __name__ == "__main__":
+    # Application can be run either as a standalone script or via the CLI.
     asyncio.run(worker_application.entrypoint())
