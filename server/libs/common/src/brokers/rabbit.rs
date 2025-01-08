@@ -1,7 +1,9 @@
 use crate::brokers::core::BrokerCore;
 use async_trait::async_trait;
 use lapin::{
-    options::*, types::{AMQPValue, FieldTable}, BasicProperties, Connection, ConnectionProperties, ExchangeKind,
+    options::*,
+    types::{AMQPValue, FieldTable},
+    BasicProperties, Connection, ConnectionProperties, ExchangeKind,
 };
 use std::sync::Arc;
 
@@ -22,10 +24,7 @@ impl RabbitBroker {
 
 #[async_trait]
 impl BrokerCore for RabbitBroker {
-    async fn register_exchange(
-        &self,
-        exchange: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
         let channel = self.connection.create_channel().await?;
 
         channel
@@ -49,15 +48,17 @@ impl BrokerCore for RabbitBroker {
         let channel = self.connection.create_channel().await?;
 
         channel
-            .queue_declare(
-                queue,
-                QueueDeclareOptions::default(),
-                FieldTable::default(),
-            )
+            .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
             .await?;
 
         channel
-            .queue_bind(queue, exchange, routing_key, QueueBindOptions::default(), FieldTable::default())
+            .queue_bind(
+                queue,
+                exchange,
+                routing_key,
+                QueueBindOptions::default(),
+                FieldTable::default(),
+            )
             .await?;
 
         Ok(())
@@ -66,7 +67,9 @@ impl BrokerCore for RabbitBroker {
     async fn delete_queue(&self, queue: &str) -> Result<(), Box<dyn std::error::Error>> {
         let channel = self.connection.create_channel().await?;
 
-        channel.queue_delete(queue, QueueDeleteOptions::default()).await?;
+        channel
+            .queue_delete(queue, QueueDeleteOptions::default())
+            .await?;
 
         Ok(())
     }
@@ -74,11 +77,13 @@ impl BrokerCore for RabbitBroker {
     async fn delete_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
         let channel = self.connection.create_channel().await?;
 
-        channel.exchange_delete(exchange, ExchangeDeleteOptions::default()).await?;
+        channel
+            .exchange_delete(exchange, ExchangeDeleteOptions::default())
+            .await?;
 
         Ok(())
     }
-    
+
     async fn publish_message(
         &self,
         exchange: &str,
@@ -88,7 +93,7 @@ impl BrokerCore for RabbitBroker {
         task_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let channel = self.connection.create_channel().await?;
-        
+
         // Initialize headers
         let mut headers = FieldTable::default();
         headers.insert("task_kind".into(), AMQPValue::LongString(task_id.into()));
@@ -99,7 +104,9 @@ impl BrokerCore for RabbitBroker {
                 routing_key,
                 BasicPublishOptions::default(),
                 payload,
-                BasicProperties::default().with_message_id(message_id.into()).with_headers(headers),
+                BasicProperties::default()
+                    .with_message_id(message_id.into())
+                    .with_headers(headers),
             )
             .await?;
 

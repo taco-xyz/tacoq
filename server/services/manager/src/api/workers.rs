@@ -148,13 +148,19 @@ async fn unregister_worker(
         })?;
 
     // Unregister from broker
-    state.broker.write().await.remove_worker(&id).await.map_err(|e| {
-        error!("Failed to unregister worker from broker: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to unregister worker from broker: {}", e),
-        )
-    })?;
+    state
+        .broker
+        .write()
+        .await
+        .remove_worker(&id)
+        .await
+        .map_err(|e| {
+            error!("Failed to unregister worker from broker: {:?}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to unregister worker from broker: {}", e),
+            )
+        })?;
 
     Ok(StatusCode::OK)
 }
@@ -166,8 +172,8 @@ mod test {
         testing::test::{get_test_server, init_test_logger},
     };
     use common::{brokers::testing::get_mock_broker, TaskKind, Worker};
-    use sqlx::PgPool;
     use serde_json::json;
+    use sqlx::PgPool;
 
     // This runs before any test in this module
     #[ctor::ctor]

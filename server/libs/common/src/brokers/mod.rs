@@ -38,8 +38,7 @@ impl Broker {
     pub async fn new(uri: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let broker = create_broker_connection(uri).await?;
         broker.register_exchange(Self::SUBMISSION_EXCHANGE).await?;
-        
-        
+
         Ok(Self {
             uri: uri.to_string(),
             broker,
@@ -56,13 +55,18 @@ impl Broker {
         // Create a unique queue for this worker using its ID
         let worker_queue = worker.id.to_string();
 
-        self.broker.register_queue(Self::SUBMISSION_EXCHANGE, &worker_queue, &worker_queue).await?;
+        self.broker
+            .register_queue(Self::SUBMISSION_EXCHANGE, &worker_queue, &worker_queue)
+            .await?;
 
         self.workers.push(worker);
         Ok(())
     }
 
-    pub async fn remove_worker(&mut self, worker_id: &Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn remove_worker(
+        &mut self,
+        worker_id: &Uuid,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let index: usize = self
             .workers
             .iter()
@@ -107,15 +111,14 @@ impl Broker {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::models::TaskKind;
     use crate::TaskStatus;
+    use testing::{get_mock_broker, setup_task_kinds, setup_tasks, setup_workers};
     use time::OffsetDateTime;
     use uuid::Uuid;
-    use testing::{setup_task_kinds, setup_tasks, setup_workers, get_mock_broker};
 
     #[tokio::test]
     async fn test_broker_new() {

@@ -1,11 +1,11 @@
-use async_trait::async_trait;
-use time::OffsetDateTime;
-use std::sync::Arc;
 use crate::brokers::core::BrokerCore;
 use crate::brokers::Broker;
 use crate::TaskKind;
+use crate::{TaskInstance, TaskStatus, Worker};
+use async_trait::async_trait;
 use sqlx::types::Uuid;
-use crate::{Worker, TaskInstance, TaskStatus};
+use std::sync::Arc;
+use time::OffsetDateTime;
 
 /// Mock implementations for BrokerCore that does nothing
 #[derive(Clone)]
@@ -25,10 +25,7 @@ impl MockBrokerCore {
 
 #[async_trait]
 impl BrokerCore for MockBrokerCore {
-    async fn register_exchange(
-        &self,
-        _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn register_exchange(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
