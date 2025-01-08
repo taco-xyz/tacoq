@@ -69,16 +69,6 @@ jobs:
       - name: Load Docker image
         run: docker load --input /tmp/app-image.tar
 
-      - name: Set up database and run migrations
-        run: |
-          docker run --network host \
-            -e DATABASE_URL=${DATABASE_URL} \
-            tacoq-manager /bin/bash -c "
-              cargo install sqlx-cli --no-default-features --features postgres &&
-              cargo sqlx database create &&
-              cargo sqlx migrate run --source ./server/libs/db-common/migrations
-            "
-
       - name: Run tests in container
         run: |
           docker run --network host \
