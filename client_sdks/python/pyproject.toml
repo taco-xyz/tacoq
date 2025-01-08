@@ -1,8 +1,18 @@
 [project]
 name = "python"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python SDK to interact with the TacoQ Service API"
 readme = "README.md"
+authors = [
+    { name="Manuel Costa" },
+    { name="Pedro Ribeiro" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
 requires-python = ">=3.12"
 dependencies = [
     "aio-pika>=9.5.3",

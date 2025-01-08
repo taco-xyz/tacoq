@@ -4,11 +4,17 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*
 
 jobs:
-  publish:
+  publish_manager:
     name: Publish Docker image
     runs-on: ubuntu-latest
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
 
     steps:
       - uses: actions/checkout@v4
@@ -19,9 +25,15 @@ jobs:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -29,8 +41,34 @@ jobs:
           context: .
           file: server/services/manager/Dockerfile
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/manager:latest
-            ghcr.io/${{ github.repository }}/manager:${{ github.sha }}
+          tags: ${{steps.meta.outputs.tags}}
+          labels: ${{steps.meta.outputs.labels}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  publish_sdk:
+    name: Publish Python SDK
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for trusted publishing
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Build package
+        run: |
+          uv build
+
+      - name: Publish package to PyPI
+        run: |
+          uv publish
