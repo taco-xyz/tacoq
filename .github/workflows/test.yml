@@ -73,7 +73,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            tacoq-manager cargo test --all-features
+            tacoq-manager cargo test --release --all-features
 
   e2e-test:
     name: End-to-end tests
