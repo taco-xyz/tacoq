@@ -49,6 +49,7 @@ jobs:
     permissions:
       id-token: write # Required for trusted publishing
       contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
