@@ -2,7 +2,6 @@ name: Publish
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
 
 jobs:
@@ -70,4 +69,5 @@ jobs:
 
       - name: Publish package to PyPI
         run: |
+          cd client_sdks/python
           uv publish
