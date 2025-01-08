@@ -9,6 +9,9 @@ jobs:
   publish_manager:
     name: Publish Docker image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     env:
       REGISTRY: ghcr.io
@@ -70,4 +73,5 @@ jobs:
 
       - name: Publish package to PyPI
         run: |
+          cd client_sdks/python
           uv publish
