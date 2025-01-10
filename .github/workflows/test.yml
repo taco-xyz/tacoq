@@ -110,6 +110,8 @@ jobs:
       # Language-specific steps
       - name: Run SDK specific workflow
         uses: ./.github/actions/sdk-${{ matrix.sdk }}
+        with:
+          sdk: ${{ matrix.sdk }}
 
       # Cleanup
       - name: Cleanup test environment
