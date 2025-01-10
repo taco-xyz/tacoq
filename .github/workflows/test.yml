@@ -83,7 +83,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ===================================
       # Common setup steps
+      # ===================================
+
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
@@ -107,13 +110,23 @@ jobs:
             cargo sqlx migrate run --source ./server/libs/db-common/migrations
           "
 
-      # Language-specific steps
-      - name: Run SDK specific workflow
-        uses: ./.github/actions/sdk-${{ matrix.sdk }}
-        with:
-          sdk: ${{ matrix.sdk }}
+      # ===================================
+      # SDK-specific tests
+      # Each matrix step will run the tests 
+      # for the corresponding SDK.
+      # ===================================
 
+      # Python
+      - name: Run Python tests
+        if: matrix.sdk == 'python'
+        uses: ./.github/actions/sdk-tests
+        with:
+          sdk: python
+
+      # ================================
       # Cleanup
+      # ================================
+
       - name: Cleanup test environment
         if: always()
         run: |
