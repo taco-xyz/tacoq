@@ -8,6 +8,6 @@ async def test_health_check_client(manager_client: ManagerClient):
 
     health_state = await manager_client.check_health()
 
-    assert (
-        health_state == ManagerStates.HEALTHY
-    ), f"Manager is not healthy. Current state: {health_state}"
+    assert health_state == ManagerStates.HEALTHY, (
+        f"Manager is not healthy. Current state: {health_state}"
+    )
