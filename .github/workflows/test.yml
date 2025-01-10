@@ -119,9 +119,7 @@ jobs:
       # Python
       - name: Run Python tests
         if: matrix.sdk == 'python'
-        uses: ./.github/actions/sdk-tests
-        with:
-          sdk: python
+        uses: ./.github/actions/sdk-python
 
       # ================================
       # Cleanup
