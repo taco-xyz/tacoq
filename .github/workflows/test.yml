@@ -32,8 +32,8 @@ jobs:
           name: app-image
           path: /tmp/app-image.tar
 
-  test:
-    name: Run tests
+  server-tests:
+    name: Run server tests
     needs: build
     runs-on: ubuntu-latest
     env:
@@ -72,14 +72,18 @@ jobs:
             -e DATABASE_URL=${DATABASE_URL} \
             tacoq-manager cargo test --release --all-features
 
-  e2e-test:
-    name: End-to-end tests
+  client-tests:
+    name: Client Tests
+    needs: [build, server-tests]
     runs-on: ubuntu-latest
-    needs: [build, test]
+    strategy:
+      matrix:
+        sdk: [python] # Add other SDKs here like [python, nodejs, java]
 
     steps:
       - uses: actions/checkout@v4
 
+      # Common setup steps
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
@@ -88,20 +92,6 @@ jobs:
 
       - name: Load Docker image
         run: docker load --input /tmp/app-image.tar
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Install Python dependencies
-        run: |
-          cd client_sdks/python
-          uv sync --dev
 
       - name: Start test environment
         run: |
@@ -117,14 +107,11 @@ jobs:
             cargo sqlx migrate run --source ./server/libs/db-common/migrations
           "
 
-      - name: Run end-to-end tests
-        env:
-          MANAGER_TEST_URL: http://localhost:3000
-          BROKER_TEST_URL: amqp://user:password@localhost:5672
-        run: |
-          cd client_sdks/python
-          uv run pytest
+      # Language-specific steps
+      - name: Run SDK specific workflow
+        uses: ./.github/actions/sdk-${{ matrix.sdk }}
 
+      # Cleanup
       - name: Cleanup test environment
         if: always()
         run: |
