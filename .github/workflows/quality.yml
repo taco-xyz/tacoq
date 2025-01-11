@@ -8,7 +8,7 @@ on:
 jobs:
   
   # ================================
-  # Rust
+  # Rust Formatting & Linting
   # ================================
   
   rust-fmt:
@@ -47,7 +47,7 @@ jobs:
           SQLX_OFFLINE: true
 
   # ================================
-  # Python
+  # Python Formatting & Linting
   # ================================
 
   python-quality:
