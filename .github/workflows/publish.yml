@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
 
 jobs:
+
+  # =================================================
+  # Publish Manager
+  # =================================================
+
   publish_manager:
     name: Publish Docker image
     runs-on: ubuntu-latest
@@ -47,7 +52,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  publish_sdk:
+  # =================================================
+  # Publish Python SDK
+  # =================================================
+
+  publish_python_sdk:
     name: Publish Python SDK
     runs-on: ubuntu-latest
     permissions:
