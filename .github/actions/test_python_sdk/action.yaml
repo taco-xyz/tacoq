@@ -55,6 +55,7 @@ runs:
           git checkout --orphan gh-pages
           git rm -rf .
           git commit --allow-empty -m "Initial gh-pages commit"
+          git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/$GITHUB_REPOSITORY"
           git push origin gh-pages
           git checkout -
         fi
