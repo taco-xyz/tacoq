@@ -106,6 +106,8 @@ jobs:
       # Python Tests
       - name: Run Python tests
         uses: ./.github/actions/test_python_sdk
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Cleanup
       - uses: ./.github/actions/cleanup_sdk_test_environment

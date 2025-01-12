@@ -1,6 +1,11 @@
 name: 'Python SDK Test Steps'
 description: 'Runs tests for the Python SDK'
 
+inputs:
+  github-token:
+    description: 'GitHub token for benchmark uploads'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -63,5 +68,5 @@ runs:
       with:
         tool: 'pytest'
         output-file-path: client_sdks/python/output.json
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ inputs.github-token }}
         comment-always: true
