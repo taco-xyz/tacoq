@@ -41,6 +41,17 @@ runs:
     # Benchmarks
     # =================================================
 
+    - name: Create gh-pages branch if missing
+      shell: bash
+      run: |
+        if ! git show-ref --quiet refs/remotes/origin/gh-pages; then
+          git checkout --orphan gh-pages
+          git rm -rf .
+          git commit --allow-empty -m "Initial gh-pages commit"
+          git push origin gh-pages
+          git checkout -
+        fi
+
     - name: Run benchmarks
       shell: bash
       run: |
@@ -52,3 +63,5 @@ runs:
       with:
         tool: 'pytest'
         output-file-path: client_sdks/python/output.json
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        comment-always: true
