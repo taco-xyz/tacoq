@@ -4,6 +4,11 @@ description: 'Runs tests for the Python SDK'
 runs:
   using: "composite"
   steps:
+
+    # =================================================
+    # Setup
+    # =================================================
+
     - uses: actions/setup-python@v4
       with:
         python-version: "3.x"
@@ -18,6 +23,11 @@ runs:
         cd client_sdks/python
         uv sync --dev
 
+    # =================================================
+    # Tests
+    # We run all tests except benchmarks
+    # =================================================
+
     - name: Run tests
       shell: bash
       env:
@@ -25,4 +35,20 @@ runs:
         BROKER_TEST_URL: amqp://user:password@localhost:5672
       run: |
         cd client_sdks/python
-        uv run pytest 
+        uv run pytest -m "not bench"
+
+    # =================================================
+    # Benchmarks
+    # =================================================
+
+    - name: Run benchmark
+      shell: bash
+      run: |
+        cd client_sdks/python
+        uv run pytest -m "bench" --benchmark-json output.json
+
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'pytest'
+        output-file-path: output.json
