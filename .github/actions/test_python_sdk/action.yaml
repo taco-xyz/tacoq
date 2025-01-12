@@ -46,19 +46,19 @@ runs:
     # Benchmarks
     # =================================================
 
-    - name: Create gh-pages branch if missing
-      shell: bash
-      run: |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions[bot]"
-        if ! git show-ref --quiet refs/remotes/origin/gh-pages; then
-          git checkout --orphan gh-pages
-          git rm -rf .
-          git commit --allow-empty -m "Initial gh-pages commit"
-          git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/$GITHUB_REPOSITORY"
-          git push origin gh-pages
-          git checkout -
-        fi
+    # - name: Create gh-pages branch if missing
+    #   shell: bash
+    #   run: |
+    #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    #     git config --global user.name "github-actions[bot]"
+    #     if ! git show-ref --quiet refs/remotes/origin/gh-pages; then
+    #       git checkout --orphan gh-pages
+    #       git rm -rf .
+    #       git commit --allow-empty -m "Initial gh-pages commit"
+    #       git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/$GITHUB_REPOSITORY"
+    #       git push origin gh-pages
+    #       git checkout -
+    #     fi
 
     - name: Run benchmarks
       shell: bash
@@ -73,3 +73,4 @@ runs:
         output-file-path: client_sdks/python/output.json
         github-token: ${{ inputs.github-token }}
         comment-always: true
+        auto-push: true
