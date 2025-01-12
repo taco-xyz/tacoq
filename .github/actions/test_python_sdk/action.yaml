@@ -73,4 +73,4 @@ runs:
         output-file-path: client_sdks/python/output.json
         github-token: ${{ inputs.github-token }}
         comment-always: true
-        auto-push: true
+        auto-push: false
