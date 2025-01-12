@@ -1,0 +1,13 @@
+[module]
+name = "clients"
+
+[dependencies]
+manager = { name = "manager" }
+
+[file_paths]
+include = [
+  "python/**/*",
+  "rust/**/*",
+  "typescript/**/*",
+  "docker-compose.test.yml",
+]

@@ -1,0 +1,11 @@
+name: 'Cleanup Test Environment'
+description: 'Cleans up the test environment'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Cleanup test environment
+      shell: bash
+      run: |
+        cd client_sdks
+        docker compose -f docker-compose.test.yml down

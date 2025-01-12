@@ -1,0 +1,37 @@
+name: 'Setup Test Environment'
+description: 'Sets up the test environment with Docker and database'
+
+inputs:
+  artifact-path:
+    description: 'Path to the Docker image artifact'
+    required: true
+    default: '/tmp'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Docker image
+      uses: actions/download-artifact@v4
+      with:
+        name: app-image
+        path: ${{ inputs.artifact-path }}
+
+    - name: Load Docker image
+      shell: bash
+      run: docker load --input ${{ inputs.artifact-path }}/app-image.tar
+
+    - name: Start test environment
+      shell: bash
+      run: |
+        cd client_sdks
+        docker compose -f docker-compose.test.yml up -d --wait
+
+    - name: Migrate database
+      shell: bash
+      run: |
+        cd client_sdks
+        docker compose -f docker-compose.test.yml exec tacoq /bin/bash -c "
+          cargo install sqlx-cli --no-default-features --features postgres &&
+          cargo sqlx database create &&
+          cargo sqlx migrate run --source ./server/libs/db-common/migrations
+        "
