@@ -26,6 +26,9 @@ dependencies = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
+markers = [
+    "bench: benchmark a function",
+]
 
 [build-system]
 requires = ["setuptools"]
@@ -35,7 +38,10 @@ build-backend = "setuptools.build_meta"
 dev = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.24.0",
+    "pytest-benchmark>=5.1.0",
+    "pytest-xdist>=3.6.1",
 ]
 
 [project.scripts]
 tacoq = "cli.cli:cli"
+
