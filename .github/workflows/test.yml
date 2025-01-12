@@ -97,8 +97,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-    permissions:
-      contents: write # Only applies to this job
 
     steps:
       - uses: actions/checkout@v4
