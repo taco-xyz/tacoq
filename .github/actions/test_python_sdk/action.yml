@@ -41,12 +41,6 @@ runs:
     # Benchmarks
     # =================================================
 
-    - name: Create benchmark output file
-      shell: bash
-      run: |
-        cd client_sdks/python
-        touch output.json
-
     - name: Run benchmarks
       shell: bash
       run: |
@@ -57,4 +51,4 @@ runs:
       uses: benchmark-action/github-action-benchmark@v1
       with:
         tool: 'pytest'
-        output-file-path: output.json
+        output-file-path: client_sdks/python/output.json
