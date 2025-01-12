@@ -44,20 +44,21 @@ runs:
 
     # =================================================
     # Benchmarks
+    # Disabled for now.
     # =================================================
 
-    - name: Run benchmarks
-      shell: bash
-      run: |
-        cd client_sdks/python
-        uv run pytest -m "bench" --benchmark-json output.json
+    # - name: Run benchmarks
+    #   shell: bash
+    #   run: |
+    #     cd client_sdks/python
+    #     uv run pytest -m "bench" --benchmark-json output.json
 
-    - name: Store benchmark result
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        tool: 'pytest'
-        output-file-path: client_sdks/python/output.json
-        github-token: ${{ inputs.github-token }}
-        comment-always: true
-        auto-push: true
-        summary-always: true
+    # - name: Store benchmark result
+    #   uses: benchmark-action/github-action-benchmark@v1
+    #   with:
+    #     tool: 'pytest'
+    #     output-file-path: client_sdks/python/output.json
+    #     github-token: ${{ inputs.github-token }}
+    #     comment-always: true
+    #     auto-push: true
+    #     summary-always: true
