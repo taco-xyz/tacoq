@@ -1,0 +1,76 @@
+name: 'Python SDK Test Steps'
+description: 'Runs tests for the Python SDK'
+
+inputs:
+  github-token:
+    description: 'GitHub token for benchmark uploads'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+
+    # =================================================
+    # Setup
+    # =================================================
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
+
+    - name: Install UV
+      shell: bash
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd client_sdks/python
+        uv sync --dev
+
+    # =================================================
+    # Tests
+    # We run all tests except benchmarks
+    # =================================================
+
+    - name: Run tests
+      shell: bash
+      env:
+        MANAGER_TEST_URL: http://localhost:3000
+        BROKER_TEST_URL: amqp://user:password@localhost:5672
+      run: |
+        cd client_sdks/python
+        uv run pytest -m "not bench"
+
+    # =================================================
+    # Benchmarks
+    # =================================================
+
+    # - name: Create gh-pages branch if missing
+    #   shell: bash
+    #   run: |
+    #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
+    #     git config --global user.name "github-actions[bot]"
+    #     if ! git show-ref --quiet refs/remotes/origin/gh-pages; then
+    #       git checkout --orphan gh-pages
+    #       git rm -rf .
+    #       git commit --allow-empty -m "Initial gh-pages commit"
+    #       git remote set-url origin "https://x-access-token:${{ inputs.github-token }}@github.com/$GITHUB_REPOSITORY"
+    #       git push origin gh-pages
+    #       git checkout -
+    #     fi
+
+    - name: Run benchmarks
+      shell: bash
+      run: |
+        cd client_sdks/python
+        uv run pytest -m "bench" --benchmark-json output.json
+
+    - name: Store benchmark result
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: 'pytest'
+        output-file-path: client_sdks/python/output.json
+        github-token: ${{ inputs.github-token }}
+        comment-always: true
+        auto-push: true
