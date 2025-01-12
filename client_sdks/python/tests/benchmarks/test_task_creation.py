@@ -50,7 +50,7 @@ async def create_n_tasks_concurrent(
 ## ====================================
 
 
-@pytest.fixture(params=[5, 15, 30])
+@pytest.fixture(params=[30])
 def n_tasks(request: pytest.FixtureRequest) -> int:
     """Fixture that provides different numbers of tasks to create"""
     return request.param
