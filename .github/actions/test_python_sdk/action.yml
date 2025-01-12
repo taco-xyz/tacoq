@@ -41,7 +41,13 @@ runs:
     # Benchmarks
     # =================================================
 
-    - name: Run benchmark
+    - name: Create benchmark output file
+      shell: bash
+      run: |
+        cd client_sdks/python
+        touch output.json
+
+    - name: Run benchmarks
       shell: bash
       run: |
         cd client_sdks/python
