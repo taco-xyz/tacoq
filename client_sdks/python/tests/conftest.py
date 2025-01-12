@@ -1,6 +1,6 @@
-from manager import ManagerClient, ManagerConfig, ManagerStates
-from worker import WorkerApplication, WorkerApplicationConfig
-from broker import BrokerConfig
+from src.manager import ManagerClient, ManagerConfig, ManagerStates
+from src.worker import WorkerApplication, WorkerApplicationConfig
+from src.broker import BrokerConfig
 import pytest
 
 import os
