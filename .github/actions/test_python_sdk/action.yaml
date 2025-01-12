@@ -74,3 +74,4 @@ runs:
         github-token: ${{ inputs.github-token }}
         comment-always: true
         auto-push: false
+        summary-always: true
