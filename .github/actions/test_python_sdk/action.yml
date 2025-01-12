@@ -1,0 +1,28 @@
+name: 'Python SDK Test Steps'
+description: 'Runs tests for the Python SDK'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.x"
+
+    - name: Install UV
+      shell: bash
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd client_sdks/python
+        uv sync --dev
+
+    - name: Run tests
+      shell: bash
+      env:
+        MANAGER_TEST_URL: http://localhost:3000
+        BROKER_TEST_URL: amqp://user:password@localhost:5672
+      run: |
+        cd client_sdks/python
+        uv run pytest 
