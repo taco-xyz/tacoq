@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use mockall::automock;
+use std::fmt::Debug;
 
 pub trait MessageHandler: Send {
     fn handle(&self, message: Vec<u8>) -> Result<(), Box<dyn std::error::Error>>;
@@ -7,7 +8,7 @@ pub trait MessageHandler: Send {
 
 #[automock]
 #[async_trait]
-pub trait BrokerCore: Send + Sync {
+pub trait BrokerCore: Send + Sync + Debug {
     async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>>;
 
     async fn register_queue(
