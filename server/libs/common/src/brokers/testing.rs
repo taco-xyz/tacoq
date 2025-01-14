@@ -31,27 +31,27 @@ pub fn setup_worker_kinds(task_kinds: Vec<TaskKind>) -> Vec<WorkerKind> {
     ]
 }
 
-pub fn setup_workers(worker_kinds: Vec<WorkerKind>) -> Vec<Worker> {
+pub fn setup_workers(task_kinds: Vec<TaskKind>) -> Vec<Worker> {
     vec![
         Worker {
             id: Uuid::new_v4(),
             name: "worker1".to_string(),
             registered_at: OffsetDateTime::now_utc(),
-            worker_kind: worker_kinds[0].clone(),
+            task_kind: vec![task_kinds[0].clone()],
             active: true,
         },
         Worker {
             id: Uuid::new_v4(),
             name: "worker2".to_string(),
             registered_at: OffsetDateTime::now_utc(),
-            worker_kind: worker_kinds[1].clone(),
+            task_kind: vec![task_kinds[1].clone()],
             active: true,
         },
         Worker {
             id: Uuid::new_v4(),
             name: "worker3".to_string(),
             registered_at: OffsetDateTime::now_utc(),
-            worker_kind: worker_kinds[1].clone(),
+            task_kind: task_kinds,
             active: true,
         },
     ]

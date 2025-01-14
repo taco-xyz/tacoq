@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use std::sync::Arc;
 
-use crate::{TaskInstance, WorkerKind};
+use crate::TaskInstance;
 
 async fn create_broker_connection(
     uri: &str,
@@ -21,6 +21,9 @@ async fn create_broker_connection(
     }
 }
 
+pub struct PublisherQueue;
+pub struct ConsumerQueue;
+
 // Broker can be either a publisher or a consumer
 #[derive(Clone, Debug)]
 pub struct Broker {
@@ -31,45 +34,20 @@ pub struct Broker {
 }
 
 impl Broker {
-    pub async fn new(url: &str, exchange: Option<String>, queue: Option<String>) -> Self {
-        let broker = create_broker_connection(url).await.unwrap();
-        Self {
+    pub async fn new(
+        url: &str,
+        exchange: Option<String>,
+        queue: Option<String>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let broker = create_broker_connection(url).await?;
+
+        Ok(Self {
             url: url.to_string(),
             broker,
             exchange,
             queue,
-        }
+        })
     }
-
-    // pub async fn register_worker(
-    //     &mut self,
-    //     worker: Worker,
-    // ) -> Result<(), Box<dyn std::error::Error>> {
-    //     // Create a unique queue for this worker using its ID
-    //     let worker_queue = worker.id.to_string();
-
-    //     self.broker
-    //         .register_queue(Self::SUBMISSION_EXCHANGE, &worker_queue, &worker_queue)
-    //         .await?;
-
-    //     self.workers.push(worker);
-    //     Ok(())
-    // }
-
-    // pub async fn remove_worker(
-    //     &mut self,
-    //     worker_id: &Uuid,
-    // ) -> Result<(), Box<dyn std::error::Error>> {
-    //     let index: usize = self
-    //         .workers
-    //         .iter()
-    //         .position(|worker| worker.id == *worker_id)
-    //         .unwrap();
-    //     self.workers.remove(index);
-    //     self.broker.delete_queue(&worker_id.to_string()).await?;
-
-    //     Ok(())
-    // }
 
     pub async fn setup(&self) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(exchange) = &self.exchange {
@@ -80,6 +58,18 @@ impl Broker {
             self.broker
                 .register_queue(self.exchange.as_ref().unwrap(), queue, &queue)
                 .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn teardown(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(queue) = &self.queue {
+            self.broker.delete_queue(queue).await?;
+        }
+
+        if let Some(exchange) = &self.exchange {
+            self.broker.delete_exchange(exchange).await?;
         }
 
         Ok(())
@@ -96,20 +86,8 @@ impl Broker {
 
     pub async fn publish(
         &mut self,
-        worker_kind: &WorkerKind,
         task: &TaskInstance,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        // let worker = (0..self.workers.len())
-        //     // Cycle the workers list in a round robin fashion
-        //     .map(|_| {
-        //         let cur_worker = &self.workers[self.workers_index];
-        //         self.workers_index = (self.workers_index + 1) % self.workers.len();
-        //         cur_worker
-        //     })
-        //     // Find the first worker that can handle the task
-        //     .find(|cur_worker| cur_worker.can_handle(task))
-        //     .ok_or("No available worker")?;
-
         // Convert input data to bytes
         let payload = serde_json::to_vec(&task.input_data)?;
 
@@ -117,14 +95,15 @@ impl Broker {
         self.broker
             .publish_message(
                 self.exchange.as_ref().unwrap(),
-                &worker_kind.id.to_string(),
+                &task.id.to_string(), // TODO: Change this to worker kind in the future
                 &payload,
                 &task.id.to_string(),
                 &task.task_kind.name,
             )
             .await?;
 
-        Ok(worker_kind.id)
+        // TODO: Change this return type to worker_kind something
+        Ok(task.id)
     }
 }
 
@@ -146,26 +125,27 @@ mod test {
     #[tokio::test]
     async fn test_broker_publish() {
         let task_kinds = setup_task_kinds();
-        let worker_kinds = setup_worker_kinds(task_kinds.clone());
+        // let worker_kinds = setup_worker_kinds(task_kinds.clone());
         let tasks = setup_tasks(task_kinds.clone());
 
         let mut broker = get_mock_broker();
 
         for task in tasks {
             // Use the first worker kind that can handle this task
-            let suitable_worker_kind = worker_kinds
-                .iter()
-                .find(|wk| wk.task_kinds.contains(&task.task_kind))
-                .unwrap();
-            broker.publish(suitable_worker_kind, &task).await.unwrap();
+            // let suitable_worker_kind = worker_kinds
+            //     .iter()
+            //     .find(|wk| wk.task_kinds.contains(&task.task_kind))
+            //     .unwrap();
+
+            broker.publish(&task).await.unwrap();
         }
     }
 
     #[tokio::test]
     async fn test_no_available_worker_kind() {
         let mut broker = get_mock_broker();
-        let task_kinds = setup_task_kinds();
-        let worker_kinds = setup_worker_kinds(task_kinds.clone());
+        // let task_kinds = setup_task_kinds();
+        // let worker_kinds = setup_worker_kinds(task_kinds.clone());
 
         let task = TaskInstance {
             id: Uuid::new_v4(),
@@ -178,7 +158,7 @@ mod test {
         };
 
         // Try to publish with a worker kind that can't handle the task
-        let result = broker.publish(&worker_kinds[0], &task).await;
+        let result = broker.publish(&task).await;
         // The publish should succeed even if the worker kind can't handle the task
         assert!(result.is_ok());
     }
@@ -196,7 +176,7 @@ mod test {
             .iter()
             .filter(|t| worker_kind.task_kinds.contains(&t.task_kind))
         {
-            let result = broker.publish(worker_kind, task).await;
+            let result = broker.publish(task).await;
             assert!(result.is_ok());
         }
     }

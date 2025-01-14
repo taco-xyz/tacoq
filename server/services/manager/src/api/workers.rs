@@ -83,21 +83,6 @@ async fn register_worker(
             )
         })?;
 
-    // Register worker in broker
-    state
-        .broker
-        .write()
-        .await
-        .register_worker(worker.clone())
-        .await
-        .map_err(|e| {
-            error!("Failed to register worker in broker: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to register worker in broker: {}", e),
-            )
-        })?;
-
     Ok((StatusCode::CREATED, Json(worker)))
 }
 
@@ -145,21 +130,6 @@ async fn unregister_worker(
                     format!("Failed to deactivate worker: {}", e),
                 )
             }
-        })?;
-
-    // Unregister from broker
-    state
-        .broker
-        .write()
-        .await
-        .remove_worker(&id)
-        .await
-        .map_err(|e| {
-            error!("Failed to unregister worker from broker: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to unregister worker from broker: {}", e),
-            )
         })?;
 
     Ok(StatusCode::OK)
@@ -213,9 +183,8 @@ mod test {
     // Test unregistering an existing worker
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn test_unregister_worker_success(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
 
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);

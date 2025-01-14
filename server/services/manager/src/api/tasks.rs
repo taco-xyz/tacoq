@@ -97,7 +97,7 @@ struct CreateTaskInput {
     tag = "tasks"
 )]
 async fn create_task(
-    State(state): State<AppState>,
+    State(mut state): State<AppState>,
     Json(task_input): Json<CreateTaskInput>,
 ) -> Result<(StatusCode, Json<TaskInstance>), (StatusCode, String)> {
     info!("Creating task with kind: {:?}", task_input.task_kind_name);
@@ -131,19 +131,13 @@ async fn create_task(
     // Send the task to the worker queue
     // We need to lock the broker because we're
     // sharing it between threads
-    let worker_id = state
-        .broker
-        .write()
-        .await
-        .publish(&task)
-        .await
-        .map_err(|e| {
-            error!("Failed to publish task to broker: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to publish task to broker: {}", e),
-            )
-        })?;
+    let worker_id = state.broker.publish(&task).await.map_err(|e| {
+        error!("Failed to publish task to broker: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to publish task to broker: {}", e),
+        )
+    })?;
 
     // Assign the task the worker
     state
@@ -396,11 +390,7 @@ mod test {
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_fails_with_mismatched_worker_task_kind(db_pools: PgPool) {
         let test_worker = get_test_worker(&["different_task"]);
-        let mut broker = get_mock_broker();
-        broker
-            .register_worker(get_test_worker(&["different_task"]))
-            .await
-            .unwrap();
+        let broker = get_mock_broker();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -425,9 +415,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_succesfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -468,9 +457,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_fails_with_invalid_status(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -498,9 +486,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_successfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -545,9 +532,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_result_successfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -578,9 +564,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_error_successfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo

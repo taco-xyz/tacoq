@@ -1,15 +1,15 @@
 mod api;
 mod config;
+mod constants;
 mod repo;
 mod testing;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use common::brokers::Broker;
 use sqlx::PgPool;
-use tokio::sync::RwLock;
 use tracing::{info, info_span};
 
 use config::Config;
@@ -23,7 +23,7 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Arc<RwLock<Broker>>,
+    pub broker: Broker,
 }
 
 /// Creates database connection pools
@@ -41,9 +41,13 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 ///
 /// * `config` - The configuration for the broker   
 async fn setup_broker(config: &Config) -> Broker {
-    Broker::new(&config.broker_addr)
-        .await
-        .expect("Failed to initialize broker")
+    Broker::new(
+        &config.broker_addr,
+        None,
+        Some(String::from(constants::TASK_INPUT_QUEUE)),
+    )
+    .await
+    .expect("Failed to initialize broker")
 }
 
 /// Initializes the application state based on the given configuration
@@ -63,7 +67,7 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
         task_repository,
         task_kind_repository,
         worker_repository,
-        broker: Arc::new(RwLock::new(broker)),
+        broker: broker,
     }
 }
 
