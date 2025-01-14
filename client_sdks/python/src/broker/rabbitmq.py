@@ -21,26 +21,17 @@ from aio_pika.abc import (
 TASK_ASSIGNMENT_EXCHANGE = "task_assignment_worker_{worker_kind}_exchange"
 """ Exchange for task assignments (direct type). """
 
-
 TASK_ASSIGNMENT_MANAGER_QUEUE = "task_assignment_manager_queue"
 """ Queue for task assignments for the manager. """
 
 TASK_ASSIGNMENT_WORKER_QUEUE = "task_assignment_worker_{worker_kind}_queue"
 """ Queue for task assignments for a worker kind. """
 
-# NOTE: The routing key of a task assignment depends on the worker kind
-# because there is one queue per worker kind, shared by all workers of
-# that kind.
-
 TASK_RESULT_EXCHANGE = "task_result_exchange"
 """ Exchange for task results. """
 
 TASK_RESULT_QUEUE = "task_result_queue"
 """ Queue for task results. """
-
-TASK_RESULT_ROUTING_KEY = "task_result_routing_key"
-""" Routing key for task results. """
-
 
 # =========================================
 # Errors
@@ -135,17 +126,14 @@ class PublisherClient(BaseClient):
     Uses a fanout exchange to send tasks to both the manager queue
     and the appropriate worker kind queue."""
 
-    _worker_kind: str
-    """ The kind of worker this publisher targets. """
+    _exchanges: dict[str, AbstractExchange] = {}
+    """ Map of worker kind to fanout exchanges for task assignments """
 
-    _worker_task_queue: Optional[AbstractQueue] = None
-    """ The queue for the target worker kind. """
+    _worker_task_queues: dict[str, AbstractQueue] = {}
+    """ Map of worker kind to task queues """
 
     _manager_task_queue: Optional[AbstractQueue] = None
-    """ The queue for the manager to track tasks. """
-
-    _exchange: Optional[AbstractExchange] = None
-    """ The fanout exchange for task assignments. """
+    """ The queue for the manager to track tasks """
 
     async def connect(self) -> None:
         await super().connect()
@@ -155,42 +143,53 @@ class PublisherClient(BaseClient):
                 "Tried to connect to RabbitMQ, but channel was not established."
             )
 
-        # Create the fanout exchange for task assignments
-        exchange = await self._channel.declare_exchange(
-            TASK_ASSIGNMENT_EXCHANGE,
-            type="fanout",
-            durable=self.config.durable,
-            auto_delete=self.config.auto_delete,
-        )
-
-        # Create queues for both manager and worker kind
+        # Create manager queue only once
         self._manager_task_queue = await self._channel.declare_queue(
             TASK_ASSIGNMENT_MANAGER_QUEUE,
             durable=self.config.durable,
             auto_delete=self.config.auto_delete,
         )
-        await self._manager_task_queue.bind(exchange)
-
-        self._worker_task_queue = await self._channel.declare_queue(
-            TASK_ASSIGNMENT_WORKER_QUEUE.format(worker_kind=self._worker_kind),
-            durable=self.config.durable,
-            auto_delete=self.config.auto_delete,
-        )
-        await self._worker_task_queue.bind(exchange)
 
     async def publish_task(self, task: Task) -> None:
         """Publish a task to both manager and worker queues via fanout exchange."""
-        if self._exchange is None:
-            raise ExchangeNotDeclaredError(
-                "Tried to publish task, but exchange was not declared."
+        worker_kind = task.task_kind.worker_kind
+
+        if self._channel is None:
+            raise NoChannelError(
+                "Tried to connect to RabbitMQ, but channel was not established."
             )
+
+        # Create exchange for this worker kind if needed
+        if worker_kind not in self._exchanges:
+            exchange = await self._channel.declare_exchange(
+                f"{TASK_ASSIGNMENT_EXCHANGE}.{worker_kind}",
+                type="fanout",
+                durable=self.config.durable,
+                auto_delete=self.config.auto_delete,
+            )
+            self._exchanges[worker_kind] = exchange
+
+            # Create worker queue and bind to exchange
+            worker_queue = await self._channel.declare_queue(
+                TASK_ASSIGNMENT_WORKER_QUEUE.format(worker_kind=worker_kind),
+                durable=self.config.durable,
+                auto_delete=self.config.auto_delete,
+            )
+            await worker_queue.bind(exchange)
+            self._worker_task_queues[worker_kind] = worker_queue
+
+            # Bind manager queue to this exchange
+            if self._manager_task_queue is not None:
+                await self._manager_task_queue.bind(exchange)
 
         message = Message(
             body=task.model_dump_json().encode(),
             headers={"task_id": str(task.id)},
         )
 
-        await self._exchange.publish(message, "")  # Empty routing key for fanout
+        await self._exchanges[worker_kind].publish(
+            message, ""
+        )  # Empty routing key for fanout
 
 
 ## =========================================
@@ -276,4 +275,6 @@ class WorkerClient(BaseClient):
             headers={"task_id": str(task_id)},
         )
 
-        await self._result_exchange.publish(message, TASK_RESULT_ROUTING_KEY)
+        await self._result_exchange.publish(
+            message, TASK_RESULT_EXCHANGE
+        )  # Empty routing key cause it's just one queue
