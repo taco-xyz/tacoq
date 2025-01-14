@@ -5,8 +5,14 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-TaskInput = Any  # Maps to Option<serde_json::Value>
-TaskOutput = Any  # Maps to Option<serde_json::Value>
+
+TaskInput = Any
+""" Task input data defined by the user - they can use whatever format they want, but
+they must handle the serialization and deserialization of the data themselves. """
+
+TaskOutput = Any
+""" Task output data defined by the user - they can use whatever format they want, but
+they must handle the serialization and deserialization of the data themselves. """
 
 
 class TaskStatus(str, Enum):
@@ -26,7 +32,10 @@ class TaskKind(BaseModel):
     """A type of task. Requires both the type of worker that executes it and the name of the task."""
 
     worker_kind: str
+    """ The kind of worker that executes the task. """
+
     name: str
+    """ The name of the task. """
 
     def __str__(self) -> str:
         return f"{self.worker_kind}:{self.name}"
@@ -79,4 +88,6 @@ class TaskInstance(BaseModel):
 
     @property
     def has_finished(self) -> bool:
+        """Whether the task has finished."""
+
         return self.status == TaskStatus.COMPLETED
