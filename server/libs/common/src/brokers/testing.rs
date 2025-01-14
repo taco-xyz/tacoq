@@ -9,9 +9,10 @@ use uuid::Uuid;
 /// Creates and returns a broker with a mock core
 pub fn get_mock_broker() -> Broker {
     Broker {
-        uri: "mock".to_string(),
+        url: "mock".to_string(),
         broker: Arc::new(MockBrokerCore::new()),
-        submission_exchange: "task_submission",
+        exchange: None,
+        queue: None,
     }
 }
 
