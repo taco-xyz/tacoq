@@ -1,168 +1,99 @@
 from enum import Enum
 from typing import Optional
-from dataclasses import dataclass
-
 from uuid import UUID
-import aiohttp as aio
+
+from pydantic import BaseModel
+from aiohttp import ClientSession, ClientConnectorError
+from aiohttp_retry import RetryClient, RetryOptionsBase
 
 from manager.config import ManagerConfig
-from models.task import (
-    TaskStatus,
-    TaskInput,
-    TaskOutput,
-    TaskInstance,
-)
-
-WORKER_PATH = "/workers"
-""" Base path for worker registration and unregistration endpoints."""
+from models.task import Task
 
 TASK_PATH = "/tasks"
 """ Base path for task CRUD operations."""
 
+HEALTH_PATH = "/health"
+""" Base path for health checking."""
+
 
 class ManagerStates(str, Enum):
-    """Possible states of the manager.
-
-    ### States
-    - `HEALTHY`: The manager is healthy.
-    - `UNHEALTHY`: The manager is unhealthy.
-    - `NOT_REACHABLE`: The manager is not reachable.
-    - `UNKNOWN`: The manager is in an unknown state.
-    """
+    """Possible states of the manager. Used for health checking during tests."""
 
     HEALTHY = "healthy"
+    """ The manager is healthy. """
+
     UNHEALTHY = "unhealthy"
+    """ The manager is unhealthy. """
+
     NOT_REACHABLE = "not_reachable"
+    """ The manager is not reachable. """
+
     UNKNOWN = "unknown"
+    """ The manager is in an unknown state. Schrödinger's Manager?"""
 
 
-@dataclass
-class ManagerClient:
-    """Abstracts the manager API for worker registration and unregistration."""
+class ManagerClient(BaseModel):
+    """Abstracts the manager API task retrieval."""
 
     config: ManagerConfig
 
     # Check whether the manager is healthy
 
-    async def check_health(self) -> ManagerStates:
+    async def check_health(
+        self, override_retry_options: Optional[RetryOptionsBase] = None
+    ) -> ManagerStates:
         """Check whether the manager is healthy. This is currently used before
         tests are run to notify the user if the manager is not healthy or even
         running at all.
 
+        ### Parameters
+        - `override_retry_options`: Retry options to override the default ones
+
         ### Returns
         - `ManagerStates`: Whether the manager is healthy.
         """
+
         try:
-            async with aio.ClientSession(timeout=self.config.timeout) as session:
-                async with session.get(f"{self.config.url}/health") as resp:
+            async with ClientSession() as session:
+                retry_client = RetryClient(
+                    session,
+                    retry_options=override_retry_options or self.config.retry_options,
+                )
+                async with retry_client.get(
+                    f"{self.config.base_url}{HEALTH_PATH}"
+                ) as resp:
                     match resp.status:
                         case 200:
                             return ManagerStates.HEALTHY
-                        case 503:
-                            return ManagerStates.UNHEALTHY
                         case _:
-                            return ManagerStates.UNHEALTHY
-        except aio.ClientConnectorError:
+                            return ManagerStates.UNKNOWN
+        except ClientConnectorError:
             return ManagerStates.NOT_REACHABLE
 
     # Task Get/Set Operations
 
-    async def get_task(self, task_id: UUID) -> TaskInstance:
+    async def get_task(
+        self, task_id: UUID, override_retry_options: Optional[RetryOptionsBase] = None
+    ) -> Task:
         """Get a task by its UUID.
 
         ### Parameters
         - `task_id`: UUID of the task to retrieve
+        - `override_retry_options`: Retry options to override the default ones
 
         ### Returns
-        - `TaskInstance`: The task details
+        - `Task`: The task details
         """
-        async with aio.ClientSession(timeout=self.config.timeout) as session:
-            async with session.get(f"{self.config.url}{TASK_PATH}/{task_id}") as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                return TaskInstance.from_dict(data)
 
-    async def publish_task(
-        self, task_kind_name: str, input_data: Optional[TaskInput] = None
-    ) -> TaskInstance:
-        """Create a new task.
+        async with ClientSession() as session:
+            retry_client = RetryClient(
+                session,
+                retry_options=override_retry_options or self.config.retry_options,
+            )
 
-        ### Parameters
-        - `task_kind_name`: Name of the task kind
-        - `input_data`: Optional input data for the task
-
-        ### Returns
-        - `TaskInstance`: The created task details
-        """
-        async with aio.ClientSession(timeout=self.config.timeout) as session:
-            async with session.post(
-                f"{self.config.url}{TASK_PATH}",
-                json={"task_kind_name": task_kind_name, "input_data": input_data},
+            async with retry_client.get(
+                f"{self.config.base_url}{TASK_PATH}/{task_id}"
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
-                return TaskInstance.from_dict(data)
-
-    async def update_task_status(self, task_id: UUID, status: TaskStatus) -> None:
-        """Update the status of a task.
-
-        ### Parameters
-        - `task_id`: UUID of the task to update
-        - `status`: New status for the task
-        """
-        async with aio.ClientSession(timeout=self.config.timeout) as session:
-            async with session.put(
-                f"{self.config.url}{TASK_PATH}/{task_id}/status", json=status.value
-            ) as resp:
-                resp.raise_for_status()
-
-    async def update_task_result(
-        self, task_id: UUID, data: TaskOutput, is_error: bool = False
-    ) -> None:
-        """Submit results or error for a task.
-
-        ### Parameters
-        - `task_id`: UUID of the task to update
-        - `data`: Result data or error message
-        - `is_error`: Whether this is an error result
-        """
-        async with aio.ClientSession(timeout=self.config.timeout) as session:
-            async with session.put(
-                f"{self.config.url}{TASK_PATH}/{task_id}/result",
-                json={"data": data, "is_error": is_error},
-            ) as resp:
-                resp.raise_for_status()
-
-    # Worker registration and unregistration
-
-    async def register_worker(self, name: str, task_kinds: list[str]) -> UUID:
-        """Register a new worker with the manager service. Called on worker startup.
-
-        ### Parameters
-        - `name`: The name of the worker.
-        - `task_kinds`: The task kinds that the worker can handle.
-
-        ### Returns
-        - `UUID`: The ID of the registered worker.
-        """
-
-        async with aio.ClientSession(timeout=self.config.timeout) as session:
-            async with session.post(
-                f"{self.config.url}{WORKER_PATH}",
-                json={"name": name, "task_kinds": task_kinds},
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                return UUID(data["id"])
-
-    async def unregister_worker(self, worker_id: UUID) -> None:
-        """Unregister an existing worker. Called on graceful worker shutdown.
-
-        ### Parameters
-        - `worker_id`: The ID of the worker to unregister.
-        """
-        async with aio.ClientSession(timeout=self.config.timeout) as session:
-            async with session.delete(
-                f"{self.config.url}{WORKER_PATH}/{worker_id}"
-            ) as resp:
-                resp.raise_for_status()
+                return Task(**data)
