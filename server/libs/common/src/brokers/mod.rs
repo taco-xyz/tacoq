@@ -86,6 +86,7 @@ impl Broker {
 
     pub async fn publish(
         &mut self,
+        worker_kind: &WorkerKind,
         task: &TaskInstance,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
         // Convert input data to bytes
