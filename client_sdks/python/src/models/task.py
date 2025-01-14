@@ -86,7 +86,7 @@ class TaskResult(BaseModel):
 class Task(BaseModel):
     """Tasks are sent to workers to be executed with a specific payload.
     Workers are eligible for receiving certain tasks depending on their
-    list of capabilities.
+    kind.
     """
 
     id: UUID = Field(default_factory=uuid.uuid4)
