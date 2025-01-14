@@ -1,16 +1,18 @@
-from worker import WorkerApplication
-from manager import ManagerClient
+# pyright: reportPrivateUsage=false, reportOptionalMemberAccess=false
+
+from src.worker import WorkerApplication
+from src.manager import ManagerClient
 import pytest
 from uuid import uuid4
-from builtins import anext
+from typing import Any
 
 
 # Test Task Definitions. One will fail and one will complete successfully.
-async def failing_task(input_data):
+async def failing_task(input_data: Any):
     raise Exception("Task failed")
 
 
-async def successful_task(input_data):
+async def successful_task(input_data: Any) -> Any:
     return input_data
 
 
@@ -30,18 +32,23 @@ async def test_worker_startup_and_task_success(
         input_data = {"test": "data"}
         await manager_client.publish_task(TEST_TASK_KIND, input_data)
 
-        data, task_id, task_kind = await anext(
-            worker_application._broker_client.listen()
-        )
-        assert input_data == data
+        async for (
+            data,
+            task_id,
+            task_kind,
+        ) in worker_application._broker_client.listen():
+            assert input_data == data
 
-        # This should execute the task with the given function
-        await worker_application._execute_task(task_kind, data, task_id)
+            # This should execute the task with the given function
+            await worker_application._execute_task(task_kind, data, task_id)
 
-        # # Process task successfully
-        task = await manager_client.get_task(task_id)
-        assert task.has_completed
-        assert task.result.data == input_data
+            # # Process task successfully
+            task = await manager_client.get_task(task_id)
+            assert task.has_completed
+            assert task.result is not None
+            assert task.result.data == input_data
+
+            break
 
     finally:
         await worker_application._unregister_worker()
@@ -63,18 +70,22 @@ async def test_worker_task_failure_handling(
         input_data = {"test": "data"}
         await manager_client.publish_task(TEST_TASK_KIND, input_data)
 
-        data, task_id, task_kind = await anext(
-            worker_application._broker_client.listen()
-        )
-        assert input_data == data
+        async for (
+            data,
+            task_id,
+            task_kind,
+        ) in worker_application._broker_client.listen():
+            assert input_data == data
 
-        # This should execute the task with the given function
-        await worker_application._execute_task(task_kind, data, task_id)
+            # This should execute the task with the given function
+            await worker_application._execute_task(task_kind, data, task_id)
 
-        # Check that the task failed
-        task = await manager_client.get_task(task_id)
-        assert task.has_failed
-        assert "Task failed" in str(task.result.data)
+            # Check that the task failed
+            task = await manager_client.get_task(task_id)
+            assert task.has_failed
+            assert "Task failed" in str(task.result.data)
+
+            break
 
     finally:
         await worker_application._unregister_worker()

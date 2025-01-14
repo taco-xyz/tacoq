@@ -18,10 +18,10 @@ use crate::{
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/:id", get(get_task_by_id))
+        .route("/{id}", get(get_task_by_id))
         .route("/", post(create_task))
-        .route("/:id/status", put(update_task_status))
-        .route("/:id/result", put(update_task_result))
+        .route("/{id}/status", put(update_task_status))
+        .route("/{id}/result", put(update_task_result))
 }
 
 /// Get a task by its UUID
@@ -34,7 +34,7 @@ pub fn routes() -> Router<AppState> {
 #[utoipa::path(
     get,
     description = "Get a task by its UUID",
-    path = "/tasks/:id",
+    path = "/tasks/{id}",
     params(
         ("id" = Uuid, Path, description = "Task ID to get")
     ),
