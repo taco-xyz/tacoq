@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskInstanceRepository};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PgTaskInstanceRepository {
     core: PgRepositoryCore,
 }
@@ -37,7 +37,7 @@ impl TaskInstanceRepository for PgTaskInstanceRepository {
             task_id,
             task_kind_id,
             input_data,
-            "pending",
+            "pending", // Change this into an enum/constant
             None::<Uuid>,
         )
         .fetch_one(&self.core.pool)

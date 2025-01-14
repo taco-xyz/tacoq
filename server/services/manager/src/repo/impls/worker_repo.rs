@@ -93,6 +93,7 @@ impl WorkerRepository for PgWorkerRepository {
             id,
             name,
             registered_at: row.registered_at,
+            task_kind: task_kinds.clone(),
             active: row.active,
         })
     }
