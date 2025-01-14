@@ -1,5 +1,6 @@
-use crate::brokers::core::BrokerCore;
+use crate::brokers::core::{BrokerCore, MessageHandler};
 use async_trait::async_trait;
+use futures::StreamExt;
 use lapin::{
     options::*,
     types::{AMQPValue, FieldTable},
@@ -97,6 +98,35 @@ impl BrokerCore for RabbitBroker {
                     .with_headers(headers),
             )
             .await?;
+
+        Ok(())
+    }
+
+    async fn consume_messages(
+        &self,
+        queue: &str,
+        handler: Box<dyn MessageHandler>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut consumer = self
+            .channel
+            .basic_consume(
+                queue,
+                "manager",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+
+        while let Some(delivery) = consumer.next().await {
+            // TODO: Handle error better
+            let message = delivery.expect(&format!("Error in consumer {}", queue));
+
+            let payload = message.data;
+            handler.handle(payload)?;
+            self.channel
+                .basic_ack(message.delivery_tag, BasicAckOptions::default())
+                .await?;
+        }
 
         Ok(())
     }
