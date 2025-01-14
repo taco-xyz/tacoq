@@ -1,70 +1,16 @@
-use crate::brokers::core::BrokerCore;
+use crate::brokers::core::MockBrokerCore;
 use crate::brokers::Broker;
-use crate::TaskKind;
 use crate::{TaskInstance, TaskStatus, Worker};
-use async_trait::async_trait;
-use sqlx::types::Uuid;
+use crate::{TaskKind, WorkerKind};
 use std::sync::Arc;
 use time::OffsetDateTime;
-
-/// Mock implementations for BrokerCore that does nothing
-#[derive(Clone)]
-pub struct MockBrokerCore;
-
-impl Default for MockBrokerCore {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl MockBrokerCore {
-    pub fn new() -> Self {
-        MockBrokerCore
-    }
-}
-
-#[async_trait]
-impl BrokerCore for MockBrokerCore {
-    async fn register_exchange(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn register_queue(
-        &self,
-        _: &str,
-        _: &str,
-        _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn delete_queue(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn delete_exchange(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn publish_message(
-        &self,
-        _: &str,
-        _: &str,
-        _: &[u8],
-        _: &str,
-        _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-}
+use uuid::Uuid;
 
 /// Creates and returns a broker with a mock core
 pub fn get_mock_broker() -> Broker {
     Broker {
         uri: "mock".to_string(),
         broker: Arc::new(MockBrokerCore::new()),
-        workers: Vec::new(),
-        workers_index: 0,
         submission_exchange: "task_submission",
     }
 }
@@ -76,27 +22,35 @@ pub fn setup_task_kinds() -> Vec<TaskKind> {
     ]
 }
 
-pub fn setup_workers(task_kinds: Vec<TaskKind>) -> Vec<Worker> {
+pub fn setup_worker_kinds(task_kinds: Vec<TaskKind>) -> Vec<WorkerKind> {
+    vec![
+        WorkerKind::new(vec![task_kinds[0].clone()]),
+        WorkerKind::new(vec![task_kinds[1].clone()]),
+        WorkerKind::new(task_kinds),
+    ]
+}
+
+pub fn setup_workers(worker_kinds: Vec<WorkerKind>) -> Vec<Worker> {
     vec![
         Worker {
             id: Uuid::new_v4(),
             name: "worker1".to_string(),
             registered_at: OffsetDateTime::now_utc(),
-            task_kind: vec![task_kinds[0].clone()],
+            worker_kind: worker_kinds[0].clone(),
             active: true,
         },
         Worker {
             id: Uuid::new_v4(),
             name: "worker2".to_string(),
             registered_at: OffsetDateTime::now_utc(),
-            task_kind: vec![task_kinds[1].clone()],
+            worker_kind: worker_kinds[1].clone(),
             active: true,
         },
         Worker {
             id: Uuid::new_v4(),
             name: "worker3".to_string(),
             registered_at: OffsetDateTime::now_utc(),
-            task_kind: task_kinds,
+            worker_kind: worker_kinds[1].clone(),
             active: true,
         },
     ]
