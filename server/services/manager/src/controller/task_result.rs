@@ -1,15 +1,16 @@
 use crate::repo::PgTaskInstanceRepository;
 use common::brokers::core::MessageHandler;
 use common::brokers::Broker;
+use tokio::sync::RwLock;
 
 use std::sync::Arc;
 
 // This file will create a rabbitmq consumer and a shared publisher with the application. This will read from the queue and publish on the rabbit queue
 
 #[derive(Clone, Debug)]
-struct TaskResultController {
-    consumer: Broker,       // This should be a reader broker class
-    publisher: Arc<Broker>, // shared amongst controllers
+pub struct TaskResultController {
+    consumer: Broker,               // This should be a reader broker class
+    publisher: Arc<RwLock<Broker>>, // shared amongst controllers
     task_repository: Arc<PgTaskInstanceRepository>, // Here maybe we should have a service to share logic publisher + task_repository
                                                     // TODO: check for other relevant repositories
 }
@@ -28,7 +29,7 @@ impl MessageHandler for Handler {
 impl TaskResultController {
     pub async fn new(
         broker_url: &str,
-        publisher: Arc<Broker>,
+        publisher: Arc<RwLock<Broker>>,
         task_repository: Arc<PgTaskInstanceRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let s: &str = "task_result";
@@ -47,6 +48,7 @@ impl TaskResultController {
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let handler = Handler;
 
+        self.consumer.setup().await?;
         self.consumer.consume(Box::new(handler)).await?;
 
         Ok(())

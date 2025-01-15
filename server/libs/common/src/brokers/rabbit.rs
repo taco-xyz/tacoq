@@ -40,7 +40,7 @@ impl BrokerCore for RabbitBroker {
 
     async fn register_queue(
         &self,
-        exchange: &str,
+        exchange: Option<String>,
         queue: &str,
         routing_key: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -48,15 +48,17 @@ impl BrokerCore for RabbitBroker {
             .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
             .await?;
 
-        self.channel
-            .queue_bind(
-                queue,
-                exchange,
-                routing_key,
-                QueueBindOptions::default(),
-                FieldTable::default(),
-            )
-            .await?;
+        if let Some(ex) = exchange {
+            self.channel
+                .queue_bind(
+                    queue,
+                    &ex,
+                    routing_key,
+                    QueueBindOptions::default(),
+                    FieldTable::default(),
+                )
+                .await?;
+        }
 
         Ok(())
     }
