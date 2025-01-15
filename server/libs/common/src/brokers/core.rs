@@ -1,14 +1,16 @@
 use async_trait::async_trait;
 use mockall::automock;
 use std::fmt::Debug;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
-pub trait MessageHandler: Send {
+pub trait MessageHandler: Send + Sync + 'static {
     fn handle(&self, message: Vec<u8>) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[automock]
 #[async_trait]
-pub trait BrokerCore: Send + Sync + Debug {
+pub trait BrokerCore: Send + Sync + Debug + 'static {
     async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>>;
 
     async fn register_queue(
@@ -35,5 +37,6 @@ pub trait BrokerCore: Send + Sync + Debug {
         &self,
         queue: &str,
         handler: Box<dyn MessageHandler>,
+        shutdown: Arc<AtomicBool>,
     ) -> Result<(), Box<dyn std::error::Error>>;
 }

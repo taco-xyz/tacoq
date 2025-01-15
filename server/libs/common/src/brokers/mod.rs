@@ -6,6 +6,7 @@ use core::{BrokerCore, MessageHandler};
 use rabbit::RabbitBroker;
 use uuid::Uuid;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use crate::TaskInstance;
@@ -31,6 +32,7 @@ pub struct Broker {
     pub broker: Arc<dyn BrokerCore>,
     pub exchange: Option<String>,
     pub queue: Option<String>,
+    shutdown: Arc<AtomicBool>,
 }
 
 impl Broker {
@@ -46,6 +48,7 @@ impl Broker {
             broker,
             exchange,
             queue,
+            shutdown: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -80,7 +83,7 @@ impl Broker {
         handler: Box<dyn MessageHandler>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         self.broker
-            .consume_messages(self.queue.as_ref().unwrap(), handler)
+            .consume_messages(self.queue.as_ref().unwrap(), handler, self.shutdown.clone())
             .await
     }
 
@@ -108,6 +111,8 @@ impl Broker {
     }
 
     pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.shutdown.store(true, Ordering::SeqCst);
+
         if let Some(queue) = &self.queue {
             self.broker.delete_queue(queue).await?;
         }

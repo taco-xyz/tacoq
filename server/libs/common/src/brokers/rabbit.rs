@@ -6,6 +6,10 @@ use lapin::{
     types::{AMQPValue, FieldTable},
     BasicProperties, Channel, Connection, ConnectionProperties, ExchangeKind,
 };
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 // use std::sync::Arc;
 
@@ -110,6 +114,7 @@ impl BrokerCore for RabbitBroker {
         &self,
         queue: &str,
         handler: Box<dyn MessageHandler>,
+        shutdown: Arc<AtomicBool>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut consumer = self
             .channel
@@ -122,9 +127,11 @@ impl BrokerCore for RabbitBroker {
             .await?;
 
         while let Some(delivery) = consumer.next().await {
-            // TODO: Handle error better
-            let message = delivery.expect(&format!("Error in consumer {}", queue));
+            if shutdown.load(Ordering::SeqCst) {
+                break;
+            }
 
+            let message = delivery.expect(&format!("Error in consumer {}", queue));
             let payload = message.data;
             handler.handle(payload)?;
             self.channel
