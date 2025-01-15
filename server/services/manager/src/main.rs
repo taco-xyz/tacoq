@@ -15,6 +15,9 @@ use tracing::{info, info_span};
 use config::Config;
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
 
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
 /// Represents the shared application state that can be accessed by all routes
 ///
 /// Contains all the repositories used for the application logic and the broker
@@ -23,7 +26,7 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Broker,
+    pub broker: Arc<RwLock<Broker>>,
 }
 
 /// Creates database connection pools
@@ -40,11 +43,18 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker   
-async fn setup_publisher_broker(config: &Config) -> Broker {
+async fn setup_publisher_broker(config: &Config) -> Arc<RwLock<Broker>> {
     // Add the constants here
-    Broker::new(&config.broker_addr, None, None)
+    Arc::new(RwLock::new(
+        Broker::new(
+            &config.broker_addr,
+            "task_output",
+            Some("task_output".to_string()),
+            None,
+        )
         .await
-        .expect("Failed to initialize publisher broker")
+        .expect("Failed to initialize publisher broker"),
+    ))
 }
 
 /// Initializes the application state based on the given configuration
@@ -53,7 +63,7 @@ async fn setup_publisher_broker(config: &Config) -> Broker {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
+async fn setup_app_state(db_pools: PgPool, broker: Arc<RwLock<Broker>>) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskInstanceRepository::new(core.clone());
@@ -76,7 +86,7 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
+async fn setup_app(db_pools: PgPool, broker: Arc<RwLock<Broker>>) -> Router {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
@@ -99,7 +109,7 @@ async fn main() {
     let db_pools = setup_db_pools(&config).await;
     info!("Database connection pools created");
 
-    let broker = setup_broker(&config).await;
+    let broker = setup_publisher_broker(&config).await;
     info!("Broker initialized");
 
     let app = setup_app(db_pools, broker).await;

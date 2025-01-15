@@ -18,10 +18,10 @@ use crate::{
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/:id", get(get_task_by_id))
+        .route("/{id}", get(get_task_by_id))
         .route("/", post(create_task))
-        .route("/:id/status", put(update_task_status))
-        .route("/:id/result", put(update_task_result))
+        .route("/{id}/status", put(update_task_status))
+        .route("/{id}/result", put(update_task_result))
 }
 
 /// Get a task by its UUID
@@ -34,7 +34,7 @@ pub fn routes() -> Router<AppState> {
 #[utoipa::path(
     get,
     description = "Get a task by its UUID",
-    path = "/tasks/:id",
+    path = "/tasks/{id}",
     params(
         ("id" = Uuid, Path, description = "Task ID to get")
     ),
@@ -580,7 +580,6 @@ mod test {
     async fn update_task_error_successfully(db_pools: PgPool) {
         let mut broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo

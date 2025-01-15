@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use std::sync::Arc;
 
-use crate::{TaskInstance, WorkerKind};
+use crate::TaskInstance;
 
 async fn create_broker_connection(
     uri: &str,
@@ -74,7 +74,6 @@ impl Broker {
 
     pub async fn publish(
         &mut self,
-        worker_kind: &WorkerKind,
         task: &TaskInstance,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
         // Convert input data to bytes
@@ -84,14 +83,14 @@ impl Broker {
         self.broker
             .publish_message(
                 self.exchange.as_ref().unwrap(),
-                &worker_kind.id.to_string(),
+                &task.id.to_string(),
                 &payload,
                 &task.id.to_string(),
                 &task.task_kind.name,
             )
             .await?;
 
-        Ok(worker_kind.id)
+        Ok(task.id)
     }
 }
 
@@ -113,26 +112,27 @@ mod test {
     #[tokio::test]
     async fn test_broker_publish() {
         let task_kinds = setup_task_kinds();
-        let worker_kinds = setup_worker_kinds(task_kinds.clone());
+        // let worker_kinds = setup_worker_kinds(task_kinds.clone());
         let tasks = setup_tasks(task_kinds.clone());
 
         let mut broker = get_mock_broker();
 
         for task in tasks {
             // Use the first worker kind that can handle this task
-            let suitable_worker_kind = worker_kinds
-                .iter()
-                .find(|wk| wk.task_kinds.contains(&task.task_kind))
-                .unwrap();
-            broker.publish(suitable_worker_kind, &task).await.unwrap();
+            // let suitable_worker_kind = worker_kinds
+            //     .iter()
+            //     .find(|wk| wk.task_kinds.contains(&task.task_kind))
+            //     .unwrap();
+
+            broker.publish(&task).await.unwrap();
         }
     }
 
     #[tokio::test]
     async fn test_no_available_worker_kind() {
         let mut broker = get_mock_broker();
-        let task_kinds = setup_task_kinds();
-        let worker_kinds = setup_worker_kinds(task_kinds.clone());
+        // let task_kinds = setup_task_kinds();
+        // let worker_kinds = setup_worker_kinds(task_kinds.clone());
 
         let task = TaskInstance {
             id: Uuid::new_v4(),
@@ -145,7 +145,7 @@ mod test {
         };
 
         // Try to publish with a worker kind that can't handle the task
-        let result = broker.publish(&worker_kinds[0], &task).await;
+        let result = broker.publish(&task).await;
         // The publish should succeed even if the worker kind can't handle the task
         assert!(result.is_ok());
     }
@@ -163,7 +163,7 @@ mod test {
             .iter()
             .filter(|t| worker_kind.task_kinds.contains(&t.task_kind))
         {
-            let result = broker.publish(worker_kind, task).await;
+            let result = broker.publish(task).await;
             assert!(result.is_ok());
         }
     }
