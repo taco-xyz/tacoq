@@ -38,7 +38,7 @@ impl Broker {
         exchange: Option<String>,
         queue: Option<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let broker = create_broker_connection(url).await.unwrap();
+        let broker = create_broker_connection(url).await?;
 
         Ok(Self {
             url: url.to_string(),
@@ -56,7 +56,7 @@ impl Broker {
 
         if let Some(queue) = &self.queue {
             self.broker
-                .register_queue(self.exchange.as_ref().unwrap(), queue, &queue)
+                .register_queue(self.exchange.clone(), queue, &queue)
                 .await?;
         }
 
@@ -79,7 +79,7 @@ impl Broker {
         // Convert input data to bytes
         let payload = serde_json::to_vec(&task.input_data)?;
 
-        // Use task type as exchange, worker ID as routing key
+        // TODO: Change this to use the worker kinds as routing keys
         self.broker
             .publish_message(
                 self.exchange.as_ref().unwrap(),

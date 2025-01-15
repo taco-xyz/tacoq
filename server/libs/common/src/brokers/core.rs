@@ -13,7 +13,7 @@ pub trait BrokerCore: Send + Sync + Debug {
 
     async fn register_queue(
         &self,
-        exchange: &str,
+        exchange: Option<String>,
         queue: &str,
         routing_key: &str,
     ) -> Result<(), Box<dyn std::error::Error>>;

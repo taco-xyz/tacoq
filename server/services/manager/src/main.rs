@@ -44,7 +44,6 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 ///
 /// * `config` - The configuration for the broker   
 async fn setup_publisher_broker(config: &Config) -> Arc<RwLock<Broker>> {
-    // Add the constants here
     Arc::new(RwLock::new(
         Broker::new(
             &config.broker_addr,
@@ -112,16 +111,56 @@ async fn main() {
     let broker = setup_publisher_broker(&config).await;
     info!("Broker initialized");
 
-    let app = setup_app(db_pools, broker).await;
+    let app = setup_app(db_pools.clone(), broker.clone()).await;
     info!("App created");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     info!("Listening on {}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    info!("Listener created");
+    // Create task repositories for controllers
+    let core = PgRepositoryCore::new(db_pools);
+    let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
+
+    // Initialize controllers
+    let task_input_controller = controller::task_input::TaskInputController::new(
+        &config.broker_addr,
+        broker.clone(),
+        task_repo.clone(),
+    )
+    .await
+    .expect("Failed to create task input controller");
+
+    let task_result_controller = controller::task_result::TaskResultController::new(
+        &config.broker_addr,
+        broker.clone(),
+        task_repo.clone(),
+    )
+    .await
+    .expect("Failed to create task result controller");
+
+    // Spawn all components
+    let input_handle = tokio::spawn(async move {
+        task_input_controller
+            .run()
+            .await
+            .expect("Task input controller failed");
+    });
+
+    let result_handle = tokio::spawn(async move {
+        task_result_controller
+            .run()
+            .await
+            .expect("Task result controller failed");
+    });
+
+    let server_handle = tokio::spawn(async move {
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        axum::serve(listener, app).await.unwrap()
+    });
 
     span.exit();
 
-    axum::serve(listener, app).await.unwrap();
+    // Wait for all components
+    tokio::try_join!(input_handle, result_handle, server_handle)
+        .expect("One of the components failed unexpectedly");
 }
