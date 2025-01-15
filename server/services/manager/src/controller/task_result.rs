@@ -41,4 +41,8 @@ impl TaskResultController {
             .await?;
         Ok(())
     }
+
+    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.consumer.cleanup().await
+    }
 }

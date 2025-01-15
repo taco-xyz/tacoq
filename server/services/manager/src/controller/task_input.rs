@@ -53,4 +53,11 @@ impl TaskInputController {
 
         Ok(())
     }
+
+    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Cleanup both consumer and publisher
+        self.consumer.cleanup().await?;
+        self.handler.publisher.cleanup().await?;
+        Ok(())
+    }
 }
