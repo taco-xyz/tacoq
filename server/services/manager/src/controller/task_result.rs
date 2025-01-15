@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 struct Handler {
-    task_repository: Arc<PgTaskInstanceRepository>,
+    _task_repository: Arc<PgTaskInstanceRepository>,
 }
 
 impl MessageHandler for Handler {
@@ -29,7 +29,9 @@ impl TaskResultController {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let s: &str = "task_result";
         let consumer = Broker::new(broker_url, s, None, Some(s.to_string())).await?;
-        let handler = Handler { task_repository };
+        let handler = Handler {
+            _task_repository: task_repository,
+        };
 
         Ok(Self { consumer, handler })
     }
