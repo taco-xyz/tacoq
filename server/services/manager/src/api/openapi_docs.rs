@@ -10,6 +10,8 @@ use crate::AppState;
     crate::api::tasks::create_task,
     crate::api::tasks::update_task_status,
     crate::api::tasks::update_task_result,
+    crate::api::workers::register_worker,
+    crate::api::workers::unregister_worker,
 ))]
 struct ApiDoc;
 

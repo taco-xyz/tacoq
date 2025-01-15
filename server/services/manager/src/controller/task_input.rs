@@ -7,8 +7,8 @@ use std::sync::Arc;
 #[derive(Clone, Debug)]
 struct Handler {
     publisher: Broker, // shared amongst controllers
-    task_repository: Arc<PgTaskInstanceRepository>, // Here maybe we should have a service to share logic publisher + task_repository
-                                                    // TODO: check for other relevant repositories
+    _task_repository: Arc<PgTaskInstanceRepository>, // Here maybe we should have a service to share logic publisher + task_repository
+                                                     // TODO: check for other relevant repositories
 }
 impl MessageHandler for Handler {
     fn handle(&self, message: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
@@ -39,7 +39,7 @@ impl TaskInputController {
         let consumer = Broker::new(broker_url, s, None, Some(s.to_string())).await?;
         let handler = Handler {
             publisher,
-            task_repository,
+            _task_repository: task_repository,
         };
 
         Ok(Self { consumer, handler })
