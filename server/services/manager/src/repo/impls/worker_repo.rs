@@ -92,6 +92,7 @@ impl WorkerRepository for PgWorkerRepository {
         Ok(Worker {
             id,
             name,
+            task_kind: task_kinds,
             registered_at: row.registered_at,
             active: row.active,
         })

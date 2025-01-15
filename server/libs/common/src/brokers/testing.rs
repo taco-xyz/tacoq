@@ -10,6 +10,7 @@ use uuid::Uuid;
 pub fn get_mock_broker() -> Broker {
     Broker {
         url: "mock".to_string(),
+        name: "mock".to_string(),
         broker: Arc::new(MockBrokerCore::new()),
         exchange: None,
         queue: None,
