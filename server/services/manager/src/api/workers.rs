@@ -97,7 +97,7 @@ struct CreateTaskInput {
     tag = "tasks"
 )]
 async fn create_task(
-    State(state): State<AppState>,
+    State(mut state): State<AppState>,
     Json(task_input): Json<CreateTaskInput>,
 ) -> Result<(StatusCode, Json<TaskInstance>), (StatusCode, String)> {
     info!("Creating task with kind: {:?}", task_input.task_kind_name);
@@ -129,21 +129,13 @@ async fn create_task(
         })?;
 
     // Send the task to the worker queue
-    // We need to lock the broker because we're
-    // sharing it between threads
-    let worker_id = state
-        .broker
-        .write()
-        .await
-        .publish(&task)
-        .await
-        .map_err(|e| {
-            error!("Failed to publish task to broker: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to publish task to broker: {}", e),
-            )
-        })?;
+    let worker_id = state.broker.publish(&task).await.map_err(|e| {
+        error!("Failed to publish task to broker: {:?}", e);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to publish task to broker: {}", e),
+        )
+    })?;
 
     // Assign the task the worker
     state

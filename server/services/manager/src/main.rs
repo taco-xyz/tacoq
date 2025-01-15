@@ -16,7 +16,6 @@ use config::Config;
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
 
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// Represents the shared application state that can be accessed by all routes
 ///
@@ -26,7 +25,7 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Arc<RwLock<Broker>>,
+    pub broker: Broker, // Changed from Arc<RwLock<Broker>>
 }
 
 /// Creates database connection pools
@@ -43,17 +42,15 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker   
-async fn setup_publisher_broker(config: &Config) -> Arc<RwLock<Broker>> {
-    Arc::new(RwLock::new(
-        Broker::new(
-            &config.broker_addr,
-            "task_output",
-            Some("task_output".to_string()),
-            None,
-        )
-        .await
-        .expect("Failed to initialize publisher broker"),
-    ))
+async fn setup_publisher_broker(config: &Config) -> Broker {
+    Broker::new(
+        &config.broker_addr,
+        "task_output",
+        Some("task_output".to_string()),
+        None,
+    )
+    .await
+    .expect("Failed to initialize publisher broker")
 }
 
 /// Initializes the application state based on the given configuration
@@ -62,7 +59,7 @@ async fn setup_publisher_broker(config: &Config) -> Arc<RwLock<Broker>> {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app_state(db_pools: PgPool, broker: Arc<RwLock<Broker>>) -> AppState {
+async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskInstanceRepository::new(core.clone());
@@ -85,7 +82,7 @@ async fn setup_app_state(db_pools: PgPool, broker: Arc<RwLock<Broker>>) -> AppSt
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: PgPool, broker: Arc<RwLock<Broker>>) -> Router {
+async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
@@ -108,10 +105,12 @@ async fn main() {
     let db_pools = setup_db_pools(&config).await;
     info!("Database connection pools created");
 
-    let broker = setup_publisher_broker(&config).await;
-    info!("Broker initialized");
+    // Create two separate publisher brokers
+    let broker_for_state = setup_publisher_broker(&config).await;
+    let broker_for_input = setup_publisher_broker(&config).await;
+    info!("Brokers initialized");
 
-    let app = setup_app(db_pools.clone(), broker.clone()).await;
+    let app = setup_app(db_pools.clone(), broker_for_state).await;
     info!("App created");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
@@ -124,19 +123,16 @@ async fn main() {
     // Initialize controllers
     let task_input_controller = controller::task_input::TaskInputController::new(
         &config.broker_addr,
-        broker.clone(),
+        broker_for_input,
         task_repo.clone(),
     )
     .await
     .expect("Failed to create task input controller");
 
-    let task_result_controller = controller::task_result::TaskResultController::new(
-        &config.broker_addr,
-        broker.clone(),
-        task_repo.clone(),
-    )
-    .await
-    .expect("Failed to create task result controller");
+    let task_result_controller =
+        controller::task_result::TaskResultController::new(&config.broker_addr, task_repo.clone())
+            .await
+            .expect("Failed to create task result controller");
 
     // Spawn all components
     let input_handle = tokio::spawn(async move {
