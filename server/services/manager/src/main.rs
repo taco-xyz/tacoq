@@ -1,5 +1,6 @@
 mod api;
 mod config;
+mod constants;
 mod controller;
 mod repo;
 mod testing;
@@ -57,7 +58,7 @@ async fn setup_publisher_broker(config: &Config) -> Broker {
     Broker::new(
         &config.broker_addr,
         "task_output",
-        Some("task_output".to_string()),
+        Some(constants::TASK_OUTPUT_EXCHANGE.to_string()),
         None,
     )
     .await
@@ -94,6 +95,11 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
 async fn setup_app(db_pools: PgPool, broker: Broker) -> (Router, AppState) {
+    broker
+        .setup()
+        .await
+        .expect("Failed to setup producer broker");
+
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
