@@ -25,51 +25,29 @@ async fn create_broker_connection(
 #[derive(Clone, Debug)]
 pub struct Broker {
     pub url: String,
+    pub name: String, // Mainly for logging and debugging purposes
     pub broker: Arc<dyn BrokerCore>,
     pub exchange: Option<String>,
     pub queue: Option<String>,
 }
 
 impl Broker {
-    pub async fn new(url: &str, exchange: Option<String>, queue: Option<String>) -> Self {
+    pub async fn new(
+        url: &str,
+        name: &str,
+        exchange: Option<String>,
+        queue: Option<String>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let broker = create_broker_connection(url).await.unwrap();
-        Self {
+
+        Ok(Self {
             url: url.to_string(),
+            name: name.to_string(),
             broker,
             exchange,
             queue,
-        }
+        })
     }
-
-    // pub async fn register_worker(
-    //     &mut self,
-    //     worker: Worker,
-    // ) -> Result<(), Box<dyn std::error::Error>> {
-    //     // Create a unique queue for this worker using its ID
-    //     let worker_queue = worker.id.to_string();
-
-    //     self.broker
-    //         .register_queue(Self::SUBMISSION_EXCHANGE, &worker_queue, &worker_queue)
-    //         .await?;
-
-    //     self.workers.push(worker);
-    //     Ok(())
-    // }
-
-    // pub async fn remove_worker(
-    //     &mut self,
-    //     worker_id: &Uuid,
-    // ) -> Result<(), Box<dyn std::error::Error>> {
-    //     let index: usize = self
-    //         .workers
-    //         .iter()
-    //         .position(|worker| worker.id == *worker_id)
-    //         .unwrap();
-    //     self.workers.remove(index);
-    //     self.broker.delete_queue(&worker_id.to_string()).await?;
-
-    //     Ok(())
-    // }
 
     pub async fn setup(&self) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(exchange) = &self.exchange {
@@ -99,17 +77,6 @@ impl Broker {
         worker_kind: &WorkerKind,
         task: &TaskInstance,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
-        // let worker = (0..self.workers.len())
-        //     // Cycle the workers list in a round robin fashion
-        //     .map(|_| {
-        //         let cur_worker = &self.workers[self.workers_index];
-        //         self.workers_index = (self.workers_index + 1) % self.workers.len();
-        //         cur_worker
-        //     })
-        //     // Find the first worker that can handle the task
-        //     .find(|cur_worker| cur_worker.can_handle(task))
-        //     .ok_or("No available worker")?;
-
         // Convert input data to bytes
         let payload = serde_json::to_vec(&task.input_data)?;
 

@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskInstanceRepository};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PgTaskInstanceRepository {
     core: PgRepositoryCore,
 }
