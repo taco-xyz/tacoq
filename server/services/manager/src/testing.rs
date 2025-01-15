@@ -1,8 +1,5 @@
 #[cfg(test)]
 pub mod test {
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
-
     use axum_test::TestServer;
     use sqlx::PgPool;
 
