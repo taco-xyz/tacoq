@@ -92,6 +92,18 @@ impl Broker {
 
         Ok(task.id)
     }
+
+    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(queue) = &self.queue {
+            self.broker.delete_queue(queue).await?;
+        }
+
+        if let Some(exchange) = &self.exchange {
+            self.broker.delete_exchange(exchange).await?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

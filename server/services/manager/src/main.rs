@@ -4,18 +4,23 @@ mod controller;
 mod repo;
 mod testing;
 
-use std::net::SocketAddr;
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use common::brokers::Broker;
 use sqlx::PgPool;
+use tokio::sync::oneshot;
 use tracing::{info, info_span};
 
 use config::Config;
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
-
-use std::sync::Arc;
 
 /// Represents the shared application state that can be accessed by all routes
 ///
@@ -26,6 +31,12 @@ pub struct AppState {
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
     pub broker: Broker, // Changed from Arc<RwLock<Broker>>
+}
+
+impl AppState {
+    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.broker.cleanup().await
+    }
 }
 
 /// Creates database connection pools
@@ -82,16 +93,18 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
+async fn setup_app(db_pools: PgPool, broker: Broker) -> (Router, AppState) {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
     // Create base router with routes and state
-    Router::new()
+    let router = Router::new()
         .merge(api::routes())
-        .with_state(app_state)
+        .with_state(app_state.clone())
         .layer(OtelInResponseLayer)
-        .layer(OtelAxumLayer::default())
+        .layer(OtelAxumLayer::default());
+
+    (router, app_state)
 }
 
 #[tokio::main]
@@ -110,7 +123,7 @@ async fn main() {
     let broker_for_input = setup_publisher_broker(&config).await;
     info!("Brokers initialized");
 
-    let app = setup_app(db_pools.clone(), broker_for_state).await;
+    let (app, mut app_state) = setup_app(db_pools.clone(), broker_for_state.clone()).await;
     info!("App created");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
@@ -134,7 +147,24 @@ async fn main() {
             .await
             .expect("Failed to create task result controller");
 
-    // Spawn all components
+    let is_running = Arc::new(AtomicBool::new(true));
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
+    // Clone controllers for the shutdown handler
+    let mut task_input_controller_shutdown = task_input_controller.clone();
+    let mut task_result_controller_shutdown = task_result_controller.clone();
+
+    // Setup shutdown signal handler
+    let is_running_signal = is_running.clone();
+    tokio::spawn(async move {
+        if let Ok(_) = tokio::signal::ctrl_c().await {
+            info!("Shutdown signal received");
+            is_running_signal.store(false, Ordering::SeqCst);
+            let _ = shutdown_tx.send(());
+        }
+    });
+
+    // Spawn controllers
     let input_handle = tokio::spawn(async move {
         task_input_controller
             .run()
@@ -151,12 +181,35 @@ async fn main() {
 
     let server_handle = tokio::spawn(async move {
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-        axum::serve(listener, app).await.unwrap()
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                shutdown_rx.await.ok();
+            })
+            .await
+            .unwrap()
     });
 
     span.exit();
 
-    // Wait for all components
-    tokio::try_join!(input_handle, result_handle, server_handle)
-        .expect("One of the components failed unexpectedly");
+    // Wait for shutdown signal
+    tokio::select! {
+        _ = input_handle => {},
+        _ = result_handle => {},
+        _ = server_handle => {},
+    }
+
+    // Cleanup
+    info!("Starting cleanup");
+    if let Err(e) = task_input_controller_shutdown.cleanup().await {
+        info!("Error cleaning up task input controller: {}", e);
+    }
+    if let Err(e) = task_result_controller_shutdown.cleanup().await {
+        info!("Error cleaning up task result controller: {}", e);
+    }
+
+    if let Err(e) = app_state.cleanup().await {
+        info!("Error cleanin up app state: {}", e)
+    }
+
+    info!("Cleanup complete");
 }
