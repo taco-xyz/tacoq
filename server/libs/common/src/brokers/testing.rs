@@ -2,6 +2,7 @@ use crate::brokers::core::MockBrokerCore;
 use crate::brokers::Broker;
 use crate::{TaskInstance, TaskStatus, Worker};
 use crate::{TaskKind, WorkerKind};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -14,6 +15,7 @@ pub fn get_mock_broker() -> Broker {
         broker: Arc::new(MockBrokerCore::new()),
         exchange: None,
         queue: None,
+        shutdown: Arc::new(AtomicBool::new(false)),
     }
 }
 
