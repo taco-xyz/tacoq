@@ -129,8 +129,6 @@ async fn create_task(
         })?;
 
     // Send the task to the worker queue
-    // We need to lock the broker because we're
-    // sharing it between threads
     let worker_id = state.broker.publish(&task).await.map_err(|e| {
         error!("Failed to publish task to broker: {:?}", e);
         (

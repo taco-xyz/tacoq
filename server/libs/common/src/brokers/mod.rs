@@ -22,13 +22,11 @@ async fn create_broker_connection(
     }
 }
 
-pub struct PublisherQueue;
-pub struct ConsumerQueue;
-
 // Broker can be either a publisher or a consumer
 #[derive(Clone, Debug)]
 pub struct Broker {
     pub url: String,
+    pub name: String, // Mainly for logging and debugging purposes
     pub broker: Arc<dyn BrokerCore>,
     pub exchange: Option<String>,
     pub queue: Option<String>,
@@ -38,6 +36,7 @@ pub struct Broker {
 impl Broker {
     pub async fn new(
         url: &str,
+        name: &str,
         exchange: Option<String>,
         queue: Option<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -45,6 +44,7 @@ impl Broker {
 
         Ok(Self {
             url: url.to_string(),
+            name: name.to_string(),
             broker,
             exchange,
             queue,
@@ -66,18 +66,6 @@ impl Broker {
         Ok(())
     }
 
-    pub async fn teardown(&self) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(queue) = &self.queue {
-            self.broker.delete_queue(queue).await?;
-        }
-
-        if let Some(exchange) = &self.exchange {
-            self.broker.delete_exchange(exchange).await?;
-        }
-
-        Ok(())
-    }
-
     pub async fn consume(
         &self,
         handler: Box<dyn MessageHandler>,
@@ -89,7 +77,6 @@ impl Broker {
 
     pub async fn publish(
         &mut self,
-        worker_kind: &WorkerKind,
         task: &TaskInstance,
     ) -> Result<Uuid, Box<dyn std::error::Error>> {
         // Convert input data to bytes
@@ -99,14 +86,13 @@ impl Broker {
         self.broker
             .publish_message(
                 self.exchange.as_ref().unwrap(),
-                &task.id.to_string(), // TODO: Change this to worker kind in the future
+                &task.id.to_string(),
                 &payload,
                 &task.id.to_string(),
                 &task.task_kind.name,
             )
             .await?;
 
-        // TODO: Change this return type to worker_kind something
         Ok(task.id)
     }
 

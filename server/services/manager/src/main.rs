@@ -1,15 +1,22 @@
 mod api;
 mod config;
-mod constants;
+mod controller;
 mod repo;
 mod testing;
 
-use std::net::SocketAddr;
+use std::{
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use common::brokers::Broker;
 use sqlx::PgPool;
+use tokio::sync::oneshot;
 use tracing::{info, info_span};
 
 use config::Config;
@@ -23,7 +30,13 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Broker,
+    pub broker: Broker, // Changed from Arc<RwLock<Broker>>
+}
+
+impl AppState {
+    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.broker.cleanup().await
+    }
 }
 
 /// Creates database connection pools
@@ -40,14 +53,15 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker   
-async fn setup_broker(config: &Config) -> Broker {
+async fn setup_publisher_broker(config: &Config) -> Broker {
     Broker::new(
         &config.broker_addr,
+        "task_output",
+        Some("task_output".to_string()),
         None,
-        Some(String::from(constants::TASK_INPUT_QUEUE)),
     )
     .await
-    .expect("Failed to initialize broker")
+    .expect("Failed to initialize publisher broker")
 }
 
 /// Initializes the application state based on the given configuration
@@ -67,7 +81,7 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
         task_repository,
         task_kind_repository,
         worker_repository,
-        broker: broker,
+        broker,
     }
 }
 
@@ -79,16 +93,18 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: PgPool, broker: Broker) -> Router {
+async fn setup_app(db_pools: PgPool, broker: Broker) -> (Router, AppState) {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
     // Create base router with routes and state
-    Router::new()
+    let router = Router::new()
         .merge(api::routes())
-        .with_state(app_state)
+        .with_state(app_state.clone())
         .layer(OtelInResponseLayer)
-        .layer(OtelAxumLayer::default())
+        .layer(OtelAxumLayer::default());
+
+    (router, app_state)
 }
 
 #[tokio::main]
@@ -102,19 +118,98 @@ async fn main() {
     let db_pools = setup_db_pools(&config).await;
     info!("Database connection pools created");
 
-    let broker = setup_broker(&config).await;
-    info!("Broker initialized");
+    // Create two separate publisher brokers
+    let broker_for_state = setup_publisher_broker(&config).await;
+    let broker_for_input = setup_publisher_broker(&config).await;
+    info!("Brokers initialized");
 
-    let app = setup_app(db_pools, broker).await;
+    let (app, mut app_state) = setup_app(db_pools.clone(), broker_for_state.clone()).await;
     info!("App created");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     info!("Listening on {}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    info!("Listener created");
+    // Create task repositories for controllers
+    let core = PgRepositoryCore::new(db_pools);
+    let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
+
+    // Initialize controllers
+    let task_input_controller = controller::task_input::TaskInputController::new(
+        &config.broker_addr,
+        broker_for_input,
+        task_repo.clone(),
+    )
+    .await
+    .expect("Failed to create task input controller");
+
+    let task_result_controller =
+        controller::task_result::TaskResultController::new(&config.broker_addr, task_repo.clone())
+            .await
+            .expect("Failed to create task result controller");
+
+    let is_running = Arc::new(AtomicBool::new(true));
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+
+    // Clone controllers for the shutdown handler
+    let mut task_input_controller_shutdown = task_input_controller.clone();
+    let mut task_result_controller_shutdown = task_result_controller.clone();
+
+    // Setup shutdown signal handler
+    let is_running_signal = is_running.clone();
+    tokio::spawn(async move {
+        if let Ok(_) = tokio::signal::ctrl_c().await {
+            info!("Shutdown signal received");
+            is_running_signal.store(false, Ordering::SeqCst);
+            let _ = shutdown_tx.send(());
+        }
+    });
+
+    // Spawn controllers
+    let input_handle = tokio::spawn(async move {
+        task_input_controller
+            .run()
+            .await
+            .expect("Task input controller failed");
+    });
+
+    let result_handle = tokio::spawn(async move {
+        task_result_controller
+            .run()
+            .await
+            .expect("Task result controller failed");
+    });
+
+    let server_handle = tokio::spawn(async move {
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                shutdown_rx.await.ok();
+            })
+            .await
+            .unwrap()
+    });
 
     span.exit();
 
-    axum::serve(listener, app).await.unwrap();
+    // Wait for shutdown signal
+    tokio::select! {
+        _ = input_handle => {},
+        _ = result_handle => {},
+        _ = server_handle => {},
+    }
+
+    // Cleanup
+    info!("Starting cleanup");
+    if let Err(e) = task_input_controller_shutdown.cleanup().await {
+        info!("Error cleaning up task input controller: {}", e);
+    }
+    if let Err(e) = task_result_controller_shutdown.cleanup().await {
+        info!("Error cleaning up task result controller: {}", e);
+    }
+
+    if let Err(e) = app_state.cleanup().await {
+        info!("Error cleanin up app state: {}", e)
+    }
+
+    info!("Cleanup complete");
 }
