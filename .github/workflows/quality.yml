@@ -6,46 +6,62 @@ on:
       - main
 
 jobs:
-  quality:
-    name: Code Quality Checks
+  
+  # ================================
+  # Rust Formatting & Linting
+  # ================================
+  
+  rust-fmt:
+    name: Rust Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Rust checks
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
-
+          components: rustfmt
       - name: Check code formatting
         run: cargo fmt --all -- --check
 
+  rust-clippy:
+    name: Rust Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - name: Check clippy
         run: cargo clippy --all-features --tests -- -D warnings
 
+  rust-sqlx:
+    name: SQLx Schema Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - name: Install sqlx-cli
         run: cargo install sqlx-cli --no-default-features --features native-tls,postgres
-
       - name: Run sqlx prepare
         run: cargo sqlx prepare --workspace --check
         env:
           SQLX_OFFLINE: true
 
-      # Python checks
-      - name: Set up Python
-        uses: actions/setup-python@v4
+  # ================================
+  # Python Formatting & Linting
+  # ================================
+
+  python-quality:
+    name: Python Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
-
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Check Python formatting
+      - name: Check formatting & linting
         run: |
           cd client_sdks/python
           uv tool run ruff format --check .
-
-      - name: Run Python linter
-        run: |
-          cd client_sdks/python
           uv tool run ruff check .
