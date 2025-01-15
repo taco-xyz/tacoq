@@ -7,6 +7,8 @@ use lapin::{
     BasicProperties, Channel, Connection, ConnectionProperties, ExchangeKind,
 };
 
+// use std::sync::Arc;
+
 #[derive(Clone, Debug)]
 pub struct RabbitBroker {
     channel: Channel,
