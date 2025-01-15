@@ -396,11 +396,7 @@ mod test {
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_fails_with_mismatched_worker_task_kind(db_pools: PgPool) {
         let test_worker = get_test_worker(&["different_task"]);
-        let mut broker = get_mock_broker();
-        broker
-            .register_worker(get_test_worker(&["different_task"]))
-            .await
-            .unwrap();
+        let broker = get_mock_broker();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -425,9 +421,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_succesfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -468,9 +463,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_fails_with_invalid_status(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -498,9 +492,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_successfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -545,9 +538,8 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_result_successfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
-        broker.register_worker(test_worker.clone()).await.unwrap();
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -578,7 +570,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_error_successfully(db_pools: PgPool) {
-        let mut broker = get_mock_broker();
+        let broker = get_mock_broker();
         let test_worker = get_test_worker(&["test_task"]);
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
