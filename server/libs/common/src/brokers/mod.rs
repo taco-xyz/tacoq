@@ -116,7 +116,7 @@ mod test {
     use super::*;
     use crate::models::TaskKind;
     use crate::TaskStatus;
-    use testing::{get_mock_broker, setup_task_kinds, setup_tasks, setup_worker_kinds};
+    use testing::{get_mock_broker, setup_task_kinds, setup_tasks};
     use time::OffsetDateTime;
     use uuid::Uuid;
 

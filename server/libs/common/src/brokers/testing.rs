@@ -1,7 +1,6 @@
 use crate::brokers::core::MockBrokerCore;
 use crate::brokers::Broker;
-use crate::{TaskInstance, TaskStatus, Worker};
-use crate::{TaskKind, WorkerKind};
+use crate::{TaskInstance, TaskKind, TaskStatus, Worker};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use time::OffsetDateTime;
@@ -23,14 +22,6 @@ pub fn setup_task_kinds() -> Vec<TaskKind> {
     vec![
         TaskKind::new("task1".to_string()),
         TaskKind::new("task2".to_string()),
-    ]
-}
-
-pub fn setup_worker_kinds(task_kinds: Vec<TaskKind>) -> Vec<WorkerKind> {
-    vec![
-        WorkerKind::new(vec![task_kinds[0].clone()]),
-        WorkerKind::new(vec![task_kinds[1].clone()]),
-        WorkerKind::new(task_kinds),
     ]
 }
 
