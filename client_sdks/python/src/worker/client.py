@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from typing import Callable, Awaitable, Optional, Dict
+from uuid import UUID
 
 from broker import create_broker_instance, BrokerClient
 from manager import ManagerClient
@@ -53,7 +54,12 @@ class WorkerApplication:
         """
         self._registered_tasks[kind] = task
 
-    def task(self, kind: str) -> Callable[[TaskInput], Awaitable[TaskOutput]]:
+    def task(
+        self, kind: str
+    ) -> Callable[
+        [Callable[[TaskInput], Awaitable[TaskOutput]]],
+        Callable[[TaskInput], Awaitable[TaskOutput]],
+    ]:
         """Decorator for registering task handler functions.
 
         ### Parameters
@@ -63,7 +69,9 @@ class WorkerApplication:
         - `Callable`: Decorator function that registers the task handler
         """
 
-        def decorator(task: Callable[[TaskInput], Awaitable[TaskOutput]]):
+        def decorator(
+            task: Callable[[TaskInput], Awaitable[TaskOutput]],
+        ) -> Callable[[TaskInput], Awaitable[TaskOutput]]:
             self.register_task(kind, task)
             return task
 
@@ -110,7 +118,7 @@ class WorkerApplication:
         # Important for hot reloading code
         self.cleanup()
 
-    async def _execute_task(self, kind: str, input_data: TaskInput, task_id: str):
+    async def _execute_task(self, kind: str, input_data: TaskInput, task_id: UUID):
         """Execute a task and update its status in the manager.
 
         ### Parameters
@@ -134,7 +142,7 @@ class WorkerApplication:
         except Exception as e:
             # Log the exception (could improve error handling)
             await self._manager_client.update_task_result(
-                task_id, str(e), is_error=True
+                task_id, {"error": str(e)}, is_error=True
             )
 
     async def _listen(self):
@@ -146,8 +154,16 @@ class WorkerApplication:
         if not self._broker_client:
             raise RuntimeError("Broker client is not initialized.")
 
+        input_data: TaskInput
+        task_id: UUID
+        task_kind: str
+
         try:
-            async for input_data, task_id, task_kind in self._broker_client.listen():
+            async for (
+                input_data,
+                task_id,
+                task_kind,
+            ) in self._broker_client.listen():
                 await self._execute_task(task_kind, input_data, task_id)
         except asyncio.CancelledError:
             await self._broker_client.disconnect()
@@ -173,7 +189,5 @@ class WorkerApplication:
         This method is called when the worker is shutting down. Used for cleaning internal state.
         """
         self._broker_client = None
-        self._manager_client = None
         self._registered_tasks = {}
         self._id = None
-        self._config = None
