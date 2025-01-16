@@ -1,3 +1,4 @@
+use crate::constants;
 use crate::repo::PgTaskInstanceRepository;
 use common::brokers::core::MessageHandler;
 use common::brokers::Broker;
@@ -27,7 +28,8 @@ impl TaskResultController {
         broker_url: &str,
         task_repository: Arc<PgTaskInstanceRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let s: &str = "task_result";
+        let s: &str = constants::TASK_RESULT_QUEUE;
+
         let consumer = Broker::new(broker_url, s, None, Some(s.to_string())).await?;
         let handler = Handler {
             _task_repository: task_repository,
