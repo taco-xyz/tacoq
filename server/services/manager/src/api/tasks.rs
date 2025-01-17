@@ -9,7 +9,7 @@ use tracing::{error, info};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use common::{models::TaskInstance, TaskStatus};
+use common::{brokers::core::BrokerProducer, models::TaskInstance, TaskStatus};
 
 use crate::{
     repo::{TaskInstanceRepository, TaskKindRepository},
@@ -97,7 +97,7 @@ struct CreateTaskInput {
     tag = "tasks"
 )]
 async fn create_task(
-    State(mut state): State<AppState>,
+    State(state): State<AppState>,
     Json(task_input): Json<CreateTaskInput>,
 ) -> Result<(StatusCode, Json<TaskInstance>), (StatusCode, String)> {
     info!("Creating task with kind: {:?}", task_input.task_kind_name);
@@ -129,7 +129,7 @@ async fn create_task(
         })?;
 
     // Send the task to the worker queue
-    let worker_id = state.broker.publish(&task).await.map_err(|e| {
+    state.broker.publish_message(&task).await.map_err(|e| {
         error!("Failed to publish task to broker: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -140,7 +140,7 @@ async fn create_task(
     // Assign the task the worker
     state
         .task_repository
-        .assign_task_to_worker(&task.id, &worker_id)
+        .assign_task_to_worker(&task.id, &Uuid::nil()) // currently this is empty as we don't have a worker returning from the broker anymore
         .await
         .map_err(|e| {
             error!("Failed to assign task to worker: {:?}", e);

@@ -178,7 +178,7 @@ impl TaskInstanceRabbitMQProducer {
 
 #[async_trait]
 impl BrokerProducer<TaskInstance> for TaskInstanceRabbitMQProducer {
-    async fn publish_message(&self, task: TaskInstance) -> Result<(), Box<dyn std::error::Error>> {
+    async fn publish_message(&self, task: &TaskInstance) -> Result<(), Box<dyn std::error::Error>> {
         let payload = serde_json::to_vec(&task.input_data)?;
 
         // Need to change the routing key to the task kind, future will be worker kind
