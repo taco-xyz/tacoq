@@ -4,7 +4,8 @@ use utoipa::ToSchema;
 
 use time::OffsetDateTime;
 
-use super::{TaskInstance, TaskKind};
+use super::TaskInstance;
+use crate::models::TaskKind;
 
 /// A worker that can execute tasks after receiving them.
 /// We know that it can receive those tasks from its list of capabilities.
@@ -42,7 +43,8 @@ impl Worker {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{TaskKind, Worker};
+    use crate::TaskInstance;
     use sqlx::types::Uuid;
     use time::OffsetDateTime;
 
@@ -50,7 +52,7 @@ mod test {
     fn test_worker_can_handle() {
         let task_kind1 = TaskKind::new("task1".to_string());
         let task_kind2 = TaskKind::new("task2".to_string());
-        let worker_kind = WorkerKind::new(vec![task_kind1.clone()]);
+        let worker = Worker::new("worker1".to_string(), vec![task_kind1.clone()]);
 
         let task1 = TaskInstance {
             id: Uuid::new_v4(),
@@ -71,7 +73,7 @@ mod test {
             result: None,
         };
 
-        assert!(worker_kind.can_handle(&task1));
-        assert!(!worker_kind.can_handle(&task2));
+        assert!(worker.can_handle(&task1));
+        assert!(!worker.can_handle(&task2));
     }
 }

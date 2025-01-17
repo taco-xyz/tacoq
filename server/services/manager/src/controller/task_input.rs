@@ -1,81 +1,62 @@
 use crate::constants;
 use crate::repo::PgTaskInstanceRepository;
-use common::brokers::core::MessageHandler;
-use common::brokers::Broker;
+use common::brokers::core::BrokerConsumer;
+use common::brokers::rabbit::{
+    RabbitBrokerCore, TaskInstanceRabbitMQProducer, TaskResultRabbitMQConsumer,
+};
+use common::TaskResult;
 
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
-#[derive(Clone, Debug)]
-struct Handler {
-    publisher: Broker, // shared amongst controllers
-    _task_repository: Arc<PgTaskInstanceRepository>, // Here maybe we should have a service to share logic publisher + task_repository
-                                                     // TODO: check for other relevant repositories
-}
-
-impl Handler {
-    pub async fn new(
-        publisher: Broker,
-        task_repository: Arc<PgTaskInstanceRepository>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        publisher.setup().await?;
-
-        Ok(Self {
-            publisher,
-            _task_repository: task_repository,
-        })
-    }
-
-    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.publisher.cleanup().await?;
-        Ok(())
-    }
-}
-
-impl MessageHandler for Handler {
-    fn handle(&self, message: Vec<u8>) -> Result<(), Box<dyn std::error::Error>> {
-        // Currently just print the message to stdout
-        // Here is where the message logic for receiving messages should live
-        println!("{:?}", message);
-
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TaskInputController {
-    consumer: Broker,
-    handler: Handler,
+    consumer: TaskResultRabbitMQConsumer,
+    producer: TaskInstanceRabbitMQProducer,
+    _task_repository: Arc<PgTaskInstanceRepository>,
 }
 
 impl TaskInputController {
     pub async fn new(
         broker_url: &str,
-        publisher: Broker,
         task_repository: Arc<PgTaskInstanceRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let s: &str = constants::TASK_INPUT_QUEUE;
+        let core = RabbitBrokerCore::new(broker_url).await?;
 
-        // Need to create here a new broker connection -> check if it is the appropriate place
-        // TODO: change the hardcoded values into non hardcoded ones
-        let consumer = Broker::new(broker_url, s, None, Some(s.to_string())).await?;
-        let handler = Handler::new(publisher, task_repository).await?;
+        let consumer = TaskResultRabbitMQConsumer::new(
+            core.clone(),
+            constants::TASK_INPUT_QUEUE,
+            Arc::new(AtomicBool::new(false)),
+        )
+        .await?;
 
-        Ok(Self { consumer, handler })
+        let producer =
+            TaskInstanceRabbitMQProducer::new(core, constants::TASK_OUTPUT_EXCHANGE).await?;
+
+        Ok(Self {
+            consumer,
+            producer,
+            _task_repository: task_repository,
+        })
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.consumer.setup().await?;
-        self.consumer
-            .consume(Box::new(self.handler.clone()))
-            .await?;
+        // let producer = self.producer.clone();
 
-        Ok(())
+        let handler = Box::new(move |task: TaskResult| {
+            // Here we would process the input and create a new task instance
+            println!("Received task input: {:?}", task);
+            // Example of publishing (you'll want to implement actual logic)
+            // producer.publish_message(new_task).await?;
+            Ok(())
+        });
+
+        self.consumer.consume_messages(handler).await
     }
 
-    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Cleanup both consumer and publisher
+    pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.consumer.cleanup().await?;
-        self.handler.cleanup().await?;
+        self.producer.cleanup().await?;
         Ok(())
     }
 }

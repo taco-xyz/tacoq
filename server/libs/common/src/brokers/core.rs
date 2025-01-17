@@ -1,42 +1,22 @@
 use async_trait::async_trait;
 use mockall::automock;
 use std::fmt::Debug;
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::marker::{Send, Sync};
 
-pub trait MessageHandler: Send + Sync + 'static {
-    fn handle(&self, message: Vec<u8>) -> Result<(), Box<dyn std::error::Error>>;
+pub type MessageHandlerFn<T> =
+    Box<dyn Fn(T) -> Result<(), Box<dyn std::error::Error>> + Send + Sync>;
+
+#[automock]
+#[async_trait]
+pub trait BrokerConsumer<T: Send + Sync + 'static> {
+    async fn consume_messages(
+        &self,
+        handler: MessageHandlerFn<T>,
+    ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[automock]
 #[async_trait]
-pub trait BrokerCore: Send + Sync + Debug + 'static {
-    async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn register_queue(
-        &self,
-        exchange: Option<String>,
-        queue: &str,
-        routing_key: &str,
-    ) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn delete_queue(&self, queue: &str) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn delete_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn publish_message(
-        &self,
-        exchange: &str,
-        routing_key: &str,
-        payload: &[u8],
-        message_id: &str,
-        task_id: &str,
-    ) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn consume_messages(
-        &self,
-        queue: &str,
-        handler: Box<dyn MessageHandler>,
-        shutdown: Arc<AtomicBool>,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+pub trait BrokerProducer<T: Send + Sync>: Send + Sync + Debug {
+    async fn publish_message(&self, message: T) -> Result<(), Box<dyn std::error::Error>>;
 }

@@ -1,34 +1,31 @@
-use crate::brokers::core::{BrokerCore, MessageHandler};
-use async_trait::async_trait;
+use crate::{TaskInstance, TaskResult};
 use futures::StreamExt;
 use lapin::{
-    options::*,
-    types::{AMQPValue, FieldTable},
-    BasicProperties, Channel, Connection, ConnectionProperties, ExchangeKind,
+    options::*, types::FieldTable, BasicProperties, Channel, Connection, ConnectionProperties,
+    ExchangeKind,
 };
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
 
-// use std::sync::Arc;
+use async_trait::async_trait;
+
+use super::core::{BrokerConsumer, BrokerProducer, MessageHandlerFn};
 
 #[derive(Clone, Debug)]
-pub struct RabbitBroker {
+pub struct RabbitBrokerCore {
     channel: Channel,
 }
 
-impl RabbitBroker {
-    pub async fn new(url_string: &str) -> Result<RabbitBroker, Box<dyn std::error::Error>> {
+impl RabbitBrokerCore {
+    pub async fn new(url_string: &str) -> Result<RabbitBrokerCore, Box<dyn std::error::Error>> {
         let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
         let channel = connection.create_channel().await?;
 
         Ok(Self { channel })
     }
-}
 
-#[async_trait]
-impl BrokerCore for RabbitBroker {
     async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
         self.channel
             .exchange_declare(
@@ -82,44 +79,49 @@ impl BrokerCore for RabbitBroker {
 
         Ok(())
     }
+}
 
-    async fn publish_message(
-        &self,
-        exchange: &str,
-        routing_key: &str,
-        payload: &[u8],
-        message_id: &str,
-        task_id: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        // Initialize headers
-        let mut headers = FieldTable::default();
-        headers.insert("task_kind".into(), AMQPValue::LongString(task_id.into()));
+#[derive(Clone, Debug)]
+pub struct TaskResultRabbitMQConsumer {
+    core: RabbitBrokerCore,
+    queue: String,
+    shutdown: Arc<AtomicBool>,
+}
 
-        self.channel
-            .basic_publish(
-                exchange,
-                routing_key,
-                BasicPublishOptions::default(),
-                payload,
-                BasicProperties::default()
-                    .with_message_id(message_id.into())
-                    .with_headers(headers),
-            )
-            .await?;
+impl TaskResultRabbitMQConsumer {
+    pub async fn new(
+        core: RabbitBrokerCore,
+        queue: &str,
+        shutdown: Arc<AtomicBool>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        core.register_queue(None, queue, queue).await?;
+
+        Ok(Self {
+            core,
+            queue: queue.to_string(),
+            shutdown,
+        })
+    }
+
+    pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.shutdown.store(true, Ordering::SeqCst);
+        self.core.delete_queue(&self.queue).await?;
 
         Ok(())
     }
+}
 
+#[async_trait]
+impl BrokerConsumer<TaskResult> for TaskResultRabbitMQConsumer {
     async fn consume_messages(
         &self,
-        queue: &str,
-        handler: Box<dyn MessageHandler>,
-        shutdown: Arc<AtomicBool>,
+        handler: MessageHandlerFn<TaskResult>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut consumer = self
+            .core
             .channel
             .basic_consume(
-                queue,
+                &self.queue,
                 "manager",
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
@@ -127,17 +129,70 @@ impl BrokerCore for RabbitBroker {
             .await?;
 
         while let Some(delivery) = consumer.next().await {
-            if shutdown.load(Ordering::SeqCst) {
+            if self.shutdown.load(Ordering::SeqCst) {
                 break;
             }
 
-            let message = delivery.expect(&format!("Error in consumer {}", queue));
+            let message = delivery.unwrap_or_else(|_| panic!("Error in consumer {}", self.queue));
             let payload = message.data;
-            handler.handle(payload)?;
-            self.channel
+
+            // This may be unsafe or error out, we have to check if the payload is valid or not
+            let task_result = serde_json::from_slice(&payload)?;
+            handler(task_result)?;
+
+            self.core
+                .channel
                 .basic_ack(message.delivery_tag, BasicAckOptions::default())
                 .await?;
         }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TaskInstanceRabbitMQProducer {
+    core: RabbitBrokerCore,
+    exchange: String,
+}
+
+impl TaskInstanceRabbitMQProducer {
+    pub async fn new(
+        core: RabbitBrokerCore,
+        exchange: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        core.register_exchange(exchange).await?;
+
+        Ok(Self {
+            core,
+            exchange: exchange.to_string(),
+        })
+    }
+
+    pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.core.delete_exchange(&self.exchange).await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl BrokerProducer<TaskInstance> for TaskInstanceRabbitMQProducer {
+    async fn publish_message(&self, task: TaskInstance) -> Result<(), Box<dyn std::error::Error>> {
+        let payload = serde_json::to_vec(&task.input_data)?;
+
+        // Need to change the routing key to the task kind, future will be worker kind
+        // Have to see how to implement that given abstractions
+        self.core
+            .channel
+            .basic_publish(
+                &self.exchange,
+                "",
+                BasicPublishOptions::default(),
+                payload.as_slice(),
+                BasicProperties::default(),
+            )
+            .await?;
 
         Ok(())
     }

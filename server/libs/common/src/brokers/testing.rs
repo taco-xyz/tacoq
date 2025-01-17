@@ -1,22 +1,6 @@
-use crate::brokers::core::MockBrokerCore;
-use crate::brokers::Broker;
 use crate::{TaskInstance, TaskKind, TaskStatus, Worker};
-use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
 use time::OffsetDateTime;
 use uuid::Uuid;
-
-/// Creates and returns a broker with a mock core
-pub fn get_mock_broker() -> Broker {
-    Broker {
-        url: "mock".to_string(),
-        name: "mock".to_string(),
-        broker: Arc::new(MockBrokerCore::new()),
-        exchange: None,
-        queue: None,
-        shutdown: Arc::new(AtomicBool::new(false)),
-    }
-}
 
 pub fn setup_task_kinds() -> Vec<TaskKind> {
     vec![
