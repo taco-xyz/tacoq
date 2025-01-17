@@ -15,7 +15,9 @@ use std::{
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use common::brokers::Broker;
+use common::brokers::rabbit::{RabbitBrokerCore, TaskInstanceRabbitMQProducer};
+use constants::TASK_OUTPUT_EXCHANGE;
+use controller::{task_input::TaskInputController, task_result::TaskResultController};
 use sqlx::PgPool;
 use tokio::sync::oneshot;
 use tracing::{info, info_span};
@@ -31,7 +33,7 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Broker, // Changed from Arc<RwLock<Broker>>
+    pub broker: TaskInstanceRabbitMQProducer,
 }
 
 impl AppState {
@@ -54,15 +56,14 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker   
-async fn setup_publisher_broker(config: &Config) -> Broker {
-    Broker::new(
-        &config.broker_addr,
-        "task_output",
-        Some(constants::TASK_OUTPUT_EXCHANGE.to_string()),
-        None,
-    )
-    .await
-    .expect("Failed to initialize publisher broker")
+async fn setup_publisher_broker(config: &Config) -> TaskInstanceRabbitMQProducer {
+    let core = RabbitBrokerCore::new(&config.broker_addr.clone())
+        .await
+        .expect("Failed to initialize publisher broker");
+
+    TaskInstanceRabbitMQProducer::new(core, TASK_OUTPUT_EXCHANGE)
+        .await
+        .expect("Failed to initialize publisher broker")
 }
 
 /// Initializes the application state based on the given configuration
@@ -71,7 +72,7 @@ async fn setup_publisher_broker(config: &Config) -> Broker {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
+async fn setup_app_state(db_pools: &PgPool, broker: TaskInstanceRabbitMQProducer) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskInstanceRepository::new(core.clone());
@@ -94,12 +95,7 @@ async fn setup_app_state(db_pools: PgPool, broker: Broker) -> AppState {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: PgPool, broker: Broker) -> (Router, AppState) {
-    broker
-        .setup()
-        .await
-        .expect("Failed to setup producer broker");
-
+async fn setup_app(db_pools: &PgPool, broker: TaskInstanceRabbitMQProducer) -> (Router, AppState) {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
@@ -125,11 +121,10 @@ async fn main() {
     info!("Database connection pools created");
 
     // Create two separate publisher brokers
-    let broker_for_state = setup_publisher_broker(&config).await;
-    let broker_for_input = setup_publisher_broker(&config).await;
+    let broker = setup_publisher_broker(&config).await;
     info!("Brokers initialized");
 
-    let (app, mut app_state) = setup_app(db_pools.clone(), broker_for_state.clone()).await;
+    let (app, mut app_state) = setup_app(&db_pools, broker).await;
     info!("App created");
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
@@ -140,25 +135,20 @@ async fn main() {
     let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
 
     // Initialize controllers
-    let task_input_controller = controller::task_input::TaskInputController::new(
-        &config.broker_addr,
-        broker_for_input,
-        task_repo.clone(),
-    )
-    .await
-    .expect("Failed to create task input controller");
+    let task_input_controller = TaskInputController::new(&config.broker_addr, task_repo.clone())
+        .await
+        .expect("Failed to create task input controller");
 
-    let task_result_controller =
-        controller::task_result::TaskResultController::new(&config.broker_addr, task_repo.clone())
-            .await
-            .expect("Failed to create task result controller");
+    let task_result_controller = TaskResultController::new(&config.broker_addr, task_repo.clone())
+        .await
+        .expect("Failed to create task result controller");
 
     let is_running = Arc::new(AtomicBool::new(true));
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
     // Clone controllers for the shutdown handler
-    let mut task_input_controller_shutdown = task_input_controller.clone();
-    let mut task_result_controller_shutdown = task_result_controller.clone();
+    let task_input_controller_shutdown = task_input_controller.clone();
+    let task_result_controller_shutdown = task_result_controller.clone();
 
     // Setup shutdown signal handler
     let is_running_signal = is_running.clone();

@@ -9,7 +9,7 @@ use common::TaskResult;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TaskInputController {
     consumer: TaskResultRabbitMQConsumer,
     producer: TaskInstanceRabbitMQProducer,

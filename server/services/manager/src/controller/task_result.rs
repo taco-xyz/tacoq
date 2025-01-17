@@ -7,7 +7,7 @@ use common::TaskResult;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TaskResultController {
     consumer: TaskResultRabbitMQConsumer,
     _task_repository: Arc<PgTaskInstanceRepository>,
