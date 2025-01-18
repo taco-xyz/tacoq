@@ -1,6 +1,6 @@
 use crate::constants;
 use crate::repo::PgTaskInstanceRepository;
-use common::brokers::core::BrokerConsumer;
+use common::brokers::core::{BrokerConsumer, BrokerProducer};
 use common::brokers::rabbit::{
     RabbitBrokerCore, TaskInstanceRabbitMQProducer, TaskResultRabbitMQConsumer,
 };

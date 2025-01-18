@@ -9,7 +9,7 @@ use tracing::{error, info};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use common::{brokers::core::BrokerProducer, models::TaskInstance, TaskStatus};
+use common::{models::TaskInstance, TaskStatus};
 
 use crate::{
     repo::{TaskInstanceRepository, TaskKindRepository},
@@ -298,8 +298,10 @@ async fn update_task_result(
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+
     use axum::http::StatusCode;
-    use common::brokers::testing::get_mock_broker;
+    use common::brokers::testing::get_mock_broker_producer;
     use common::{TaskInstance, TaskKind, Worker};
     use serde_json::json;
     use sqlx::PgPool;
@@ -333,7 +335,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn test_non_existent_task_by_id(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
 
         let response = server
@@ -344,7 +346,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools.clone(), broker).await;
         let core = PgRepositoryCore::new(db_pools.clone());
         let task_instance_repository = PgTaskInstanceRepository::new(core.clone());
@@ -369,7 +371,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_fails_with_non_existent_worker(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
 
         let create_response = server
@@ -388,7 +390,7 @@ mod test {
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_fails_with_mismatched_worker_task_kind(db_pools: PgPool) {
         let test_worker = get_test_worker(&["different_task"]);
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
         worker_repo
@@ -413,7 +415,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn create_task_succesfully(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let test_worker = get_test_worker(&["test_task"]);
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
@@ -443,7 +445,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_fails_with_non_existent_task(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
 
         let response = server
@@ -455,7 +457,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_fails_with_invalid_status(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let test_worker = get_test_worker(&["test_task"]);
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
@@ -484,7 +486,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_status_successfully(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let test_worker = get_test_worker(&["test_task"]);
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
@@ -515,7 +517,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_result_fails_with_non_existent_task(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
 
         let response = server
@@ -530,7 +532,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_result_successfully(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let test_worker = get_test_worker(&["test_task"]);
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);
@@ -562,7 +564,7 @@ mod test {
 
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn update_task_error_successfully(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let test_worker = get_test_worker(&["test_task"]);
         let core = PgRepositoryCore::new(db_pools.clone());
         let worker_repo = PgWorkerRepository::new(core);

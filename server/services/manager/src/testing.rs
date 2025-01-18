@@ -1,9 +1,11 @@
 #[cfg(test)]
 pub mod test {
+    use std::sync::Arc;
+
     use axum_test::TestServer;
     use sqlx::PgPool;
 
-    use common::brokers::Broker;
+    use common::{brokers::core::BrokerProducer, TaskInstance};
 
     use crate::setup_app;
 
@@ -18,8 +20,11 @@ pub mod test {
 
     /// Creates and returns a test server instance with the application router.
     /// This provides a way to make test HTTP requests against the API endpoints.
-    pub async fn get_test_server(db_pools: PgPool, broker: Broker) -> TestServer {
-        let (router, _) = setup_app(db_pools, broker).await;
+    pub async fn get_test_server(
+        db_pools: PgPool,
+        broker: Arc<dyn BrokerProducer<TaskInstance>>,
+    ) -> TestServer {
+        let (router, _) = setup_app(&db_pools, broker).await;
         TestServer::new(router).unwrap()
     }
 }

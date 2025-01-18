@@ -2,6 +2,16 @@ use crate::{TaskInstance, TaskKind, TaskStatus, Worker};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::brokers::core::{MockBrokerConsumer, MockBrokerProducer};
+
+pub fn get_mock_broker_producer<T: Send + Sync>() -> MockBrokerProducer<T> {
+    MockBrokerProducer::new()
+}
+
+pub fn get_mock_broker_consumer<T: Send + Sync>() -> MockBrokerConsumer<T> {
+    MockBrokerConsumer::new()
+}
+
 pub fn setup_task_kinds() -> Vec<TaskKind> {
     vec![
         TaskKind::new("task1".to_string()),

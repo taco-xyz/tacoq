@@ -141,9 +141,10 @@ mod test {
         repo::{PgRepositoryCore, PgWorkerRepository},
         testing::test::{get_test_server, init_test_logger},
     };
-    use common::{brokers::testing::get_mock_broker, TaskKind, Worker};
+    use common::{brokers::testing::get_mock_broker_producer, TaskInstance, TaskKind, Worker};
     use serde_json::json;
     use sqlx::PgPool;
+    use std::sync::Arc;
 
     // This runs before any test in this module
     #[ctor::ctor]
@@ -164,7 +165,7 @@ mod test {
     // Test registering a new worker successfully
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn test_register_worker_success(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
 
         let response = server
@@ -183,7 +184,7 @@ mod test {
     // Test unregistering an existing worker
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn test_unregister_worker_success(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let test_worker = get_test_worker(&["test_task"]);
 
         let core = PgRepositoryCore::new(db_pools.clone());
@@ -203,7 +204,7 @@ mod test {
     // Test unregistering a non-existent worker
     #[sqlx::test(migrator = "db_common::MIGRATOR")]
     async fn test_unregister_nonexistent_worker(db_pools: PgPool) {
-        let broker = get_mock_broker();
+        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
 
         let response = server

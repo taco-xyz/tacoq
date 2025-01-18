@@ -102,13 +102,6 @@ impl TaskResultRabbitMQConsumer {
             shutdown,
         })
     }
-
-    pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.shutdown.store(true, Ordering::SeqCst);
-        self.core.delete_queue(&self.queue).await?;
-
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -148,6 +141,13 @@ impl BrokerConsumer<TaskResult> for TaskResultRabbitMQConsumer {
 
         Ok(())
     }
+
+    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.shutdown.store(true, Ordering::SeqCst);
+        self.core.delete_queue(&self.queue).await?;
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -168,12 +168,6 @@ impl TaskInstanceRabbitMQProducer {
             exchange: exchange.to_string(),
         })
     }
-
-    pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.core.delete_exchange(&self.exchange).await?;
-
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -193,6 +187,12 @@ impl BrokerProducer<TaskInstance> for TaskInstanceRabbitMQProducer {
                 BasicProperties::default(),
             )
             .await?;
+
+        Ok(())
+    }
+
+    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.core.delete_exchange(&self.exchange).await?;
 
         Ok(())
     }

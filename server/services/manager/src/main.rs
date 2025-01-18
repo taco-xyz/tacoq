@@ -15,7 +15,13 @@ use std::{
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use common::brokers::rabbit::{RabbitBrokerCore, TaskInstanceRabbitMQProducer};
+use common::{
+    brokers::{
+        core::BrokerProducer,
+        rabbit::{RabbitBrokerCore, TaskInstanceRabbitMQProducer},
+    },
+    TaskInstance,
+};
 use constants::TASK_OUTPUT_EXCHANGE;
 use controller::{task_input::TaskInputController, task_result::TaskResultController};
 use sqlx::PgPool;
@@ -33,7 +39,7 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: TaskInstanceRabbitMQProducer,
+    pub broker: Arc<dyn BrokerProducer<TaskInstance>>,
 }
 
 impl AppState {
@@ -56,14 +62,16 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker   
-async fn setup_publisher_broker(config: &Config) -> TaskInstanceRabbitMQProducer {
+async fn setup_publisher_broker(config: &Config) -> Arc<TaskInstanceRabbitMQProducer> {
     let core = RabbitBrokerCore::new(&config.broker_addr.clone())
         .await
         .expect("Failed to initialize publisher broker");
 
-    TaskInstanceRabbitMQProducer::new(core, TASK_OUTPUT_EXCHANGE)
-        .await
-        .expect("Failed to initialize publisher broker")
+    Arc::new(
+        TaskInstanceRabbitMQProducer::new(core, TASK_OUTPUT_EXCHANGE)
+            .await
+            .expect("Failed to initialize publisher broker"),
+    )
 }
 
 /// Initializes the application state based on the given configuration
@@ -72,7 +80,10 @@ async fn setup_publisher_broker(config: &Config) -> TaskInstanceRabbitMQProducer
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app_state(db_pools: &PgPool, broker: TaskInstanceRabbitMQProducer) -> AppState {
+async fn setup_app_state(
+    db_pools: &PgPool,
+    broker: Arc<dyn BrokerProducer<TaskInstance>>,
+) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskInstanceRepository::new(core.clone());
@@ -95,7 +106,10 @@ async fn setup_app_state(db_pools: &PgPool, broker: TaskInstanceRabbitMQProducer
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: &PgPool, broker: TaskInstanceRabbitMQProducer) -> (Router, AppState) {
+async fn setup_app(
+    db_pools: &PgPool,
+    broker: Arc<dyn BrokerProducer<TaskInstance>>,
+) -> (Router, AppState) {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 

@@ -13,10 +13,14 @@ pub trait BrokerConsumer<T: Send + Sync + 'static> {
         &self,
         handler: MessageHandlerFn<T>,
     ) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[automock]
 #[async_trait]
 pub trait BrokerProducer<T: Send + Sync>: Send + Sync + Debug {
     async fn publish_message(&self, message: &T) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>>;
 }
