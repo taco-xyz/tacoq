@@ -1,14 +1,12 @@
 mod api;
 mod config;
 mod constants;
-mod controller;
 mod repo;
 mod server;
 mod testing;
 
 use common::brokers::{setup_consumer_broker, setup_publisher_broker};
 use common::TaskResult;
-use controller::Controllers;
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
@@ -100,7 +98,15 @@ async fn setup_app(
 
 async fn initialize_system(
     config: &Config,
-) -> Result<(AppState, Controllers, Server), Box<dyn std::error::Error>> {
+) -> Result<
+    (
+        AppState,
+        Server,
+        Arc<task_instance::TaskInstanceController>,
+        Arc<task_result::TaskResultController>,
+    ),
+    Box<dyn std::error::Error>,
+> {
     let is_running = Arc::new(AtomicBool::new(true));
 
     let db_pools = setup_db_pools(config).await;
@@ -133,12 +139,21 @@ async fn initialize_system(
     let core = PgRepositoryCore::new(db_pools);
     let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
 
-    let controllers =
-        Controllers::new(task_instance_consumer, task_result_consumer, task_repo).await?;
+    let task_input_controller = Arc::new(
+        task_instance::TaskInstanceController::new(task_instance_consumer, task_repo.clone())
+            .await?,
+    );
+    let task_result_controller =
+        Arc::new(task_result::TaskResultController::new(task_result_consumer, task_repo).await?);
 
     let server = Server::new(app, 3000);
 
-    Ok((app_state, controllers, server))
+    Ok((
+        app_state,
+        server,
+        task_input_controller,
+        task_result_controller,
+    ))
 }
 
 #[tokio::main]
@@ -149,9 +164,10 @@ async fn main() {
 
     let span = info_span!("manager_startup_real").entered();
 
-    let (mut app_state, controllers, server) = initialize_system(&config)
-        .await
-        .expect("Failed to initialize system");
+    let (mut app_state, server, task_input_controller, task_result_controller) =
+        initialize_system(&config)
+            .await
+            .expect("Failed to initialize system");
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -163,7 +179,26 @@ async fn main() {
         }
     });
 
-    let (input_handle, result_handle) = controllers.run().await;
+    let input_handle = tokio::spawn({
+        let controller = task_input_controller.clone();
+        async move {
+            controller
+                .run()
+                .await
+                .expect("Task input controller failed");
+        }
+    });
+
+    let result_handle = tokio::spawn({
+        let controller = task_result_controller.clone();
+        async move {
+            controller
+                .run()
+                .await
+                .expect("Task result controller failed");
+        }
+    });
+
     let server_handle = tokio::spawn(async move {
         server.run(shutdown_rx).await.expect("Server failed");
     });
@@ -179,7 +214,12 @@ async fn main() {
 
     // Cleanup
     info!("Starting cleanup");
-    controllers.cleanup().await;
+    if let Err(e) = task_input_controller.cleanup().await {
+        info!("Error cleaning up task input controller: {}", e);
+    }
+    if let Err(e) = task_result_controller.cleanup().await {
+        info!("Error cleaning up task result controller: {}", e);
+    }
     if let Err(e) = app_state.cleanup().await {
         info!("Error cleaning up app state: {}", e);
     }

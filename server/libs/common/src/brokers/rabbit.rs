@@ -16,79 +16,11 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub struct RabbitBrokerCore {
-    channel: Channel,
-}
-
-impl RabbitBrokerCore {
-    pub async fn new(url_string: &str) -> Result<RabbitBrokerCore, Box<dyn std::error::Error>> {
-        let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
-        let channel = connection.create_channel().await?;
-
-        Ok(Self { channel })
-    }
-
-    async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.channel
-            .exchange_declare(
-                exchange,
-                ExchangeKind::Direct,
-                ExchangeDeclareOptions::default(),
-                FieldTable::default(),
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    async fn register_queue(
-        &self,
-        exchange: Option<String>,
-        queue: &str,
-        routing_key: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        self.channel
-            .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
-            .await?;
-
-        if let Some(ex) = exchange {
-            self.channel
-                .queue_bind(
-                    queue,
-                    &ex,
-                    routing_key,
-                    QueueBindOptions::default(),
-                    FieldTable::default(),
-                )
-                .await?;
-        }
-
-        Ok(())
-    }
-
-    async fn delete_queue(&self, queue: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.channel
-            .queue_delete(queue, QueueDeleteOptions::default())
-            .await?;
-
-        Ok(())
-    }
-
-    async fn delete_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.channel
-            .exchange_delete(exchange, ExchangeDeleteOptions::default())
-            .await?;
-
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct RabbitMQConsumer<T>
 where
     T: Debug,
 {
-    core: RabbitBrokerCore,
+    channel: Channel,
     queue: String,
     shutdown: Arc<AtomicBool>,
     _phantom: std::marker::PhantomData<T>,
@@ -99,18 +31,30 @@ where
     T: Debug,
 {
     pub async fn new(
-        core: RabbitBrokerCore,
+        url_string: &str,
         queue: &str,
         shutdown: Arc<AtomicBool>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        core.register_queue(None, queue, queue).await?;
+        let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
+        let channel = connection.create_channel().await?;
+
+        channel
+            .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
+            .await?;
 
         Ok(Self {
-            core,
+            channel,
             queue: queue.to_string(),
             shutdown,
             _phantom: std::marker::PhantomData,
         })
+    }
+
+    async fn delete_queue(&self, queue: &str) -> Result<(), Box<dyn std::error::Error>> {
+        self.channel
+            .queue_delete(queue, QueueDeleteOptions::default())
+            .await?;
+        Ok(())
     }
 }
 
@@ -124,7 +68,6 @@ where
         handler: MessageHandlerFn<T>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut consumer = self
-            .core
             .channel
             .basic_consume(
                 &self.queue,
@@ -145,8 +88,7 @@ where
             let parsed_message = serde_json::from_slice(&payload)?;
             handler(parsed_message)?;
 
-            self.core
-                .channel
+            self.channel
                 .basic_ack(message.delivery_tag, BasicAckOptions::default())
                 .await?;
         }
@@ -156,7 +98,7 @@ where
 
     async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
         self.shutdown.store(true, Ordering::SeqCst);
-        self.core.delete_queue(&self.queue).await?;
+        self.delete_queue(&self.queue).await?;
         Ok(())
     }
 }
@@ -166,7 +108,7 @@ pub struct RabbitMQProducer<T>
 where
     T: Debug,
 {
-    core: RabbitBrokerCore,
+    channel: Channel,
     exchange: String,
     _phantom: std::marker::PhantomData<T>,
 }
@@ -175,17 +117,31 @@ impl<T> RabbitMQProducer<T>
 where
     T: Debug,
 {
-    pub async fn new(
-        core: RabbitBrokerCore,
-        exchange: &str,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        core.register_exchange(exchange).await?;
+    pub async fn new(url_string: &str, exchange: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
+        let channel = connection.create_channel().await?;
+
+        channel
+            .exchange_declare(
+                exchange,
+                ExchangeKind::Direct,
+                ExchangeDeclareOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
 
         Ok(Self {
-            core,
+            channel,
             exchange: exchange.to_string(),
             _phantom: std::marker::PhantomData,
         })
+    }
+
+    async fn delete_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
+        self.channel
+            .exchange_delete(exchange, ExchangeDeleteOptions::default())
+            .await?;
+        Ok(())
     }
 }
 
@@ -197,8 +153,7 @@ where
     async fn publish_message(&self, message: &T) -> Result<(), Box<dyn std::error::Error>> {
         let payload = serde_json::to_vec(&message)?;
 
-        self.core
-            .channel
+        self.channel
             .basic_publish(
                 &self.exchange,
                 "", //TODO: add appropriate routing key
@@ -212,7 +167,7 @@ where
     }
 
     async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.core.delete_exchange(&self.exchange).await?;
+        self.delete_exchange(&self.exchange).await?;
         Ok(())
     }
 }
@@ -224,9 +179,9 @@ pub async fn setup_rabbit_producer<T>(
 where
     T: Debug,
 {
-    let core = RabbitBrokerCore::new(url_string).await?;
-
-    Ok(Arc::new(RabbitMQProducer::<T>::new(core, exchange).await?))
+    Ok(Arc::new(
+        RabbitMQProducer::<T>::new(url_string, exchange).await?,
+    ))
 }
 
 pub async fn setup_rabbit_consumer<T>(
@@ -237,9 +192,7 @@ pub async fn setup_rabbit_consumer<T>(
 where
     T: Debug,
 {
-    let core = RabbitBrokerCore::new(url_string).await?;
-
     Ok(Arc::new(
-        RabbitMQConsumer::<T>::new(core, queue, is_running).await?,
+        RabbitMQConsumer::<T>::new(url_string, queue, is_running).await?,
     ))
 }
