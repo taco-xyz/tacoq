@@ -20,14 +20,14 @@ use sqlx::PgPool;
 
 use config::Config;
 use controller::{task_instance, task_result};
-use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
+use repo::{PgRepositoryCore, PgTaskKindRepository, PgTaskRepository, PgWorkerRepository};
 
 /// Represents the shared application state that can be accessed by all routes
 ///
 /// Contains all the repositories used for the application logic and the broker
 #[derive(Clone)]
 pub struct AppState {
-    pub task_repository: PgTaskInstanceRepository,
+    pub task_repository: PgTaskRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
     pub broker: Arc<dyn BrokerProducer<Task>>,
@@ -51,7 +51,7 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
-    let task_repository = PgTaskInstanceRepository::new(core.clone());
+    let task_repository = PgTaskRepository::new(core.clone());
     let task_kind_repository = PgTaskKindRepository::new(core.clone());
     let worker_repository = PgWorkerRepository::new(core.clone());
 
@@ -120,7 +120,7 @@ async fn initialize_system(
     let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
 
     let core = PgRepositoryCore::new(db_pools);
-    let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
+    let task_repo = Arc::new(PgTaskRepository::new(core));
 
     let task_input_controller = Arc::new(
         task_instance::NewTaskController::new(new_task_consumer, task_repo.clone()).await?,

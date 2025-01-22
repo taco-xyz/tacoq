@@ -1,4 +1,4 @@
-use crate::repo::impls::task_instance_repo::PgTaskInstanceRepository;
+use crate::repo::impls::task_repo::PgTaskRepository;
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
 
@@ -7,13 +7,13 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct NewTaskController {
     consumer: Arc<dyn BrokerConsumer<Task>>,
-    _task_repository: Arc<PgTaskInstanceRepository>,
+    _task_repository: Arc<PgTaskRepository>,
 }
 
 impl NewTaskController {
     pub async fn new(
         consumer: Arc<dyn BrokerConsumer<Task>>,
-        task_repository: Arc<PgTaskInstanceRepository>,
+        task_repository: Arc<PgTaskRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             consumer,

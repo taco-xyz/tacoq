@@ -56,7 +56,7 @@ CREATE TABLE tasks (
     -- Task status
     started_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE
-    ttl INTERVAL NOT NULL DEFAULT '7 days'
+    ttl TIMESTAMP NOT NULL DEFAULT NOW() + INTERVAL '7 day',
 
     -- Relations
     task_kind_id UUID NOT NULL REFERENCES task_kinds(id),

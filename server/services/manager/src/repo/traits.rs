@@ -1,10 +1,7 @@
 use std::{fmt::Debug, time::SystemTime};
 
 use async_trait::async_trait;
-use common::{
-    models::{TaskInstance, TaskKind, TaskResult, Worker},
-    TaskStatus,
-};
+use common::models::{Task, TaskKind, TaskStatus, Worker};
 use uuid::Uuid;
 
 /// Repository trait for managing task records in the database
@@ -12,13 +9,13 @@ use uuid::Uuid;
 /// Provides methods for creating new tasks and retrieving existing tasks by their ID.
 /// Tasks represent units of work that can be assigned to and processed by workers.
 #[async_trait]
-pub trait TaskInstanceRepository: Send + Sync + Clone + Debug {
+pub trait TaskRepository: Send + Sync + Clone + Debug {
     /// Create a new task in the database
     async fn create_task(
         &self,
         task_kind_id: Uuid,
         input_data: Option<serde_json::Value>,
-    ) -> Result<TaskInstance, sqlx::Error>;
+    ) -> Result<Task, sqlx::Error>;
 
     /// Assign a task to a worker
     async fn assign_task_to_worker(
@@ -28,11 +25,7 @@ pub trait TaskInstanceRepository: Send + Sync + Clone + Debug {
     ) -> Result<(), sqlx::Error>;
 
     /// Get a task by its ID
-    async fn get_task_by_id(
-        &self,
-        id: &Uuid,
-        include_result: bool,
-    ) -> Result<TaskInstance, sqlx::Error>;
+    async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error>;
 
     /// Update the status of a task
     async fn update_task_status(
@@ -47,7 +40,7 @@ pub trait TaskInstanceRepository: Send + Sync + Clone + Debug {
         task_id: &Uuid,
         worker_id: &Uuid,
         error: serde_json::Value,
-    ) -> Result<TaskResult, sqlx::Error>;
+    ) -> Result<Task, sqlx::Error>;
 
     /// Upload a successful result for a task, marking it as completed
     async fn upload_task_result(
@@ -55,7 +48,7 @@ pub trait TaskInstanceRepository: Send + Sync + Clone + Debug {
         task_id: &Uuid,
         worker_id: &Uuid,
         output: serde_json::Value,
-    ) -> Result<TaskResult, sqlx::Error>;
+    ) -> Result<Task, sqlx::Error>;
 }
 
 /// Repository trait for managing task kind records in the database
@@ -101,4 +94,11 @@ pub trait WorkerRepository: Clone {
 
     /// Get the latest heartbeat for a worker
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error>;
+}
+
+/// Repository trait for managing worker kind records in the database
+///
+/// Provides methods for registering and managing worker kinds that workers can be classified as.
+pub trait WorkerKindRepository: Clone {
+    async fn get_worker_kind_by_name(&self, name: String) -> Result<TaskKind, sqlx::Error>;
 }
