@@ -1,6 +1,7 @@
 mod api;
 mod config;
 mod constants;
+mod controller;
 mod repo;
 mod server;
 mod testing;
@@ -19,6 +20,7 @@ use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE, TASK_RESULT_QUEUE};
 use sqlx::PgPool;
 
 use config::Config;
+use controller::{task_instance, task_result};
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
 
 /// Represents the shared application state that can be accessed by all routes
@@ -30,12 +32,6 @@ pub struct AppState {
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
     pub broker: Arc<dyn BrokerProducer<TaskInstance>>,
-}
-
-impl AppState {
-    pub async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.broker.cleanup().await
-    }
 }
 
 /// Creates database connection pools
@@ -164,10 +160,9 @@ async fn main() {
 
     let span = info_span!("manager_startup_real").entered();
 
-    let (mut app_state, server, task_input_controller, task_result_controller) =
-        initialize_system(&config)
-            .await
-            .expect("Failed to initialize system");
+    let (_, server, task_input_controller, task_result_controller) = initialize_system(&config)
+        .await
+        .expect("Failed to initialize system");
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -212,16 +207,5 @@ async fn main() {
         _ = server_handle => {},
     }
 
-    // Cleanup
-    info!("Starting cleanup");
-    if let Err(e) = task_input_controller.cleanup().await {
-        info!("Error cleaning up task input controller: {}", e);
-    }
-    if let Err(e) = task_result_controller.cleanup().await {
-        info!("Error cleaning up task result controller: {}", e);
-    }
-    if let Err(e) = app_state.cleanup().await {
-        info!("Error cleaning up app state: {}", e);
-    }
     info!("Cleanup complete");
 }

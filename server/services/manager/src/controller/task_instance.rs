@@ -34,9 +34,4 @@ impl TaskInstanceController {
 
         self.consumer.consume_messages(handler).await
     }
-
-    pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.consumer.cleanup().await?;
-        Ok(())
-    }
 }

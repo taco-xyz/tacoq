@@ -15,14 +15,10 @@ pub trait BrokerConsumer<T: Send + Sync + 'static>: Send + Sync + Debug {
         &self,
         handler: MessageHandlerFn<T>, // The callback is used when consuming a message
     ) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[automock]
 #[async_trait]
 pub trait BrokerProducer<T: Send + Sync>: Send + Sync + Debug {
     async fn publish_message(&self, message: &T) -> Result<(), Box<dyn std::error::Error>>;
-
-    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>>;
 }

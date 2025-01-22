@@ -49,13 +49,6 @@ where
             _phantom: std::marker::PhantomData,
         })
     }
-
-    async fn delete_queue(&self, queue: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.channel
-            .queue_delete(queue, QueueDeleteOptions::default())
-            .await?;
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -95,12 +88,6 @@ where
 
         Ok(())
     }
-
-    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.shutdown.store(true, Ordering::SeqCst);
-        self.delete_queue(&self.queue).await?;
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -136,13 +123,6 @@ where
             _phantom: std::marker::PhantomData,
         })
     }
-
-    async fn delete_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
-        self.channel
-            .exchange_delete(exchange, ExchangeDeleteOptions::default())
-            .await?;
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -163,11 +143,6 @@ where
             )
             .await?;
 
-        Ok(())
-    }
-
-    async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.delete_exchange(&self.exchange).await?;
         Ok(())
     }
 }
