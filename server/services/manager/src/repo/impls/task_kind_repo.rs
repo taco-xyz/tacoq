@@ -74,7 +74,7 @@ mod tests {
     }
 
     /// Creates a new task kind and verifies it's created correctly
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_new_task_kind(pool: PgPool) {
         let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
         let name = "Test Task".to_string();
@@ -84,7 +84,7 @@ mod tests {
     }
 
     /// Verifies that getting an existing task kind returns the same ID
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_existing_task_kind(pool: PgPool) {
         let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
         let name = "Test Task".to_string();
@@ -97,7 +97,7 @@ mod tests {
     }
 
     /// Verifies that get_all_task_kinds returns all created task kinds
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_all_task_kinds_test(pool: PgPool) {
         let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 

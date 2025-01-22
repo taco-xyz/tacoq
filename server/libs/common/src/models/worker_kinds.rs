@@ -9,3 +9,14 @@ pub struct WorkerKind {
     pub queue_name: String,
     pub created_at: OffsetDateTime,
 }
+
+impl WorkerKind {
+    pub fn new(name: String, routing_key: String, queue_name: String) -> Self {
+        WorkerKind {
+            name,
+            routing_key,
+            queue_name,
+            created_at: OffsetDateTime::now_utc(),
+        }
+    }
+}

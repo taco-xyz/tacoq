@@ -4,76 +4,56 @@ use utoipa::ToSchema;
 
 use time::OffsetDateTime;
 
-use super::TaskInstance;
-use crate::models::TaskKind;
+use sqlx::FromRow;
 
 /// A worker that can execute tasks after receiving them.
 /// We know that it can receive those tasks from its list of capabilities.
 /// A worker must register itself with its capabilities to be able to receive tasks.
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, FromRow)]
 pub struct Worker {
     pub id: Uuid,
     pub name: String,
+    pub worker_kind_name: String,
     #[serde(
         serialize_with = "crate::models::serialize_datetime",
         deserialize_with = "crate::models::deserialize_datetime"
     )]
-    pub registered_at: OffsetDateTime,
-    pub task_kind: Vec<TaskKind>,
-    pub active: bool,
+    pub created_at: OffsetDateTime,
 }
 
 impl Worker {
-    pub fn new(name: String, task_kind: Vec<TaskKind>) -> Self {
+    pub fn new(name: String, worker_kind_name: String) -> Self {
         Worker {
             id: Uuid::new_v4(),
             name,
-            registered_at: OffsetDateTime::now_utc(),
-            task_kind,
-            active: true,
+            worker_kind_name,
+            created_at: OffsetDateTime::now_utc(),
         }
-    }
-
-    pub fn can_handle(&self, task: &TaskInstance) -> bool {
-        self.task_kind
-            .iter()
-            .any(|kind| kind.name == task.task_kind.name)
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::{TaskKind, Worker};
-    use crate::TaskInstance;
-    use sqlx::types::Uuid;
-    use time::OffsetDateTime;
+/// A worker heartbeat is a signal sent by a worker to the server to indicate that it is still alive.
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, FromRow)]
+pub struct WorkerHeartbeat {
+    pub worker_id: Uuid,
+    #[serde(
+        serialize_with = "crate::models::serialize_datetime",
+        deserialize_with = "crate::models::deserialize_datetime"
+    )]
+    pub heartbeat_time: OffsetDateTime,
+    #[serde(
+        serialize_with = "crate::models::serialize_datetime",
+        deserialize_with = "crate::models::deserialize_datetime"
+    )]
+    pub created_at: OffsetDateTime,
+}
 
-    #[test]
-    fn test_worker_can_handle() {
-        let task_kind1 = TaskKind::new("task1".to_string());
-        let task_kind2 = TaskKind::new("task2".to_string());
-        let worker = Worker::new("worker1".to_string(), vec![task_kind1.clone()]);
-
-        let task1 = TaskInstance {
-            id: Uuid::new_v4(),
-            task_kind: task_kind1.clone(),
-            status: crate::TaskStatus::Queued,
+impl WorkerHeartbeat {
+    pub fn new(worker_id: Uuid, heartbeat_time: OffsetDateTime) -> Self {
+        WorkerHeartbeat {
+            worker_id,
+            heartbeat_time,
             created_at: OffsetDateTime::now_utc(),
-            input_data: None,
-            assigned_to: None,
-            result: None,
-        };
-        let task2 = TaskInstance {
-            id: Uuid::new_v4(),
-            task_kind: task_kind2.clone(),
-            status: crate::TaskStatus::Queued,
-            created_at: OffsetDateTime::now_utc(),
-            input_data: None,
-            assigned_to: None,
-            result: None,
-        };
-
-        assert!(worker.can_handle(&task1));
-        assert!(!worker.can_handle(&task2));
+        }
     }
 }

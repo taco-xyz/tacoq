@@ -288,7 +288,7 @@ mod tests {
     }
 
     /// Creates a task and then retrieves it by id
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_and_get_task(pool: PgPool) {
         let repo = PgTaskInstanceRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -315,7 +315,7 @@ mod tests {
     }
 
     /// Creates a task and then uploads a result and an error
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_task_and_then_upload_error(pool: PgPool) {
         let core = PgRepositoryCore::new(pool.clone());
         let repo = PgTaskInstanceRepository::new(core.clone());
@@ -369,7 +369,7 @@ mod tests {
     }
 
     /// Tests that a task's status can be updated after creation
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_task_status_update(pool: PgPool) {
         let repo = PgTaskInstanceRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -389,7 +389,7 @@ mod tests {
     }
 
     /// Creates a task without input data (should be allowed)
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_task_without_input_data(pool: PgPool) {
         let repo = PgTaskInstanceRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -403,7 +403,7 @@ mod tests {
     }
 
     /// Creates a task and then retrieves its results, which should be empty (no results yet)
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_task_results_empty(pool: PgPool) {
         let repo = PgTaskInstanceRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -418,7 +418,7 @@ mod tests {
     }
 
     /// Attempts to retrieve a non-existent task (should fail)
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_task(pool: PgPool) {
         let repo = PgTaskInstanceRepository::new(PgRepositoryCore::new(pool));
         let task = repo.get_task_by_id(&Uuid::new_v4(), true).await;
@@ -426,7 +426,7 @@ mod tests {
     }
 
     /// Creates a task and then updates its status through all possible transitions
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn status_transitions(pool: PgPool) {
         let repo = PgTaskInstanceRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -454,7 +454,7 @@ mod tests {
     }
 
     /// Tests assigning a task to a worker
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_assign_task_to_worker(pool: PgPool) {
         let core = PgRepositoryCore::new(pool.clone());
         let repo = PgTaskInstanceRepository::new(core.clone());

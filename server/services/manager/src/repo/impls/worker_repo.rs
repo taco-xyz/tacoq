@@ -248,7 +248,7 @@ mod tests {
     }
 
     /// Registers a worker and then retrieves it by id
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn register_and_get_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -281,7 +281,7 @@ mod tests {
     }
 
     /// Registers two workers and then retrieves all workers
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_all_workers(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -316,7 +316,7 @@ mod tests {
     }
 
     /// Tests worker update functionality including name changes and task kind modifications
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn update_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -371,7 +371,7 @@ mod tests {
     }
 
     /// Registers a worker and then updates its active status
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn worker_active_status(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -393,7 +393,7 @@ mod tests {
     }
 
     /// Registers a worker and then records a heartbeat
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn worker_heartbeat(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
@@ -417,7 +417,7 @@ mod tests {
     }
 
     /// Attempts to retrieve a nonexistent worker by id (should fail)
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
         let result = repo._get_worker_by_id(&Uuid::new_v4()).await;
@@ -425,7 +425,7 @@ mod tests {
     }
 
     /// Attempts to retrieve a nonexistent heartbeat (should fail)
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_heartbeat(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
         let result = repo._get_latest_heartbeat(&Uuid::new_v4()).await;

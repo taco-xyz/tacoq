@@ -97,7 +97,7 @@ mod test {
 
     // Getting Task
 
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_non_existent_task_by_id(db_pools: PgPool) {
         let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools, broker).await;
@@ -108,7 +108,7 @@ mod test {
         assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
 
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
         let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
         let server = get_test_server(db_pools.clone(), broker).await;
