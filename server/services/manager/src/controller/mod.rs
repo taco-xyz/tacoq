@@ -1,24 +1,27 @@
-pub mod task_input;
+pub mod task_instance;
 pub mod task_result;
 
 use crate::repo::PgTaskInstanceRepository;
-use common::brokers::rabbit::TaskResultRabbitMQConsumer;
+use common::brokers::core::BrokerConsumer;
 use std::sync::Arc;
 use tracing::info;
 
+use common::models::{TaskInstance, TaskResult};
+
 pub struct Controllers {
-    pub task_input: Arc<task_input::TaskInputController>,
+    pub task_input: Arc<task_instance::TaskInstanceController>,
     pub task_result: Arc<task_result::TaskResultController>,
 }
 
 impl Controllers {
     pub async fn new(
-        task_input_broker: Arc<TaskResultRabbitMQConsumer>,
-        task_result_broker: Arc<TaskResultRabbitMQConsumer>,
+        task_instance_broker: Arc<dyn BrokerConsumer<TaskInstance>>,
+        task_result_broker: Arc<dyn BrokerConsumer<TaskResult>>,
         task_repo: Arc<PgTaskInstanceRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let task_input = Arc::new(
-            task_input::TaskInputController::new(task_input_broker, task_repo.clone()).await?,
+            task_instance::TaskInstanceController::new(task_instance_broker, task_repo.clone())
+                .await?,
         );
         let task_result =
             Arc::new(task_result::TaskResultController::new(task_result_broker, task_repo).await?);

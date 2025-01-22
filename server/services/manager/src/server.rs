@@ -1,5 +1,5 @@
 use axum::Router;
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use tokio::sync::oneshot;
 use tracing::info;
 

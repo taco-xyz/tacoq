@@ -6,12 +6,11 @@ mod repo;
 mod server;
 mod testing;
 
+use common::TaskResult;
 use controller::Controllers;
 use server::Server;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::fmt::Debug;
+use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
 use tracing::{info, info_span};
 
@@ -20,7 +19,7 @@ use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer}
 use common::{
     brokers::{
         core::BrokerProducer,
-        rabbit::{RabbitBrokerCore, TaskInstanceRabbitMQProducer, TaskResultRabbitMQConsumer},
+        rabbit::{RabbitBrokerCore, RabbitMQConsumer, RabbitMQProducer},
     },
     TaskInstance,
 };
@@ -56,60 +55,48 @@ async fn setup_db_pools(config: &Config) -> PgPool {
     PgPool::connect(&config.db_reader_url).await.unwrap()
 }
 
-/// Initializes the broker
+/// Initializes a generic producer broker
 ///
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker   
-async fn setup_publisher_broker(config: &Config) -> Arc<TaskInstanceRabbitMQProducer> {
+/// * `exchange` - The exchange to publish messages to
+async fn setup_publisher_broker<T>(config: &Config, exchange: &str) -> Arc<RabbitMQProducer<T>>
+where
+    T: Debug,
+{
     let core = RabbitBrokerCore::new(&config.broker_addr.clone())
         .await
         .expect("Failed to initialize publisher broker");
 
     Arc::new(
-        TaskInstanceRabbitMQProducer::new(core, TASK_OUTPUT_EXCHANGE)
+        RabbitMQProducer::<T>::new(core, exchange)
             .await
             .expect("Failed to initialize publisher broker"),
     )
 }
 
-/// Initializes the consumer broker for task results
+/// Initializes a generic consumer broker
 ///
 /// # Arguments
 ///
 /// * `config` - The configuration for the broker
+/// * `queue` - The queue to consume messages from
 /// * `is_running` - A flag indicating if the application is running
-async fn setup_task_result_consumer_broker(
+async fn setup_consumer_broker<T>(
     config: &Config,
+    queue: &str,
     is_running: Arc<AtomicBool>,
-) -> Arc<TaskResultRabbitMQConsumer> {
+) -> Arc<RabbitMQConsumer<T>>
+where
+    T: Debug,
+{
     let core = RabbitBrokerCore::new(&config.broker_addr.clone())
         .await
         .expect("Failed to initialize consumer broker");
 
     Arc::new(
-        TaskResultRabbitMQConsumer::new(core, TASK_RESULT_QUEUE, is_running)
-            .await
-            .expect("Failed to initialize consumer broker"),
-    )
-}
-
-/// Initializes the consumer broker for task inputs
-///
-/// # Arguments
-///
-/// * `config` - The configuration for the broker
-/// * `is_running` - A flag indicating if the application is running
-async fn setup_task_input_consumer_broker(
-    config: &Config,
-    is_running: Arc<AtomicBool>,
-) -> Arc<TaskResultRabbitMQConsumer> {
-    let core = RabbitBrokerCore::new(&config.broker_addr.clone())
-        .await
-        .expect("Failed to initialize consumer broker");
-
-    Arc::new(
-        TaskResultRabbitMQConsumer::new(core, TASK_INPUT_QUEUE, is_running)
+        RabbitMQConsumer::<T>::new(core, queue, is_running)
             .await
             .expect("Failed to initialize consumer broker"),
     )
@@ -172,9 +159,14 @@ async fn initialize_system(
     let db_pools = setup_db_pools(config).await;
     info!("Database connection pools created");
 
-    let publisher_broker = setup_publisher_broker(config).await;
-    let task_result_consumer = setup_task_result_consumer_broker(config, is_running.clone()).await;
-    let task_input_consumer = setup_task_input_consumer_broker(config, is_running).await;
+    let publisher_broker =
+        setup_publisher_broker::<TaskInstance>(config, TASK_OUTPUT_EXCHANGE).await;
+
+    let task_result_consumer =
+        setup_consumer_broker::<TaskResult>(config, TASK_RESULT_QUEUE, is_running.clone()).await;
+
+    let task_instance_consumer =
+        setup_consumer_broker::<TaskInstance>(config, TASK_INPUT_QUEUE, is_running.clone()).await;
     info!("Brokers initialized");
 
     let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
@@ -183,7 +175,7 @@ async fn initialize_system(
     let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
 
     let controllers =
-        Controllers::new(task_input_consumer, task_result_consumer, task_repo).await?;
+        Controllers::new(task_instance_consumer, task_result_consumer, task_repo).await?;
 
     let server = Server::new(app, 3000);
 
