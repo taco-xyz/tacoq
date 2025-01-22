@@ -216,3 +216,30 @@ where
         Ok(())
     }
 }
+
+pub async fn setup_rabbit_producer<T>(
+    url_string: &str,
+    exchange: &str,
+) -> Result<Arc<RabbitMQProducer<T>>, Box<dyn std::error::Error>>
+where
+    T: Debug,
+{
+    let core = RabbitBrokerCore::new(url_string).await?;
+
+    Ok(Arc::new(RabbitMQProducer::<T>::new(core, exchange).await?))
+}
+
+pub async fn setup_rabbit_consumer<T>(
+    url_string: &str,
+    queue: &str,
+    is_running: Arc<AtomicBool>,
+) -> Result<Arc<RabbitMQConsumer<T>>, Box<dyn std::error::Error>>
+where
+    T: Debug,
+{
+    let core = RabbitBrokerCore::new(url_string).await?;
+
+    Ok(Arc::new(
+        RabbitMQConsumer::<T>::new(core, queue, is_running).await?,
+    ))
+}

@@ -3,6 +3,8 @@ use mockall::automock;
 use std::fmt::Debug;
 use std::marker::{Send, Sync};
 
+// The message handler function serves as a callback for consumed messages
+// It is expected to return a result indicating if the message was processed successfully
 pub type MessageHandlerFn<T> =
     Box<dyn Fn(T) -> Result<(), Box<dyn std::error::Error>> + Send + Sync>;
 
@@ -11,7 +13,7 @@ pub type MessageHandlerFn<T> =
 pub trait BrokerConsumer<T: Send + Sync + 'static>: Send + Sync + Debug {
     async fn consume_messages(
         &self,
-        handler: MessageHandlerFn<T>,
+        handler: MessageHandlerFn<T>, // The callback is used when consuming a message
     ) -> Result<(), Box<dyn std::error::Error>>;
 
     async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>>;
