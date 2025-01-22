@@ -37,9 +37,8 @@ CREATE TABLE workers (
 
 -- Heartbeats are regularly sent by the workers to indicate that they are still alive and kicking
 CREATE TABLE worker_heartbeats (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
-    heartbeat_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE PRIMARY KEY,
+    heartbeat_time TIMESTAMP WITH TIME ZONE NOT NULL PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
