@@ -1,10 +1,17 @@
 -- Task Kinds ---------------------------------------------------------------------
 -- NOTE: This is defined here because it is used in both workers and tasks tables.
 
+CREATE TABLE worker_kinds (
+    name PRIMARY KEY,
+    routing_key TEXT NOT NULL,
+    queue_name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
 -- Each task has a "kind" which describes that class of task
 CREATE TABLE task_kinds (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE,
+    name PRIMARY KEY,
+    worker_kind_name REFERENCES worker_kinds(name) ON DELETE CASCADE PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -13,18 +20,20 @@ CREATE TABLE task_kinds (
 -- Workers execute tasks and send heartbeats to the server to indicate that they are still alive
 CREATE TABLE workers (
     id UUID PRIMARY KEY,
-    name TEXT NOT NULL,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    registered_at TIMESTAMP WITH TIME ZONE NOT NULL
+    name TEXT NOT NULL INDEX,
+    worker_kind_name TEXT NOT NULL REFERENCES worker_kinds(name),
+    
+    registered_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE (name, worker_kind_name)
 );
 
--- Mapping between workers and the tasks they can execute
-CREATE TABLE worker_task_kinds (
-    worker_id UUID NOT NULL REFERENCES workers(id),
-    task_kind_id UUID NOT NULL REFERENCES task_kinds(id),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (worker_id, task_kind_id)
-);
+-- -- Mapping between workers and the tasks they can execute
+-- CREATE TABLE worker_task_kinds (
+--     worker_id UUID NOT NULL REFERENCES workers(id),
+--     task_kind_id UUID NOT NULL REFERENCES task_kinds(id),
+--     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+--     PRIMARY KEY (worker_id, task_kind_id)
+-- );
 
 -- Heartbeats are regularly sent by the workers to indicate that they are still alive and kicking
 CREATE TABLE worker_heartbeats (
@@ -40,28 +49,29 @@ CREATE TABLE worker_heartbeats (
 -- NOTE: This is currently not used because it's not easy to integrate with sqlx. Will come back to it.
 CREATE TYPE task_status AS ENUM (
     'pending',    -- Task is created but not yet assigned
-    'queued',     -- Task has been assigned to a worker and sent to a queue
-    'running',    -- Worker has started processing
+    'processing', -- Task is assigned to a worker and is being processed
     'completed',  -- Task completed successfully
-    'failed',     -- Task failed to complete
-    'cancelled'   -- Task was cancelled before completion
 );
 
 -- Tasks are the actual task "instances" that are created and sent to workers
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    task_kind_id UUID NOT NULL REFERENCES task_kinds(id),
+    
+    -- Task data
     input_data JSONB,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    assigned_to UUID REFERENCES workers(id)
-);
-
--- New task results table
-CREATE TABLE task_results (
-    task_id UUID PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
     output_data JSONB,
-    error_data JSONB,
-    worker_id UUID NOT NULL REFERENCES workers(id),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    is_error INT NOT NULL DEFAULT 0,
+    
+    -- Task status
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE
+    ttl INTERVAL NOT NULL DEFAULT '7 days'
+
+    -- Relations
+    task_kind_id UUID NOT NULL REFERENCES task_kinds(id),
+    assigned_to UUID REFERENCES workers(id),
+
+    -- Timestamps
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 );
