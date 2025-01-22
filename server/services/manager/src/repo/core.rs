@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PgRepositoryCore {
     pub pool: PgPool,
 }

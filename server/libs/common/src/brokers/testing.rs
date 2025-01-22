@@ -1,71 +1,15 @@
-use crate::brokers::core::BrokerCore;
-use crate::brokers::Broker;
-use crate::models::{TaskInstance, TaskKind, TaskStatus, Worker};
-use async_trait::async_trait;
-use sqlx::types::Uuid;
-use std::sync::Arc;
+use crate::{TaskInstance, TaskKind, TaskStatus, Worker};
 use time::OffsetDateTime;
+use uuid::Uuid;
 
-/// Mock implementations for BrokerCore that does nothing
-#[derive(Clone)]
-pub struct MockBrokerCore;
+use crate::brokers::core::{MockBrokerConsumer, MockBrokerProducer};
 
-impl Default for MockBrokerCore {
-    fn default() -> Self {
-        Self::new()
-    }
+pub fn get_mock_broker_producer<T: Send + Sync>() -> MockBrokerProducer<T> {
+    MockBrokerProducer::new()
 }
 
-impl MockBrokerCore {
-    pub fn new() -> Self {
-        MockBrokerCore
-    }
-}
-
-#[async_trait]
-impl BrokerCore for MockBrokerCore {
-    async fn register_exchange(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn register_queue(
-        &self,
-        _: &str,
-        _: &str,
-        _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn delete_queue(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn delete_exchange(&self, _: &str) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-
-    async fn publish_message(
-        &self,
-        _: &str,
-        _: &str,
-        _: &[u8],
-        _: &str,
-        _: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
-    }
-}
-
-/// Creates and returns a broker with a mock core
-pub fn get_mock_broker() -> Broker {
-    Broker {
-        uri: "mock".to_string(),
-        broker: Arc::new(MockBrokerCore::new()),
-        workers: Vec::new(),
-        workers_index: 0,
-        submission_exchange: "task_submission",
-    }
+pub fn get_mock_broker_consumer<T: Send + Sync>() -> MockBrokerConsumer<T> {
+    MockBrokerConsumer::new()
 }
 
 pub fn setup_task_kinds() -> Vec<TaskKind> {
