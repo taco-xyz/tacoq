@@ -1,7 +1,6 @@
 use crate::brokers::core::BrokerCore;
 use crate::brokers::Broker;
-use crate::TaskKind;
-use crate::{TaskInstance, TaskStatus, Worker};
+use crate::models::{TaskInstance, TaskKind, TaskStatus, Worker};
 use async_trait::async_trait;
 use sqlx::types::Uuid;
 use std::sync::Arc;

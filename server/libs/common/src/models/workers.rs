@@ -43,8 +43,9 @@ impl Worker {
 
 #[cfg(test)]
 mod test {
-    use super::{TaskKind, Worker};
-    use crate::TaskInstance;
+    use crate::models::TaskStatus;
+
+    use super::{TaskInstance, TaskKind, Worker};
     use sqlx::types::Uuid;
     use time::OffsetDateTime;
 
@@ -57,7 +58,7 @@ mod test {
         let task1 = TaskInstance {
             id: Uuid::new_v4(),
             task_kind: task_kind1.clone(),
-            status: crate::TaskStatus::Queued,
+            status: TaskStatus::Queued,
             created_at: OffsetDateTime::now_utc(),
             input_data: None,
             assigned_to: None,
@@ -66,7 +67,7 @@ mod test {
         let task2 = TaskInstance {
             id: Uuid::new_v4(),
             task_kind: task_kind2.clone(),
-            status: crate::TaskStatus::Queued,
+            status: TaskStatus::Queued,
             created_at: OffsetDateTime::now_utc(),
             input_data: None,
             assigned_to: None,

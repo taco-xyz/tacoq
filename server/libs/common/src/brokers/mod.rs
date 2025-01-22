@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use std::sync::Arc;
 
-use crate::{TaskInstance, Worker};
+use crate::models::{TaskInstance, Worker};
 
 async fn create_broker_connection(
     uri: &str,
@@ -114,8 +114,7 @@ impl Broker {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::models::TaskKind;
-    use crate::TaskStatus;
+    use crate::models::{TaskKind, TaskStatus};
     use testing::{get_mock_broker, setup_task_kinds, setup_tasks, setup_workers};
     use time::OffsetDateTime;
     use uuid::Uuid;

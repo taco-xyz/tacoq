@@ -4,4 +4,4 @@
 # individual folders exclusively.
 [workspace]
 
-members = [ "server/libs/common", "server/libs/db-common","server/services/manager"]
+members = [ "server/libs/common", "server/services/manager"]

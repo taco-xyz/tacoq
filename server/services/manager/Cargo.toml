@@ -6,7 +6,6 @@ description = "Galactus is a monolithic service that handles communication with 
 
 [dependencies]
 common = { path = "../../libs/common" }
-db_common = { path = "../../libs/db-common" }
 async-trait = "0.1.83"
 dotenv = "0.15.0"
 futures = "0.3.31"
