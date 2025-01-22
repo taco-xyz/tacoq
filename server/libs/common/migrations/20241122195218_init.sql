@@ -10,8 +10,9 @@ CREATE TABLE worker_kinds (
 
 -- Each task has a "kind" which describes that class of task
 CREATE TABLE task_kinds (
-    name PRIMARY KEY,
-    worker_kind_name REFERENCES worker_kinds(name) ON DELETE CASCADE PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    worker_kind_name REFERENCES worker_kinds(name) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 

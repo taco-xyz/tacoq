@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(task.is_error, 0);
         assert_eq!(task.assigned_to, None);
 
-        let retrieved = repo.get_task_by_id(&task.id, false).await.unwrap();
+        let retrieved = repo.get_task_by_id(&task.id).await.unwrap();
         assert_eq!(task.id, retrieved.id);
     }
 
@@ -182,6 +182,7 @@ mod tests {
         assert_eq!(result.assigned_to, Some(worker_id));
         assert_eq!(result.output_data, Some(output));
         assert_eq!(result.is_error, 0);
+        assert!(result.completed_at.is_some());
 
         // Test error result
         let task2 = repo.create_task(task_kind.id, None).await.unwrap();
@@ -195,6 +196,7 @@ mod tests {
         assert_eq!(error_result.assigned_to, Some(worker_id));
         assert_eq!(error_result.output_data, Some(error));
         assert_eq!(error_result.is_error, 1);
+        assert!(error_result.completed_at.is_some());
     }
 
     /// Tests that a task's status can be updated after creation
@@ -213,13 +215,13 @@ mod tests {
         repo.update_task_status(&task.id, TaskStatus::Processing)
             .await
             .unwrap();
-        let updated = repo.get_task_by_id(&task.id, false).await.unwrap();
+        let updated = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(updated.started_at.is_some());
 
         repo.update_task_status(&task.id, TaskStatus::Completed)
             .await
             .unwrap();
-        let completed = repo.get_task_by_id(&task.id, false).await.unwrap();
+        let completed = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(completed.completed_at.is_some());
     }
 
@@ -248,7 +250,7 @@ mod tests {
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();
-        let task = repo.get_task_by_id(&task.id, true).await.unwrap();
+        let task = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(task.output_data.is_none());
     }
 
@@ -256,7 +258,7 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
-        let task = repo.get_task_by_id(&Uuid::new_v4(), true).await;
+        let task = repo.get_task_by_id(&Uuid::new_v4()).await;
         assert!(task.is_err());
     }
 
@@ -279,13 +281,13 @@ mod tests {
         repo.update_task_status(&task.id, TaskStatus::Processing)
             .await
             .unwrap();
-        let task = repo.get_task_by_id(&task.id, false).await.unwrap();
+        let task = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(task.started_at.is_some());
 
         repo.update_task_status(&task.id, TaskStatus::Completed)
             .await
             .unwrap();
-        let task = repo.get_task_by_id(&task.id, false).await.unwrap();
+        let task = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(task.completed_at.is_some());
     }
 
@@ -315,7 +317,7 @@ mod tests {
         repo.assign_task_to_worker(&task.id, &worker_id)
             .await
             .unwrap();
-        let updated = repo.get_task_by_id(&task.id, false).await.unwrap();
+        let updated = repo.get_task_by_id(&task.id).await.unwrap();
         assert_eq!(updated.assigned_to, Some(worker_id));
         assert!(updated.started_at.is_some());
     }
