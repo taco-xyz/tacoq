@@ -3,30 +3,29 @@ mod config;
 mod constants;
 mod controller;
 mod repo;
+mod server;
 mod testing;
 
-use std::{
-    net::SocketAddr,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
+use controller::Controllers;
+use server::Server;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
+use tokio::sync::oneshot;
+use tracing::{info, info_span};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use common::{
     brokers::{
         core::BrokerProducer,
-        rabbit::{RabbitBrokerCore, TaskInstanceRabbitMQProducer},
+        rabbit::{RabbitBrokerCore, TaskInstanceRabbitMQProducer, TaskResultRabbitMQConsumer},
     },
     TaskInstance,
 };
-use constants::TASK_OUTPUT_EXCHANGE;
-use controller::{task_input::TaskInputController, task_result::TaskResultController};
+use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE, TASK_RESULT_QUEUE};
 use sqlx::PgPool;
-use tokio::sync::oneshot;
-use tracing::{info, info_span};
 
 use config::Config;
 use repo::{PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository, PgWorkerRepository};
@@ -71,6 +70,48 @@ async fn setup_publisher_broker(config: &Config) -> Arc<TaskInstanceRabbitMQProd
         TaskInstanceRabbitMQProducer::new(core, TASK_OUTPUT_EXCHANGE)
             .await
             .expect("Failed to initialize publisher broker"),
+    )
+}
+
+/// Initializes the consumer broker for task results
+///
+/// # Arguments
+///
+/// * `config` - The configuration for the broker
+/// * `is_running` - A flag indicating if the application is running
+async fn setup_task_result_consumer_broker(
+    config: &Config,
+    is_running: Arc<AtomicBool>,
+) -> Arc<TaskResultRabbitMQConsumer> {
+    let core = RabbitBrokerCore::new(&config.broker_addr.clone())
+        .await
+        .expect("Failed to initialize consumer broker");
+
+    Arc::new(
+        TaskResultRabbitMQConsumer::new(core, TASK_RESULT_QUEUE, is_running)
+            .await
+            .expect("Failed to initialize consumer broker"),
+    )
+}
+
+/// Initializes the consumer broker for task inputs
+///
+/// # Arguments
+///
+/// * `config` - The configuration for the broker
+/// * `is_running` - A flag indicating if the application is running
+async fn setup_task_input_consumer_broker(
+    config: &Config,
+    is_running: Arc<AtomicBool>,
+) -> Arc<TaskResultRabbitMQConsumer> {
+    let core = RabbitBrokerCore::new(&config.broker_addr.clone())
+        .await
+        .expect("Failed to initialize consumer broker");
+
+    Arc::new(
+        TaskResultRabbitMQConsumer::new(core, TASK_INPUT_QUEUE, is_running)
+            .await
+            .expect("Failed to initialize consumer broker"),
     )
 }
 
@@ -123,6 +164,32 @@ async fn setup_app(
     (router, app_state)
 }
 
+async fn initialize_system(
+    config: &Config,
+) -> Result<(AppState, Controllers, Server), Box<dyn std::error::Error>> {
+    let is_running = Arc::new(AtomicBool::new(true));
+
+    let db_pools = setup_db_pools(config).await;
+    info!("Database connection pools created");
+
+    let publisher_broker = setup_publisher_broker(config).await;
+    let task_result_consumer = setup_task_result_consumer_broker(config, is_running.clone()).await;
+    let task_input_consumer = setup_task_input_consumer_broker(config, is_running).await;
+    info!("Brokers initialized");
+
+    let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
+
+    let core = PgRepositoryCore::new(db_pools);
+    let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
+
+    let controllers =
+        Controllers::new(task_input_consumer, task_result_consumer, task_repo).await?;
+
+    let server = Server::new(app, 3000);
+
+    Ok((app_state, controllers, server))
+}
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
@@ -131,77 +198,28 @@ async fn main() {
 
     let span = info_span!("manager_startup_real").entered();
 
-    let db_pools = setup_db_pools(&config).await;
-    info!("Database connection pools created");
-
-    // Create two separate publisher brokers
-    let broker = setup_publisher_broker(&config).await;
-    info!("Brokers initialized");
-
-    let (app, mut app_state) = setup_app(&db_pools, broker).await;
-    info!("App created");
-
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    info!("Listening on {}", addr);
-
-    // Create task repositories for controllers
-    let core = PgRepositoryCore::new(db_pools);
-    let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
-
-    // Initialize controllers
-    let task_input_controller = TaskInputController::new(&config.broker_addr, task_repo.clone())
+    let (mut app_state, controllers, server) = initialize_system(&config)
         .await
-        .expect("Failed to create task input controller");
+        .expect("Failed to initialize system");
 
-    let task_result_controller = TaskResultController::new(&config.broker_addr, task_repo.clone())
-        .await
-        .expect("Failed to create task result controller");
-
-    let is_running = Arc::new(AtomicBool::new(true));
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
-    // Clone controllers for the shutdown handler
-    let task_input_controller_shutdown = task_input_controller.clone();
-    let task_result_controller_shutdown = task_result_controller.clone();
-
     // Setup shutdown signal handler
-    let is_running_signal = is_running.clone();
     tokio::spawn(async move {
-        if let Ok(_) = tokio::signal::ctrl_c().await {
+        if tokio::signal::ctrl_c().await.is_ok() {
             info!("Shutdown signal received");
-            is_running_signal.store(false, Ordering::SeqCst);
             let _ = shutdown_tx.send(());
         }
     });
 
-    // Spawn controllers
-    let input_handle = tokio::spawn(async move {
-        task_input_controller
-            .run()
-            .await
-            .expect("Task input controller failed");
-    });
-
-    let result_handle = tokio::spawn(async move {
-        task_result_controller
-            .run()
-            .await
-            .expect("Task result controller failed");
-    });
-
+    let (input_handle, result_handle) = controllers.run().await;
     let server_handle = tokio::spawn(async move {
-        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-        axum::serve(listener, app)
-            .with_graceful_shutdown(async {
-                shutdown_rx.await.ok();
-            })
-            .await
-            .unwrap()
+        server.run(shutdown_rx).await.expect("Server failed");
     });
 
     span.exit();
 
-    // Wait for shutdown signal
+    // Wait for shutdown
     tokio::select! {
         _ = input_handle => {},
         _ = result_handle => {},
@@ -210,16 +228,9 @@ async fn main() {
 
     // Cleanup
     info!("Starting cleanup");
-    if let Err(e) = task_input_controller_shutdown.cleanup().await {
-        info!("Error cleaning up task input controller: {}", e);
-    }
-    if let Err(e) = task_result_controller_shutdown.cleanup().await {
-        info!("Error cleaning up task result controller: {}", e);
-    }
-
+    controllers.cleanup().await;
     if let Err(e) = app_state.cleanup().await {
-        info!("Error cleanin up app state: {}", e)
+        info!("Error cleaning up app state: {}", e);
     }
-
     info!("Cleanup complete");
 }

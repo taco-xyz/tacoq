@@ -8,7 +8,7 @@ pub type MessageHandlerFn<T> =
 
 #[automock]
 #[async_trait]
-pub trait BrokerConsumer<T: Send + Sync + 'static> {
+pub trait BrokerConsumer<T: Send + Sync + 'static>: Send + Sync + Debug {
     async fn consume_messages(
         &self,
         handler: MessageHandlerFn<T>,

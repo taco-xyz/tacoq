@@ -1,31 +1,20 @@
-use crate::constants;
 use crate::repo::PgTaskInstanceRepository;
 use common::brokers::core::BrokerConsumer;
-use common::brokers::rabbit::{RabbitBrokerCore, TaskResultRabbitMQConsumer};
 use common::TaskResult;
 
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct TaskResultController {
-    consumer: TaskResultRabbitMQConsumer,
+    consumer: Arc<dyn BrokerConsumer<TaskResult>>,
     _task_repository: Arc<PgTaskInstanceRepository>,
 }
 
 impl TaskResultController {
     pub async fn new(
-        broker_url: &str,
+        consumer: Arc<dyn BrokerConsumer<TaskResult>>,
         task_repository: Arc<PgTaskInstanceRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let core = RabbitBrokerCore::new(broker_url).await?;
-        let consumer = TaskResultRabbitMQConsumer::new(
-            core,
-            constants::TASK_RESULT_QUEUE,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .await?;
-
         Ok(Self {
             consumer,
             _task_repository: task_repository,

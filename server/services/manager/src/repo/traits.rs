@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{fmt::Debug, time::SystemTime};
 
 use async_trait::async_trait;
 use common::{
@@ -12,7 +12,7 @@ use uuid::Uuid;
 /// Provides methods for creating new tasks and retrieving existing tasks by their ID.
 /// Tasks represent units of work that can be assigned to and processed by workers.
 #[async_trait]
-pub trait TaskInstanceRepository: Clone {
+pub trait TaskInstanceRepository: Send + Sync + Clone + Debug {
     /// Create a new task in the database
     async fn create_task(
         &self,
