@@ -7,7 +7,7 @@ use axum::{
 use tracing::{error, info};
 use uuid::Uuid;
 
-use common::models::TaskInstance;
+use common::models::Task;
 
 use crate::{repo::TaskInstanceRepository, AppState};
 
@@ -30,7 +30,7 @@ pub fn routes() -> Router<AppState> {
         ("id" = Uuid, Path, description = "Task ID to get")
     ),
     responses(
-        (status = 200, description = "Task found", body = TaskInstance, content_type = "application/json"),
+        (status = 200, description = "Task found", body = Task, content_type = "application/json"),
         (status = 404, description = "Task not found", content_type = "text/plain"),
         (status = 500, description = "Internal server error", content_type = "text/plain")
     ),
@@ -39,7 +39,7 @@ pub fn routes() -> Router<AppState> {
 async fn get_task_by_id(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TaskInstance>, (StatusCode, String)> {
+) -> Result<Json<Task>, (StatusCode, String)> {
     info!("Getting task by ID: {:?}", id);
 
     let task = state.task_repository.get_task_by_id(&id, true).await;
@@ -66,7 +66,7 @@ async fn get_task_by_id(
 mod test {
     use axum::http::StatusCode;
     use common::brokers::testing::get_mock_broker_producer;
-    use common::{TaskInstance, TaskKind, Worker};
+    use common::models::{TaskKind, Worker};
     use sqlx::PgPool;
     use std::sync::Arc;
     use tracing::info;

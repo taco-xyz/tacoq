@@ -27,14 +27,6 @@ CREATE TABLE workers (
     UNIQUE (name, worker_kind_name)
 );
 
--- -- Mapping between workers and the tasks they can execute
--- CREATE TABLE worker_task_kinds (
---     worker_id UUID NOT NULL REFERENCES workers(id),
---     task_kind_id UUID NOT NULL REFERENCES task_kinds(id),
---     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
---     PRIMARY KEY (worker_id, task_kind_id)
--- );
-
 -- Heartbeats are regularly sent by the workers to indicate that they are still alive and kicking
 CREATE TABLE worker_heartbeats (
     worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE PRIMARY KEY,

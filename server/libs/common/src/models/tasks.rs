@@ -55,7 +55,7 @@ impl From<TaskStatus> for String {
 /// Tasks are sent to workers to be executed with a specific payload.
 /// Workers are eligble for receiving certain tasks depending on their
 /// list of capabilities.
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
     pub id: Uuid,
 

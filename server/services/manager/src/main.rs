@@ -7,7 +7,6 @@ mod server;
 mod testing;
 
 use common::brokers::{setup_consumer_broker, setup_publisher_broker};
-use common::TaskResult;
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
@@ -15,7 +14,7 @@ use tracing::{info, info_span};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use common::{brokers::core::BrokerProducer, TaskInstance};
+use common::{brokers::core::BrokerProducer, models::Task};
 use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE, TASK_RESULT_QUEUE};
 use sqlx::PgPool;
 
@@ -31,7 +30,7 @@ pub struct AppState {
     pub task_repository: PgTaskInstanceRepository,
     pub task_kind_repository: PgTaskKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Arc<dyn BrokerProducer<TaskInstance>>,
+    pub broker: Arc<dyn BrokerProducer<Task>>,
 }
 
 /// Creates database connection pools
@@ -49,10 +48,7 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app_state(
-    db_pools: &PgPool,
-    broker: Arc<dyn BrokerProducer<TaskInstance>>,
-) -> AppState {
+async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskInstanceRepository::new(core.clone());
@@ -75,10 +71,7 @@ async fn setup_app_state(
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(
-    db_pools: &PgPool,
-    broker: Arc<dyn BrokerProducer<TaskInstance>>,
-) -> (Router, AppState) {
+async fn setup_app(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> (Router, AppState) {
     let app_state = setup_app_state(db_pools, broker).await;
     info!("App state created");
 
@@ -98,7 +91,7 @@ async fn initialize_system(
     (
         AppState,
         Server,
-        Arc<task_instance::TaskInstanceController>,
+        Arc<task_instance::NewTaskController>,
         Arc<task_result::TaskResultController>,
     ),
     Box<dyn std::error::Error>,
@@ -109,25 +102,19 @@ async fn initialize_system(
     info!("Database connection pools created");
 
     let publisher_broker =
-        setup_publisher_broker::<TaskInstance>(&config.broker_addr, TASK_OUTPUT_EXCHANGE)
+        setup_publisher_broker::<Task>(&config.broker_addr, TASK_OUTPUT_EXCHANGE)
             .await
             .expect("Failed to setup publisher broker");
 
-    let task_result_consumer = setup_consumer_broker::<TaskResult>(
-        &config.broker_addr,
-        TASK_RESULT_QUEUE,
-        is_running.clone(),
-    )
-    .await
-    .expect("Failed to setup task result consumer");
+    let task_result_consumer =
+        setup_consumer_broker::<Task>(&config.broker_addr, TASK_RESULT_QUEUE, is_running.clone())
+            .await
+            .expect("Failed to setup task result consumer");
 
-    let task_instance_consumer = setup_consumer_broker::<TaskInstance>(
-        &config.broker_addr,
-        TASK_INPUT_QUEUE,
-        is_running.clone(),
-    )
-    .await
-    .expect("Failed to setup task instance consumer");
+    let new_task_consumer =
+        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, is_running.clone())
+            .await
+            .expect("Failed to setup task instance consumer");
     info!("Brokers initialized");
 
     let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
@@ -136,8 +123,7 @@ async fn initialize_system(
     let task_repo = Arc::new(PgTaskInstanceRepository::new(core));
 
     let task_input_controller = Arc::new(
-        task_instance::TaskInstanceController::new(task_instance_consumer, task_repo.clone())
-            .await?,
+        task_instance::NewTaskController::new(new_task_consumer, task_repo.clone()).await?,
     );
     let task_result_controller =
         Arc::new(task_result::TaskResultController::new(task_result_consumer, task_repo).await?);

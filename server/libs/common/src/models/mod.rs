@@ -1,5 +1,6 @@
 mod task_kinds;
 mod tasks;
+pub mod testing;
 mod time_format;
 mod worker_kinds;
 mod workers;
