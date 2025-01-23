@@ -1,7 +1,5 @@
 use async_trait::async_trait;
 use common::models::TaskKind;
-use sqlx::Executor;
-use sqlx::Postgres;
 use tracing::instrument;
 
 use crate::repo::{PgRepositoryCore, TaskKindRepository};
@@ -15,65 +13,6 @@ impl PgTaskKindRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
     }
-
-    async fn save_task_kind<'e, E>(
-        &self,
-        executor: E,
-        task_kind: &TaskKind,
-    ) -> Result<TaskKind, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            INSERT INTO task_kinds (id, name, worker_kind_name, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (id) DO UPDATE 
-            SET name = $2,
-                worker_kind_name = $3
-            RETURNING id, name, worker_kind_name, created_at
-            "#,
-        )
-        .bind(task_kind.id)
-        .bind(&task_kind.name)
-        .bind(&task_kind.worker_kind_name)
-        .bind(task_kind.created_at)
-        .fetch_one(executor)
-        .await
-    }
-
-    async fn find_task_kind_by_name<'e, E>(
-        &self,
-        executor: E,
-        name: &str,
-    ) -> Result<Option<TaskKind>, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT id, name, worker_kind_name, created_at 
-            FROM task_kinds 
-            WHERE name = $1
-            "#,
-        )
-        .bind(name)
-        .fetch_optional(executor)
-        .await
-    }
-
-    async fn find_all_task_kinds<'e, E>(&self, executor: E) -> Result<Vec<TaskKind>, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT id, name, worker_kind_name, created_at FROM task_kinds
-            "#,
-        )
-        .fetch_all(executor)
-        .await
-    }
 }
 
 #[async_trait]
@@ -86,8 +25,7 @@ impl TaskKindRepository for PgTaskKindRepository {
     ) -> Result<TaskKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let task_kind = self
-            .find_task_kind_by_name(&mut *tx, name)
+        let task_kind = TaskKind::find_by_name(&mut *tx, name, worker_kind_name)
             .await?
             .unwrap_or_else(|| TaskKind::new(name, worker_kind_name));
 
@@ -97,7 +35,7 @@ impl TaskKindRepository for PgTaskKindRepository {
 
     #[instrument(skip(self))]
     async fn _get_all_task_kinds(&self) -> Result<Vec<TaskKind>, sqlx::Error> {
-        self.find_all_task_kinds(&self.core.pool).await
+        TaskKind::find_all(&self.core.pool).await
     }
 }
 
@@ -119,8 +57,12 @@ mod tests {
     async fn create_new_task_kind(pool: PgPool) {
         let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
         let name = "Test Task".to_string();
+        let worker_kind_name = "Test Worker".to_string();
 
-        let task_kind = repo.get_or_create_task_kind(&name).await.unwrap();
+        let task_kind = repo
+            .get_or_create_task_kind(&name, &worker_kind_name)
+            .await
+            .unwrap();
         assert_eq!(task_kind.name, name);
     }
 
@@ -129,9 +71,16 @@ mod tests {
     async fn get_existing_task_kind(pool: PgPool) {
         let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
         let name = "Test Task".to_string();
+        let worker_kind_name = "Test Worker".to_string();
 
-        let first = repo.get_or_create_task_kind(&name).await.unwrap();
-        let second = repo.get_or_create_task_kind(&name).await.unwrap();
+        let first = repo
+            .get_or_create_task_kind(&name, &worker_kind_name)
+            .await
+            .unwrap();
+        let second = repo
+            .get_or_create_task_kind(&name, &worker_kind_name)
+            .await
+            .unwrap();
 
         assert_eq!(first.id, second.id);
         assert_eq!(first.name, second.name);
@@ -142,13 +91,33 @@ mod tests {
     async fn get_all_task_kinds_test(pool: PgPool) {
         let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 
-        let kind1 = repo.get_or_create_task_kind("Task 1").await.unwrap();
-        let kind2 = repo.get_or_create_task_kind("Task 2").await.unwrap();
+        let worker_kind_name = "Test Worker".to_string();
+
+        let kind1 = repo
+            .get_or_create_task_kind("Task 1", &worker_kind_name)
+            .await
+            .unwrap();
+        let kind2 = repo
+            .get_or_create_task_kind("Task 2", &worker_kind_name)
+            .await
+            .unwrap();
 
         let all_kinds = repo._get_all_task_kinds().await.unwrap();
 
         assert_eq!(all_kinds.len(), 2);
         assert!(all_kinds.iter().any(|k| k.id == kind1.id));
         assert!(all_kinds.iter().any(|k| k.id == kind2.id));
+    }
+
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn test_task_kind_operations(pool: PgPool) {
+        let repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
+
+        let task_kind = repo.get_or_create_task_kind("test", "test").await.unwrap();
+        assert_eq!(task_kind.name, "test");
+        assert_eq!(task_kind.worker_kind_name, "test");
+
+        let same_kind = repo.get_or_create_task_kind("test", "test").await.unwrap();
+        assert_eq!(task_kind.id, same_kind.id);
     }
 }

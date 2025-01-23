@@ -47,13 +47,18 @@ impl TaskKind {
         .await
     }
 
-    pub async fn find_by_name<'e, E>(executor: E, name: &str) -> Result<TaskKind, sqlx::Error>
+    pub async fn find_by_name<'e, E>(
+        executor: E,
+        name: &str,
+        worker_kind_name: &str,
+    ) -> Result<Option<TaskKind>, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as(r#"SELECT * FROM task_kinds WHERE name = $1"#)
+        sqlx::query_as(r#"SELECT * FROM task_kinds WHERE name = $1 AND worker_kind_name = $2"#)
             .bind(name)
-            .fetch_one(executor)
+            .bind(worker_kind_name)
+            .fetch_optional(executor)
             .await
     }
 

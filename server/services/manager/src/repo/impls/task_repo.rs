@@ -123,7 +123,7 @@ mod tests {
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
 
@@ -151,7 +151,7 @@ mod tests {
         let worker_repo = PgWorkerRepository::new(core);
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();
@@ -196,7 +196,7 @@ mod tests {
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();
@@ -222,7 +222,7 @@ mod tests {
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();
@@ -236,7 +236,7 @@ mod tests {
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();
@@ -259,7 +259,7 @@ mod tests {
         let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();
@@ -290,7 +290,7 @@ mod tests {
         let worker_repo = PgWorkerRepository::new(core);
 
         let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test Task")
+            .get_or_create_task_kind("Test Task", "test")
             .await
             .unwrap();
         let task = repo.create_task(task_kind.id, None).await.unwrap();

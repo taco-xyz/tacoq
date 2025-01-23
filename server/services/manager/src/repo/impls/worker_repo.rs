@@ -55,77 +55,98 @@ impl WorkerRepository for PgWorkerRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        repo::{PgRepositoryCore, PgTaskKindRepository, TaskKindRepository},
-        testing::test::init_test_logger,
-    };
+    use crate::{repo::PgRepositoryCore, testing::test::init_test_logger};
     use sqlx::PgPool;
+    use std::time::Duration;
 
-    // This runs before any test in this module
     #[ctor::ctor]
     fn init() {
         init_test_logger();
     }
 
+    /// Tests registering workers with different worker kinds
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn worker_kinds(pool: PgPool) {
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+
+        // Register workers with different kinds
+        let worker1 = repo
+            .register_worker("Worker 1", "coding.worker")
+            .await
+            .unwrap();
+        let worker2 = repo
+            .register_worker("Worker 2", "testing.worker")
+            .await
+            .unwrap();
+
+        assert_eq!(worker1.worker_kind_name, "coding.worker");
+        assert_eq!(worker2.worker_kind_name, "testing.worker");
+
+        // Verify worker kinds are preserved when fetching
+        let fetched1 = repo._get_worker_by_id(&worker1.id).await.unwrap();
+        let fetched2 = repo._get_worker_by_id(&worker2.id).await.unwrap();
+
+        assert_eq!(fetched1.worker_kind_name, "coding.worker");
+        assert_eq!(fetched2.worker_kind_name, "testing.worker");
+    }
+
+    /// Tests updating a worker's kind
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn update_worker_kind(pool: PgPool) {
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+
+        // Register initial worker
+        let worker = repo
+            .register_worker("Test Worker", "initial.kind")
+            .await
+            .unwrap();
+        assert_eq!(worker.worker_kind_name, "initial.kind");
+
+        // Update worker with new kind
+        let updated = repo
+            .register_worker("Test Worker", "updated.kind")
+            .await
+            .unwrap();
+
+        assert_eq!(updated.id, worker.id);
+        assert_eq!(updated.worker_kind_name, "updated.kind");
+
+        // Verify update was persisted
+        let fetched = repo._get_worker_by_id(&worker.id).await.unwrap();
+        assert_eq!(fetched.worker_kind_name, "updated.kind");
+    }
+
     /// Registers a worker and then retrieves it by id
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn register_and_get_worker(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
-        let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
 
-        let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test task".to_string())
-            .await
-            .unwrap();
-
-        let worker_id = Uuid::new_v4();
         let worker = repo
-            .register_worker(
-                worker_id,
-                "Test Worker".to_string(),
-                vec![task_kind.clone()],
-            )
+            .register_worker("Test Worker", "test.worker")
             .await
             .unwrap();
 
-        assert_eq!(worker.id, worker_id);
         assert_eq!(worker.name, "Test Worker");
-        assert_eq!(worker.task_kind.len(), 1);
-        assert_eq!(worker.task_kind[0].id, task_kind.id);
-        assert!(worker.active);
+        assert_eq!(worker.worker_kind_name, "test.worker");
 
-        let retrieved = repo._get_worker_by_id(&worker_id).await.unwrap();
+        let retrieved = repo._get_worker_by_id(&worker.id).await.unwrap();
         assert_eq!(worker.id, retrieved.id);
         assert_eq!(worker.name, retrieved.name);
-        assert_eq!(worker.task_kind, retrieved.task_kind);
+        assert_eq!(worker.worker_kind_name, retrieved.worker_kind_name);
     }
 
     /// Registers two workers and then retrieves all workers
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_all_workers(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
-        let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
-
-        let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test task".to_string())
-            .await
-            .unwrap();
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
 
         let worker1 = repo
-            .register_worker(
-                Uuid::new_v4(),
-                "Worker 1".to_string(),
-                vec![task_kind.clone()],
-            )
+            .register_worker("Worker 1", "test.worker")
             .await
             .unwrap();
 
         let worker2 = repo
-            .register_worker(
-                Uuid::new_v4(),
-                "Worker 2".to_string(),
-                vec![task_kind.clone()],
-            )
+            .register_worker("Worker 2", "test.worker")
             .await
             .unwrap();
 
@@ -135,105 +156,55 @@ mod tests {
         assert!(all_workers.iter().any(|w| w.id == worker2.id));
     }
 
-    /// Tests worker update functionality including name changes and task kind modifications
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn update_worker(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
-        let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
-
-        // Create two distinct task kinds
-        let coding_task = task_kind_repo
-            .get_or_create_task_kind("Coding".to_string())
-            .await
-            .unwrap();
-        let testing_task = task_kind_repo
-            .get_or_create_task_kind("Testing".to_string())
-            .await
-            .unwrap();
-
-        let worker_id = Uuid::new_v4();
-
-        // Initial worker registration
-        let initial_worker = repo
-            .register_worker(
-                worker_id,
-                "Developer Bot".to_string(),
-                vec![coding_task.clone()],
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(initial_worker.name, "Developer Bot");
-        assert_eq!(initial_worker.task_kind.len(), 1);
-        assert_eq!(initial_worker.task_kind[0].id, coding_task.id);
-
-        // Update both name and task kinds
-        let updated_worker = repo
-            .register_worker(
-                worker_id,
-                "Test Bot".to_string(),
-                vec![testing_task.clone()],
-            )
-            .await
-            .unwrap();
-
-        // Verify the updates
-        assert_eq!(updated_worker.id, worker_id);
-        assert_eq!(updated_worker.name, "Test Bot");
-        assert_eq!(updated_worker.task_kind.len(), 1);
-        assert_eq!(updated_worker.task_kind[0].id, testing_task.id);
-
-        // Verify by fetching directly
-        let fetched_worker = repo._get_worker_by_id(&worker_id).await.unwrap();
-        assert_eq!(fetched_worker.name, "Test Bot");
-        assert_eq!(fetched_worker.task_kind.len(), 1);
-        assert_eq!(fetched_worker.task_kind[0].id, testing_task.id);
-    }
-
-    /// Registers a worker and then updates its active status
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn worker_active_status(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
-        let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
-
-        let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test task".to_string())
-            .await
-            .unwrap();
-
-        let worker = repo
-            .register_worker(Uuid::new_v4(), "Test Worker".to_string(), vec![task_kind])
-            .await
-            .unwrap();
-        assert!(worker.active);
-
-        repo.set_worker_active(&worker.id, false).await.unwrap();
-        let updated = repo._get_worker_by_id(&worker.id).await.unwrap();
-        assert!(!updated.active);
-    }
-
-    /// Registers a worker and then records a heartbeat
+    /// Tests recording and retrieving worker heartbeats
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn worker_heartbeat(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
-        let task_kind_repo = PgTaskKindRepository::new(PgRepositoryCore::new(pool));
-
-        let task_kind = task_kind_repo
-            .get_or_create_task_kind("Test task".to_string())
-            .await
-            .unwrap();
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
 
         let worker = repo
-            .register_worker(Uuid::new_v4(), "Test Worker".to_string(), vec![task_kind])
+            .register_worker("Test Worker", "test.worker")
             .await
             .unwrap();
 
+        // Record initial heartbeat
         repo._record_heartbeat(&worker.id).await.unwrap();
-        let heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
+        let first_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
 
-        // Heartbeat should be recent
+        // Wait a bit and record another heartbeat
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        repo._record_heartbeat(&worker.id).await.unwrap();
+        let second_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
+
+        // Second heartbeat should be more recent than first
+        assert!(second_heartbeat > first_heartbeat);
+    }
+
+    /// Tests multiple heartbeats from different workers
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn multiple_worker_heartbeats(pool: PgPool) {
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+
+        let worker1 = repo
+            .register_worker("Worker 1", "test.worker")
+            .await
+            .unwrap();
+        let worker2 = repo
+            .register_worker("Worker 2", "test.worker")
+            .await
+            .unwrap();
+
+        // Record heartbeats for both workers
+        repo._record_heartbeat(&worker1.id).await.unwrap();
+        repo._record_heartbeat(&worker2.id).await.unwrap();
+
+        // Each worker should have its own heartbeat
+        let heartbeat1 = repo._get_latest_heartbeat(&worker1.id).await.unwrap();
+        let heartbeat2 = repo._get_latest_heartbeat(&worker2.id).await.unwrap();
+
+        // Both heartbeats should be recent
         let now = SystemTime::now();
-        assert!(now.duration_since(heartbeat).unwrap().as_secs() < 1);
+        assert!(now.duration_since(heartbeat1).unwrap().as_secs() < 1);
+        assert!(now.duration_since(heartbeat2).unwrap().as_secs() < 1);
     }
 
     /// Attempts to retrieve a nonexistent worker by id (should fail)
