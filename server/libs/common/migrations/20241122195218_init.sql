@@ -2,7 +2,7 @@
 -- NOTE: This is defined here because it is used in both workers and tasks tables.
 
 CREATE TABLE worker_kinds (
-    name PRIMARY KEY,
+    name TEXT NOT NULL PRIMARY KEY,
     routing_key TEXT NOT NULL,
     queue_name TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -12,7 +12,7 @@ CREATE TABLE worker_kinds (
 CREATE TABLE task_kinds (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL UNIQUE,
-    worker_kind_name REFERENCES worker_kinds(name) ON DELETE CASCADE,
+    worker_kind_name TEXT REFERENCES worker_kinds(name) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
@@ -21,18 +21,20 @@ CREATE TABLE task_kinds (
 -- Workers execute tasks and send heartbeats to the server to indicate that they are still alive
 CREATE TABLE workers (
     id UUID PRIMARY KEY,
-    name TEXT NOT NULL INDEX,
+    name TEXT NOT NULL,
     worker_kind_name TEXT NOT NULL REFERENCES worker_kinds(name),
-    
     registered_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE (name, worker_kind_name)
 );
 
+CREATE INDEX workers_name_idx ON workers(name);
+
 -- Heartbeats are regularly sent by the workers to indicate that they are still alive and kicking
 CREATE TABLE worker_heartbeats (
-    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE PRIMARY KEY,
-    heartbeat_time TIMESTAMP WITH TIME ZONE NOT NULL PRIMARY KEY,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    heartbeat_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (worker_id, heartbeat_time)
 );
 
 -- Tasks --------------------------------------------------------------------------
@@ -42,7 +44,7 @@ CREATE TABLE worker_heartbeats (
 CREATE TYPE task_status AS ENUM (
     'pending',    -- Task is created but not yet assigned
     'processing', -- Task is assigned to a worker and is being processed
-    'completed',  -- Task completed successfully
+    'completed'   -- Task completed successfully
 );
 
 -- Tasks are the actual task "instances" that are created and sent to workers
@@ -56,7 +58,7 @@ CREATE TABLE tasks (
     
     -- Task status
     started_at TIMESTAMP WITH TIME ZONE,
-    completed_at TIMESTAMP WITH TIME ZONE
+    completed_at TIMESTAMP WITH TIME ZONE,
     ttl TIMESTAMP NOT NULL DEFAULT NOW() + INTERVAL '7 day',
 
     -- Relations
@@ -65,5 +67,5 @@ CREATE TABLE tasks (
 
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );

@@ -1,13 +1,13 @@
+pub mod core;
+pub mod rabbit;
+pub mod testing;
+
 use core::{BrokerConsumer, BrokerProducer};
 use rabbit::{setup_rabbit_consumer, setup_rabbit_producer};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use std::fmt::Debug;
-
-pub mod core;
-pub mod rabbit;
-pub mod testing;
 
 /// Initializes a generic producer broker
 ///
