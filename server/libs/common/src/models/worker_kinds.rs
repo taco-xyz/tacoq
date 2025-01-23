@@ -11,11 +11,11 @@ pub struct WorkerKind {
 }
 
 impl WorkerKind {
-    pub fn new(name: String, routing_key: String, queue_name: String) -> Self {
+    pub fn new(name: &str, routing_key: &str, queue_name: &str) -> Self {
         WorkerKind {
-            name,
-            routing_key,
-            queue_name,
+            name: name.to_string(),
+            routing_key: routing_key.to_string(),
+            queue_name: queue_name.to_string(),
             created_at: OffsetDateTime::now_utc(),
         }
     }

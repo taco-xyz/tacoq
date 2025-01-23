@@ -1,7 +1,7 @@
 use std::{fmt::Debug, time::SystemTime};
 
 use async_trait::async_trait;
-use common::models::{Task, TaskKind, TaskStatus, Worker};
+use common::models::{Task, TaskKind, TaskStatus, Worker, WorkerKind};
 use uuid::Uuid;
 
 /// Repository trait for managing task records in the database
@@ -99,6 +99,13 @@ pub trait WorkerRepository: Clone {
 /// Repository trait for managing worker kind records in the database
 ///
 /// Provides methods for registering and managing worker kinds that workers can be classified as.
+#[async_trait]
 pub trait WorkerKindRepository: Clone {
-    async fn get_worker_kind_by_name(&self, name: String) -> Result<TaskKind, sqlx::Error>;
+    // Get a worker kind by name
+    async fn get_or_create_worker_kind(
+        &self,
+        name: &str,
+        exchange: &str,
+        queue: &str,
+    ) -> Result<WorkerKind, sqlx::Error>;
 }
