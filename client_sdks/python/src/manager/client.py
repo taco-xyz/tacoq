@@ -9,6 +9,10 @@ from aiohttp_retry import RetryClient, RetryOptionsBase
 from manager.config import ManagerConfig
 from models.task import Task, WorkerKindBrokerInfo
 
+# =========================================
+# Constants
+# =========================================
+
 TASK_PATH = "/tasks"
 """ Base path for task CRUD operations."""
 
@@ -17,6 +21,10 @@ WORKER_KIND_PATH = "/worker-kind"
 
 HEALTH_PATH = "/health"
 """ Base path for health checking."""
+
+# =========================================
+# Manager States
+# =========================================
 
 
 class ManagerStates(str, Enum):
@@ -73,9 +81,7 @@ class ManagerClient(BaseModel):
                     session,
                     retry_options=override_retry_options or self.config.retry_options,
                 )
-                async with retry_client.get(
-                    f"{self.config.base_url}{HEALTH_PATH}"
-                ) as resp:
+                async with retry_client.get(f"{self.config.url}{HEALTH_PATH}") as resp:
                     match resp.status:
                         case 200:
                             return ManagerStates.HEALTHY
@@ -108,7 +114,7 @@ class ManagerClient(BaseModel):
             )
 
             async with retry_client.get(
-                f"{self.config.base_url}{TASK_PATH}/{task_id}"
+                f"{self.config.url}{TASK_PATH}/{task_id}"
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
@@ -177,7 +183,7 @@ class ManagerClient(BaseModel):
             )
 
             async with retry_client.put(
-                f"{self.config.base_url}{WORKER_KIND_PATH}/{worker_kind}"
+                f"{self.config.url}{WORKER_KIND_PATH}/{worker_kind}"
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class ManagerConfig(BaseModel):
     """Configuration for communicating with the manager."""
 
-    base_url: str
+    url: str
     """ The base URL of the manager (with no paths). """
     retry_options: RetryOptionsBase = ExponentialRetry(
         attempts=3,
