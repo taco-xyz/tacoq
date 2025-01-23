@@ -13,7 +13,7 @@ pub struct Worker {
         serialize_with = "crate::models::serialize_datetime",
         deserialize_with = "crate::models::deserialize_datetime"
     )]
-    pub created_at: OffsetDateTime,
+    pub registered_at: OffsetDateTime,
 }
 
 impl Worker {
@@ -22,7 +22,7 @@ impl Worker {
             id: Uuid::new_v4(),
             name: name.to_string(),
             worker_kind_name: worker_kind_name.to_string(),
-            created_at: OffsetDateTime::now_utc(),
+            registered_at: OffsetDateTime::now_utc(),
         }
     }
 
@@ -32,7 +32,7 @@ impl Worker {
     {
         sqlx::query_as(
             r#"
-            INSERT INTO workers (id, name, worker_kind_name, created_at)
+            INSERT INTO workers (id, name, worker_kind_name, registered_at)
             VALUES ($1, $2, $3, $4)
             ON CONFLICT (id) DO UPDATE 
             SET name = $2,
@@ -43,7 +43,7 @@ impl Worker {
         .bind(self.id)
         .bind(&self.name)
         .bind(&self.worker_kind_name)
-        .bind(self.created_at)
+        .bind(self.registered_at)
         .fetch_one(executor)
         .await
     }
@@ -72,7 +72,7 @@ impl Worker {
 pub struct WorkerHeartbeat {
     pub worker_id: Uuid,
     pub heartbeat_time: OffsetDateTime,
-    pub created_at: OffsetDateTime,
+    pub registered_at: OffsetDateTime,
 }
 
 impl WorkerHeartbeat {
@@ -80,7 +80,7 @@ impl WorkerHeartbeat {
         WorkerHeartbeat {
             worker_id,
             heartbeat_time: OffsetDateTime::now_utc(),
-            created_at: OffsetDateTime::now_utc(),
+            registered_at: OffsetDateTime::now_utc(),
         }
     }
 
@@ -90,13 +90,13 @@ impl WorkerHeartbeat {
     {
         sqlx::query(
             r#"
-            INSERT INTO worker_heartbeats (worker_id, heartbeat_time, created_at)
+            INSERT INTO worker_heartbeats (worker_id, heartbeat_time, registered_at)
             VALUES ($1, $2, $3)
             "#,
         )
         .bind(self.worker_id)
         .bind(self.heartbeat_time)
-        .bind(self.created_at)
+        .bind(self.registered_at)
         .execute(executor)
         .await?;
         Ok(())

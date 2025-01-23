@@ -68,8 +68,22 @@ pub struct Task {
     pub is_error: i32,
 
     // Task status
+    #[serde(
+        serialize_with = "crate::models::serialize_datetime_option",
+        deserialize_with = "crate::models::deserialize_datetime_option"
+    )]
     pub started_at: Option<OffsetDateTime>,
+
+    #[serde(
+        serialize_with = "crate::models::serialize_datetime_option",
+        deserialize_with = "crate::models::deserialize_datetime_option"
+    )]
     pub completed_at: Option<OffsetDateTime>,
+
+    #[serde(
+        serialize_with = "crate::models::serialize_datetime_option",
+        deserialize_with = "crate::models::deserialize_datetime_option"
+    )]
     pub ttl: Option<OffsetDateTime>, // Time to live only enabled after it has been completed
 
     // Relations

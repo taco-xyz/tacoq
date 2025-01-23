@@ -20,3 +20,32 @@ where
     OffsetDateTime::parse(&s, &time::format_description::well_known::Iso8601::DEFAULT)
         .map_err(serde::de::Error::custom)
 }
+
+pub fn serialize_datetime_option<S>(
+    dt: &Option<OffsetDateTime>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match dt {
+        Some(dt) => serialize_datetime(dt, serializer),
+        None => serializer.serialize_none(),
+    }
+}
+
+pub fn deserialize_datetime_option<'de, D>(
+    deserializer: D,
+) -> Result<Option<OffsetDateTime>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = <Option<String> as Deserialize>::deserialize(deserializer)?;
+    match s {
+        Some(s) => Ok(Some(
+            OffsetDateTime::parse(&s, &time::format_description::well_known::Iso8601::DEFAULT)
+                .map_err(serde::de::Error::custom)?,
+        )),
+        None => Ok(None),
+    }
+}
