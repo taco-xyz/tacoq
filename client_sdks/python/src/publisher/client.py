@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 from aiohttp_retry import RetryOptionsBase
 
-from broker import BrokerClient, BrokerConfig
+from broker import PublisherBrokerClient, BrokerConfig
 from manager import ManagerClient, ManagerConfig
 from models.task import TaskInput, Task, TaskKind
 
@@ -13,7 +13,7 @@ class PublisherClient:
 
     # Broker
     _broker_config: BrokerConfig
-    _broker_client: BrokerClient
+    _broker_client: Optional[PublisherBrokerClient]
 
     # Manager
     _manager_config: ManagerConfig
@@ -24,7 +24,9 @@ class PublisherClient:
         self._manager_client = ManagerClient(config=manager_config)
 
         self._broker_config = broker_config
-        # TODO - Init broker client
+
+    def _connect_to_broker(self):
+        self._broker_client = PublisherBrokerClient(config=self._broker_config)
 
     async def publish_task(
         self,
@@ -43,6 +45,12 @@ class PublisherClient:
         - `TaskInstance`: The task instance.
         """
 
+        # Connect to the broker if that hasn't yet been done
+        if not self._broker_client:
+            self._connect_to_broker()
+        if not self._broker_client:
+            raise Exception("Failed to connect to the broker")
+
         # Convert the task kind to a TaskKind if it is a string
         kind: TaskKind = (
             TaskKind.from_str(task_kind) if isinstance(task_kind, str) else task_kind
@@ -56,8 +64,16 @@ class PublisherClient:
             priority=priority,
         )
 
+        # Get the worker kind info
+        worker_kind_info = await self._manager_client.get_worker_kind_broker_info(
+            kind.worker_kind
+        )
+
         # Publish the task to the manager
-        # TODO: Implement task publishing to RabbitMQ
+        await self._broker_client.publish_task(
+            worker_kind_info.queue_name,
+            task,
+        )
 
         return task
 
