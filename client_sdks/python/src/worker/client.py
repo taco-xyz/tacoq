@@ -12,36 +12,26 @@ from worker.config import WorkerApplicationConfig
 
 @dataclass
 class WorkerApplication:
-    """A worker application that processes tasks from a task queue.
-
-    ### Attributes
-    - `_config`: Configuration for the worker application
-    - `_tasks`: Mapping of task kinds to their handler functions
-    - `_broker_client`: Client for communicating with the message broker
-    - `_manager_client`: Client for communicating with the task manager
-    - `_id`: Unique identifier assigned by the manager
-
-    ### Methods
-    - `register_task`: Register a task handler function for a specific task kind
-    - `task`: Decorator for registering task handler functions
-    - `_register_worker`: Register this worker with the manager and initialize broker connection
-    - `_unregister_worker`: Unregister from the manager and clean up broker connection
-    - `_execute_task`: Execute a task and update its status in the manager
-    - `_listen`: Listen for tasks of a specific kind from the broker
-    - `entrypoint`: Start the worker application
-    """
+    """A worker application that processes tasks from a task queue."""
 
     _config: WorkerApplicationConfig
     _registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]]
     _broker_client: Optional[BrokerClient]
     _manager_client: ManagerClient
+    _queue_name: str
 
     def __init__(self, config: WorkerApplicationConfig):
+        # Init all the clients
         self._config = config
         self._id = None
-
         self._manager_client = ManagerClient(config.manager_config)
         self._registered_tasks = {}
+
+        # Get the broker information for this worker kind
+        worker_kind_info = asyncio.run(
+            self._manager_client.get_worker_kind_broker_info(self._config.kind)
+        )
+        self._queue_name = worker_kind_info.queue_name
 
     def register_task(
         self, kind: str, task: Callable[[TaskInput], Awaitable[TaskOutput]]
