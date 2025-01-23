@@ -231,6 +231,9 @@ class WorkerClient(BaseClient):
                 "Tried to connect to RabbitMQ, but channel was not established."
             )
 
+        # Set prefetch to one to enable fair dispatching
+        await self._channel.set_qos(prefetch_count=1)
+
         # Setup task assignment queue for this worker kind
         self._worker_task_queue = await self._channel.declare_queue(
             TASK_ASSIGNMENT_WORKER_QUEUE.format(worker_kind=self._worker_kind),
