@@ -117,3 +117,16 @@ class Task(BaseModel):
         """Whether the task has finished."""
 
         return self.status == TaskStatus.COMPLETED
+
+
+class WorkerKindBrokerInfo(BaseModel):
+    """Information about a worker kind."""
+
+    queue_name: str
+    """The name of the queue for this worker kind. The worker will use this information to connect to the correct queue."""
+
+    routing_key: str
+    """The routing key for this worker kind. The worker will use this information to route the task to the correct worker."""
+
+    worker_kind: str
+    """The kind of worker."""
