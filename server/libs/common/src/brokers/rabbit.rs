@@ -1,31 +1,112 @@
-use crate::brokers::core::BrokerCore;
+use super::core::{BrokerConsumer, BrokerProducer, MessageHandlerFn};
 use async_trait::async_trait;
+use futures::StreamExt;
 use lapin::{
-    options::*,
-    types::{AMQPValue, FieldTable},
-    BasicProperties, Connection, ConnectionProperties, ExchangeKind,
+    options::*, types::FieldTable, BasicProperties, Channel, Connection, ConnectionProperties,
+    ExchangeKind,
 };
-use std::sync::Arc;
+use serde::{de::DeserializeOwned, Serialize};
+use std::{
+    clone::Clone,
+    fmt::Debug,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
-#[derive(Clone)]
-pub struct RabbitBroker {
-    connection: Arc<Connection>,
+#[derive(Clone, Debug)]
+pub struct RabbitMQConsumer<T>
+where
+    T: Debug,
+{
+    channel: Channel,
+    queue: String,
+    shutdown: Arc<AtomicBool>,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl RabbitBroker {
-    pub async fn new(uri: &str) -> Result<RabbitBroker, Box<dyn std::error::Error>> {
-        let connection = Connection::connect(uri, ConnectionProperties::default()).await?;
+impl<T> RabbitMQConsumer<T>
+where
+    T: Debug,
+{
+    pub async fn new(
+        url_string: &str,
+        queue: &str,
+        shutdown: Arc<AtomicBool>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
+        let channel = connection.create_channel().await?;
 
-        Ok(RabbitBroker {
-            connection: Arc::new(connection),
+        channel
+            .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
+            .await?;
+
+        Ok(Self {
+            channel,
+            queue: queue.to_string(),
+            shutdown,
+            _phantom: std::marker::PhantomData,
         })
     }
 }
 
 #[async_trait]
-impl BrokerCore for RabbitBroker {
-    async fn register_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let channel = self.connection.create_channel().await?;
+impl<T> BrokerConsumer<T> for RabbitMQConsumer<T>
+where
+    T: Send + Sync + Debug + DeserializeOwned + 'static,
+{
+    async fn consume_messages(
+        &self,
+        handler: MessageHandlerFn<T>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut consumer = self
+            .channel
+            .basic_consume(
+                &self.queue,
+                "manager",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+
+        while let Some(delivery) = consumer.next().await {
+            if self.shutdown.load(Ordering::SeqCst) {
+                break;
+            }
+
+            let message = delivery.unwrap_or_else(|_| panic!("Error in consumer {}", self.queue));
+            let payload = message.data;
+
+            let parsed_message = serde_json::from_slice(&payload)?;
+            handler(parsed_message)?;
+
+            self.channel
+                .basic_ack(message.delivery_tag, BasicAckOptions::default())
+                .await?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RabbitMQProducer<T>
+where
+    T: Debug,
+{
+    channel: Channel,
+    exchange: String,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> RabbitMQProducer<T>
+where
+    T: Debug,
+{
+    pub async fn new(url_string: &str, exchange: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
+        let channel = connection.create_channel().await?;
 
         channel
             .exchange_declare(
@@ -36,80 +117,57 @@ impl BrokerCore for RabbitBroker {
             )
             .await?;
 
-        Ok(())
+        Ok(Self {
+            channel,
+            exchange: exchange.to_string(),
+            _phantom: std::marker::PhantomData,
+        })
     }
+}
 
-    async fn register_queue(
-        &self,
-        exchange: &str,
-        queue: &str,
-        routing_key: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let channel = self.connection.create_channel().await?;
+#[async_trait]
+impl<T> BrokerProducer<T> for RabbitMQProducer<T>
+where
+    T: Send + Sync + Serialize + Debug,
+{
+    async fn publish_message(&self, message: &T) -> Result<(), Box<dyn std::error::Error>> {
+        let payload = serde_json::to_vec(&message)?;
 
-        channel
-            .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
-            .await?;
-
-        channel
-            .queue_bind(
-                queue,
-                exchange,
-                routing_key,
-                QueueBindOptions::default(),
-                FieldTable::default(),
-            )
-            .await?;
-
-        Ok(())
-    }
-
-    async fn delete_queue(&self, queue: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let channel = self.connection.create_channel().await?;
-
-        channel
-            .queue_delete(queue, QueueDeleteOptions::default())
-            .await?;
-
-        Ok(())
-    }
-
-    async fn delete_exchange(&self, exchange: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let channel = self.connection.create_channel().await?;
-
-        channel
-            .exchange_delete(exchange, ExchangeDeleteOptions::default())
-            .await?;
-
-        Ok(())
-    }
-
-    async fn publish_message(
-        &self,
-        exchange: &str,
-        routing_key: &str,
-        payload: &[u8],
-        message_id: &str,
-        task_id: &str,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let channel = self.connection.create_channel().await?;
-
-        // Initialize headers
-        let mut headers = FieldTable::default();
-        headers.insert("task_kind".into(), AMQPValue::LongString(task_id.into()));
-
-        channel
+        self.channel
             .basic_publish(
-                exchange,
-                routing_key,
+                &self.exchange,
+                "", //TODO: add appropriate routing key
                 BasicPublishOptions::default(),
-                payload,
-                BasicProperties::default()
-                    .with_message_id(message_id.into())
-                    .with_headers(headers),
+                payload.as_slice(),
+                BasicProperties::default(),
             )
             .await?;
 
         Ok(())
     }
+}
+
+pub async fn setup_rabbit_producer<T>(
+    url_string: &str,
+    exchange: &str,
+) -> Result<Arc<RabbitMQProducer<T>>, Box<dyn std::error::Error>>
+where
+    T: Debug,
+{
+    Ok(Arc::new(
+        RabbitMQProducer::<T>::new(url_string, exchange).await?,
+    ))
+}
+
+pub async fn setup_rabbit_consumer<T>(
+    url_string: &str,
+    queue: &str,
+    is_running: Arc<AtomicBool>,
+) -> Result<Arc<RabbitMQConsumer<T>>, Box<dyn std::error::Error>>
+where
+    T: Debug,
+{
+    Ok(Arc::new(
+        RabbitMQConsumer::<T>::new(url_string, queue, is_running).await?,
+    ))
 }
