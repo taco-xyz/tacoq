@@ -64,7 +64,9 @@ CREATE TABLE
             completed_at TIMESTAMP
         WITH
             TIME ZONE,
-            ttl TIMESTAMP,
+            ttl TIMESTAMP
+        WITH
+            TIME ZONE,
             -- Relations
             assigned_to UUID REFERENCES workers (id),
             -- Timestamps

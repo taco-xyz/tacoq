@@ -38,7 +38,6 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
     async fn upload_task_error(
         &self,
         task_id: &Uuid,
-        worker_id: &Uuid,
         error: serde_json::Value,
     ) -> Result<Task, sqlx::Error>;
 
@@ -46,7 +45,6 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
     async fn upload_task_result(
         &self,
         task_id: &Uuid,
-        worker_id: &Uuid,
         output: serde_json::Value,
     ) -> Result<Task, sqlx::Error>;
 }

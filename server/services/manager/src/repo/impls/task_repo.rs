@@ -61,11 +61,10 @@ impl TaskRepository for PgTaskRepository {
         Ok(())
     }
 
-    #[instrument(skip(self, task_id, worker_id, error), fields(task_id = %task_id, worker_id = %worker_id))]
+    #[instrument(skip(self, task_id, error), fields(task_id = %task_id))]
     async fn upload_task_error(
         &self,
         task_id: &Uuid,
-        worker_id: &Uuid,
         error: serde_json::Value,
     ) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
@@ -76,11 +75,10 @@ impl TaskRepository for PgTaskRepository {
         Ok(task)
     }
 
-    #[instrument(skip(self, task_id, worker_id, output), fields(task_id = %task_id, worker_id = %worker_id))]
+    #[instrument(skip(self, task_id, output), fields(task_id = %task_id))]
     async fn upload_task_result(
         &self,
         task_id: &Uuid,
-        worker_id: &Uuid,
         output: serde_json::Value,
     ) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
@@ -100,8 +98,29 @@ mod tests {
     use common::models::TaskStatus;
 
     use super::*;
+    use crate::repo::impls::worker_kind_repo::PgWorkerKindRepository;
+    use crate::repo::WorkerKindRepository;
     use crate::repo::{PgRepositoryCore, PgWorkerRepository, WorkerRepository};
     use crate::testing::test::init_test_logger;
+
+    // Helper function to setup test worker and worker kind
+    async fn setup_test_worker(pool: &PgPool, name: &str) -> (Uuid, String) {
+        let core = PgRepositoryCore::new(pool.clone());
+        let worker_kind_repo = PgWorkerKindRepository::new(core.clone());
+        let worker_repo = PgWorkerRepository::new(core);
+
+        let worker_kind = worker_kind_repo
+            .get_or_create_worker_kind("test.worker", "test.worker.route", "test_worker_queue")
+            .await
+            .unwrap();
+
+        let worker = worker_repo
+            .register_worker(name, &worker_kind.name)
+            .await
+            .unwrap();
+
+        (worker.id, worker_kind.name)
+    }
 
     // This runs before any test in this module
     #[ctor::ctor]
@@ -121,56 +140,101 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(task.task_kind_name, task_kind_name);
-        assert_eq!(task.input_data, Some(input));
-        assert_eq!(task.is_error, 0);
-        assert_eq!(task.assigned_to, None);
+        assert_eq!(
+            task.task_kind_name, task_kind_name,
+            "Task kind name should match"
+        );
+        assert_eq!(task.input_data, Some(input), "Input data should match");
+        assert_eq!(task.is_error, 0, "Task should not be an error");
+        assert_eq!(task.assigned_to, None, "Task should not be assigned");
 
         let retrieved = repo.get_task_by_id(&task.id).await.unwrap();
-        assert_eq!(task.id, retrieved.id);
+        assert_eq!(
+            task.id, retrieved.id,
+            "Task ID should match after being created"
+        );
     }
 
-    /// Creates a task and then uploads a result and an error
     #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn create_task_and_then_upload_error(pool: PgPool) {
-        let core = PgRepositoryCore::new(pool.clone());
-        let repo = PgTaskRepository::new(core.clone());
-        let worker_repo = PgWorkerRepository::new(core);
+    async fn test_assign_task_to_worker(pool: PgPool) {
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let (worker_id, _) = setup_test_worker(&pool, "Test Worker").await;
         let task_kind_name = "TaskKindTest";
 
         let task = repo.create_task(task_kind_name, None).await.unwrap();
-        let worker_id = Uuid::new_v4();
-        worker_repo
-            .register_worker("Test Worker", "WorkerKindTest")
+
+        repo.assign_task_to_worker(&task.id, &worker_id)
+            .await
+            .unwrap();
+        let updated = repo.get_task_by_id(&task.id).await.unwrap();
+        assert_eq!(updated.assigned_to, Some(worker_id));
+        assert!(updated.started_at.is_some());
+    }
+
+    /// Tests uploading a successful result to a task
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn test_upload_task_result(pool: PgPool) {
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let (worker_id, _) = setup_test_worker(&pool, "Test Worker").await;
+        let task_kind_name = "TaskKindTest";
+
+        let task = repo.create_task(task_kind_name, None).await.unwrap();
+
+        repo.assign_task_to_worker(&task.id, &worker_id)
             .await
             .unwrap();
 
-        // Test successful result
         let output = serde_json::json!({"result": "success"});
         let result = repo
-            .upload_task_result(&task.id, &worker_id, output.clone())
+            .upload_task_result(&task.id, output.clone())
             .await
             .unwrap();
 
-        assert_eq!(result.id, task.id);
-        assert_eq!(result.assigned_to, Some(worker_id));
-        assert_eq!(result.output_data, Some(output));
-        assert_eq!(result.is_error, 0);
-        assert!(result.completed_at.is_some());
+        assert_eq!(result.id, task.id, "Task ID should match");
+        assert_eq!(
+            result.assigned_to,
+            Some(worker_id),
+            "Assigned worker ID should match"
+        );
+        assert_eq!(result.output_data, Some(output), "Output data should match");
+        assert_eq!(result.is_error, 0, "Task should not be an error");
+        assert!(result.completed_at.is_some(), "Task should be completed");
+    }
 
-        // Test error result
-        let task2 = repo.create_task(task_kind_name, None).await.unwrap();
+    /// Tests uploading an error result to a task
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn test_upload_task_error(pool: PgPool) {
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let (worker_id, _) = setup_test_worker(&pool, "Test Worker").await;
+        let task_kind_name = "TaskKindTest";
+
+        let task = repo.create_task(task_kind_name, None).await.unwrap();
+        repo.assign_task_to_worker(&task.id, &worker_id)
+            .await
+            .unwrap();
+
         let error = serde_json::json!({"error": "failed"});
         let error_result = repo
-            .upload_task_error(&task2.id, &worker_id, error.clone())
+            .upload_task_error(&task.id, error.clone())
             .await
             .unwrap();
 
-        assert_eq!(error_result.id, task2.id);
-        assert_eq!(error_result.assigned_to, Some(worker_id));
-        assert_eq!(error_result.output_data, Some(error));
-        assert_eq!(error_result.is_error, 1);
-        assert!(error_result.completed_at.is_some());
+        assert_eq!(error_result.id, task.id, "Task ID should match");
+        assert_eq!(
+            error_result.assigned_to,
+            Some(worker_id),
+            "Assigned worker ID should match"
+        );
+        assert_eq!(
+            error_result.output_data,
+            Some(error),
+            "Output data should match"
+        );
+        assert_eq!(error_result.is_error, 1, "Task should be an error");
+        assert!(
+            error_result.completed_at.is_some(),
+            "Task should be completed"
+        );
     }
 
     /// Tests that a task's status can be updated after creation
@@ -242,27 +306,5 @@ mod tests {
             .unwrap();
         let task = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(task.completed_at.is_some());
-    }
-
-    /// Tests assigning a task to a worker
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn test_assign_task_to_worker(pool: PgPool) {
-        let core = PgRepositoryCore::new(pool.clone());
-        let repo = PgTaskRepository::new(core.clone());
-        let worker_repo = PgWorkerRepository::new(core);
-
-        let task = repo.create_task("TaskKindTest", None).await.unwrap();
-        let worker_id = Uuid::new_v4();
-        worker_repo
-            .register_worker("Test Worker", "Test Worker")
-            .await
-            .unwrap();
-
-        repo.assign_task_to_worker(&task.id, &worker_id)
-            .await
-            .unwrap();
-        let updated = repo.get_task_by_id(&task.id).await.unwrap();
-        assert_eq!(updated.assigned_to, Some(worker_id));
-        assert!(updated.started_at.is_some());
     }
 }

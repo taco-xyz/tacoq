@@ -1,9 +1,7 @@
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::Executor;
-use sqlx::FromRow;
-use sqlx::Postgres;
-use strum_macros::Display;
-use time::{Duration, OffsetDateTime};
+use sqlx::{Executor, FromRow, Postgres};
+use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -12,44 +10,14 @@ use uuid::Uuid;
 /// * `Pending`: Task is created but not yet assigned
 /// * `Processing`: Task has been assigned to a worker and sent to a queue
 /// * `Completed`: Task completed sucessfully or not
-#[derive(Display, Debug, Serialize, Deserialize, PartialEq, ToSchema)]
+#[derive(Display, EnumString, Debug, Serialize, Deserialize, PartialEq, ToSchema)]
 pub enum TaskStatus {
-    Pending,    // Task is created but not yet assigned
+    #[strum(serialize = "pending")]
+    Pending, // Task is created but not yet assigned
+    #[strum(serialize = "processing")]
     Processing, // Task has been assigned to a worker and sent to a queue
-    Completed,  // Task completed sucessfully or not
-}
-
-impl From<String> for TaskStatus {
-    fn from(s: String) -> Self {
-        s.to_lowercase()
-            .as_str()
-            .try_into()
-            .unwrap_or_else(|_| panic!("Invalid task status: {}", s))
-    }
-}
-
-impl TryFrom<&str> for TaskStatus {
-    type Error = String;
-
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        match s {
-            "pending" => Ok(TaskStatus::Pending),
-            "processing" => Ok(TaskStatus::Processing),
-            "completed" => Ok(TaskStatus::Completed),
-            _ => Err(format!("Invalid task status: {}", s)),
-        }
-    }
-}
-
-impl From<TaskStatus> for String {
-    fn from(status: TaskStatus) -> Self {
-        match status {
-            TaskStatus::Pending => "pending",
-            TaskStatus::Processing => "processing",
-            TaskStatus::Completed => "completed",
-        }
-        .to_string()
-    }
+    #[strum(serialize = "completed")]
+    Completed, // Task completed sucessfully or not
 }
 
 // Task
@@ -68,30 +36,17 @@ pub struct Task {
     pub is_error: i32,
 
     // Task status
-    #[serde(
-        serialize_with = "crate::models::serialize_datetime_option",
-        deserialize_with = "crate::models::deserialize_datetime_option"
-    )]
-    pub started_at: Option<OffsetDateTime>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
 
-    #[serde(
-        serialize_with = "crate::models::serialize_datetime_option",
-        deserialize_with = "crate::models::deserialize_datetime_option"
-    )]
-    pub completed_at: Option<OffsetDateTime>,
-
-    #[serde(
-        serialize_with = "crate::models::serialize_datetime_option",
-        deserialize_with = "crate::models::deserialize_datetime_option"
-    )]
-    pub ttl: Option<OffsetDateTime>, // Time to live only enabled after it has been completed
+    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
 
     // Relations
     pub assigned_to: Option<Uuid>,
 
     // Metadata
-    pub created_at: OffsetDateTime,
-    pub updated_at: OffsetDateTime,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl Task {
@@ -105,8 +60,8 @@ impl Task {
             started_at: None,
             completed_at: None,
             assigned_to: None,
-            created_at: OffsetDateTime::now_utc(),
-            updated_at: OffsetDateTime::now_utc(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
             ttl: None,
         }
     }
@@ -120,28 +75,28 @@ impl Task {
                 self.assigned_to = None;
             }
             TaskStatus::Processing => {
-                self.started_at = Some(OffsetDateTime::now_utc());
+                self.started_at = Some(Utc::now());
                 self.completed_at = None;
                 self.ttl = None;
             }
             TaskStatus::Completed => {
-                self.completed_at = Some(OffsetDateTime::now_utc());
-                self.ttl = Some(OffsetDateTime::now_utc() + Duration::days(7));
+                self.completed_at = Some(Utc::now());
+                self.ttl = Some(Utc::now() + Duration::days(7));
             }
         }
-        self.updated_at = OffsetDateTime::now_utc();
+        self.updated_at = Utc::now();
     }
 
     pub fn mark_processing(&mut self, worker_id: Uuid) {
         self.assigned_to = Some(worker_id);
-        self.started_at = Some(OffsetDateTime::now_utc());
-        self.updated_at = OffsetDateTime::now_utc();
+        self.started_at = Some(Utc::now());
+        self.updated_at = Utc::now();
     }
 
     pub fn mark_completed(&mut self, output_data: serde_json::Value, is_error: bool) {
-        self.completed_at = Some(OffsetDateTime::now_utc());
-        self.updated_at = OffsetDateTime::now_utc();
-        self.ttl = Some(OffsetDateTime::now_utc() + Duration::days(7));
+        self.completed_at = Some(Utc::now());
+        self.updated_at = Utc::now();
+        self.ttl = Some(Utc::now() + Duration::days(7));
         self.output_data = Some(output_data);
         self.is_error = if is_error { 1 } else { 0 };
     }

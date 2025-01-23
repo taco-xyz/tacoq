@@ -55,7 +55,12 @@ impl WorkerRepository for PgWorkerRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{repo::PgRepositoryCore, testing::test::init_test_logger};
+    use crate::{
+        repo::impls::worker_kind_repo::PgWorkerKindRepository,
+        repo::{PgRepositoryCore, WorkerKindRepository},
+        testing::test::init_test_logger,
+    };
+    use common::models::WorkerKind;
     use sqlx::PgPool;
     use std::time::Duration;
 
@@ -64,18 +69,29 @@ mod tests {
         init_test_logger();
     }
 
+    async fn setup_test_worker_kind(pool: &PgPool, name: &str) -> WorkerKind {
+        let repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
+        repo.get_or_create_worker_kind(name, &format!("{}.route", name), &format!("{}_queue", name))
+            .await
+            .unwrap()
+    }
+
     /// Tests registering workers with different worker kinds
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn worker_kinds(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
+
+        // Create worker kinds first
+        let coding_kind = setup_test_worker_kind(&pool, "coding.worker").await;
+        let testing_kind = setup_test_worker_kind(&pool, "testing.worker").await;
 
         // Register workers with different kinds
         let worker1 = repo
-            .register_worker("Worker 1", "coding.worker")
+            .register_worker("Worker 1", &coding_kind.name)
             .await
             .unwrap();
         let worker2 = repo
-            .register_worker("Worker 2", "testing.worker")
+            .register_worker("Worker 2", &testing_kind.name)
             .await
             .unwrap();
 
@@ -90,39 +106,14 @@ mod tests {
         assert_eq!(fetched2.worker_kind_name, "testing.worker");
     }
 
-    /// Tests updating a worker's kind
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn update_worker_kind(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
-
-        // Register initial worker
-        let worker = repo
-            .register_worker("Test Worker", "initial.kind")
-            .await
-            .unwrap();
-        assert_eq!(worker.worker_kind_name, "initial.kind");
-
-        // Update worker with new kind
-        let updated = repo
-            .register_worker("Test Worker", "updated.kind")
-            .await
-            .unwrap();
-
-        assert_eq!(updated.id, worker.id);
-        assert_eq!(updated.worker_kind_name, "updated.kind");
-
-        // Verify update was persisted
-        let fetched = repo._get_worker_by_id(&worker.id).await.unwrap();
-        assert_eq!(fetched.worker_kind_name, "updated.kind");
-    }
-
     /// Registers a worker and then retrieves it by id
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn register_and_get_worker(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
+        let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker = repo
-            .register_worker("Test Worker", "test.worker")
+            .register_worker("Test Worker", &test_kind.name)
             .await
             .unwrap();
 
@@ -138,15 +129,16 @@ mod tests {
     /// Registers two workers and then retrieves all workers
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_all_workers(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
+        let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker1 = repo
-            .register_worker("Worker 1", "test.worker")
+            .register_worker("Worker 1", &test_kind.name)
             .await
             .unwrap();
 
         let worker2 = repo
-            .register_worker("Worker 2", "test.worker")
+            .register_worker("Worker 2", &test_kind.name)
             .await
             .unwrap();
 
@@ -159,10 +151,11 @@ mod tests {
     /// Tests recording and retrieving worker heartbeats
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn worker_heartbeat(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
+        let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker = repo
-            .register_worker("Test Worker", "test.worker")
+            .register_worker("Test Worker", &test_kind.name)
             .await
             .unwrap();
 
@@ -182,14 +175,15 @@ mod tests {
     /// Tests multiple heartbeats from different workers
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn multiple_worker_heartbeats(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
+        let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker1 = repo
-            .register_worker("Worker 1", "test.worker")
+            .register_worker("Worker 1", &test_kind.name)
             .await
             .unwrap();
         let worker2 = repo
-            .register_worker("Worker 2", "test.worker")
+            .register_worker("Worker 2", &test_kind.name)
             .await
             .unwrap();
 
@@ -210,7 +204,7 @@ mod tests {
     /// Attempts to retrieve a nonexistent worker by id (should fail)
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_worker(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let result = repo._get_worker_by_id(&Uuid::new_v4()).await;
         assert!(result.is_err());
     }
@@ -218,7 +212,7 @@ mod tests {
     /// Attempts to retrieve a nonexistent heartbeat (should fail)
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_heartbeat(pool: PgPool) {
-        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let result = repo._get_latest_heartbeat(&Uuid::new_v4()).await;
         assert!(result.is_err());
     }

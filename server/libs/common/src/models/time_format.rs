@@ -5,11 +5,15 @@ pub fn serialize_datetime<S>(dt: &OffsetDateTime, serializer: S) -> Result<S::Ok
 where
     S: Serializer,
 {
-    // Format without the +00 prefix
+    // Convert to naive datetime format (without timezone)
     let s = dt
-        .format(&time::format_description::well_known::Iso8601::DEFAULT)
+        .format(&time::format_description::well_known::Rfc3339)
         .map_err(serde::ser::Error::custom)?;
-    serializer.serialize_str(s.trim_start_matches("+00"))
+    // Remove timezone part to make it naive
+    let naive = s
+        .rsplit_once('+')
+        .map_or(s.to_string(), |(date, _)| date.to_string());
+    serializer.serialize_str(&naive)
 }
 
 pub fn deserialize_datetime<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
@@ -17,7 +21,13 @@ where
     D: Deserializer<'de>,
 {
     let s = <String as Deserialize>::deserialize(deserializer)?;
-    OffsetDateTime::parse(&s, &time::format_description::well_known::Iso8601::DEFAULT)
+    // If the timestamp is naive (no timezone), append Z to make it UTC
+    let timestamp = if !s.contains('Z') && !s.contains('+') {
+        format!("{}Z", s)
+    } else {
+        s
+    };
+    OffsetDateTime::parse(&timestamp, &time::format_description::well_known::Rfc3339)
         .map_err(serde::de::Error::custom)
 }
 
