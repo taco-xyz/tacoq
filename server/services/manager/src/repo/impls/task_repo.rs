@@ -211,11 +211,7 @@ mod tests {
         let task = repo.create_task(task_kind.id, None).await.unwrap();
         let worker_id = Uuid::new_v4();
         worker_repo
-            .register_worker(
-                worker_id,
-                "Test Worker".to_string(),
-                vec![task_kind.clone()],
-            )
+            .register_worker("Test Worker", "Test Worker")
             .await
             .unwrap();
 
@@ -354,11 +350,7 @@ mod tests {
         let task = repo.create_task(task_kind.id, None).await.unwrap();
         let worker_id = Uuid::new_v4();
         worker_repo
-            .register_worker(
-                worker_id,
-                "Test Worker".to_string(),
-                vec![task_kind.clone()],
-            )
+            .register_worker("Test Worker", "Test Worker")
             .await
             .unwrap();
 

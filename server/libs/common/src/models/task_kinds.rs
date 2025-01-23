@@ -16,11 +16,11 @@ pub struct TaskKind {
 }
 
 impl TaskKind {
-    pub fn new(name: String, worker_kind_name: String) -> TaskKind {
+    pub fn new(name: &str, worker_kind_name: &str) -> TaskKind {
         TaskKind {
             id: Uuid::new_v4(),
-            name,
-            worker_kind_name,
+            name: name.to_string(),
+            worker_kind_name: worker_kind_name.to_string(),
             created_at: OffsetDateTime::now_utc(),
         }
     }

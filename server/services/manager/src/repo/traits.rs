@@ -75,9 +75,8 @@ pub trait WorkerRepository: Clone {
     /// Register a new worker with its supported task types
     async fn register_worker(
         &self,
-        id: Uuid,
-        name: String,
-        task_types: Vec<TaskKind>,
+        name: &str,
+        worker_kind_name: &str,
     ) -> Result<Worker, sqlx::Error>;
 
     /// Get a worker by ID
@@ -85,9 +84,6 @@ pub trait WorkerRepository: Clone {
 
     /// Get all registered workers
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error>;
-
-    /// Update a worker's active status
-    async fn set_worker_active(&self, worker_id: &Uuid, active: bool) -> Result<(), sqlx::Error>;
 
     /// Record a heartbeat for a worker
     async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error>;

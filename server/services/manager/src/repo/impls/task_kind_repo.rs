@@ -79,14 +79,18 @@ impl PgTaskKindRepository {
 #[async_trait]
 impl TaskKindRepository for PgTaskKindRepository {
     #[instrument(skip(self, name), fields(name = %name))]
-    async fn get_or_create_task_kind(&self, name: &str) -> Result<TaskKind, sqlx::Error> {
+    async fn get_or_create_task_kind(
+        &self,
+        name: &str,
+        worker_kind_name: &str,
+    ) -> Result<TaskKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
         let result = self.find_task_kind_by_name(&mut *tx, name).await;
         let task_kind = match result {
             Ok(tk) => tk,
             Err(sqlx::Error::RowNotFound) => {
-                let task_kind = TaskKind::new(name.to_string(), "default".to_string());
+                let task_kind = TaskKind::new(name, worker_kind_name);
                 self.save_task_kind(&mut *tx, &task_kind).await?
             }
             Err(e) => return Err(e),

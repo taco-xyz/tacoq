@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use common::models::{TaskKind, Worker};
+use common::models::{TaskKind, Worker, WorkerHeartbeat, WorkerKind};
+use sqlx::{Executor, Postgres};
 use std::time::SystemTime;
 use tracing::instrument;
 use uuid::Uuid;
@@ -15,220 +16,188 @@ impl PgWorkerRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
     }
-}
 
-#[async_trait]
-impl WorkerRepository for PgWorkerRepository {
-    #[instrument(skip(self, id, name, task_kinds), fields(id = %id, name = %name))]
-    async fn register_worker(
+    async fn save_worker<'e, E>(&self, executor: E, worker: &Worker) -> Result<Worker, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            INSERT INTO workers (id, name, worker_kind_name, created_at)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE 
+            SET name = $2,
+                worker_kind_name = $3,
+                active = $4
+            RETURNING *
+            "#,
+        )
+        .bind(worker.id)
+        .bind(&worker.name)
+        .bind(&worker.worker_kind_name)
+        .bind(worker.created_at)
+        .fetch_one(executor)
+        .await
+    }
+
+    async fn find_worker<'e, E>(&self, executor: E, id: &Uuid) -> Result<Worker, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            SELECT * FROM workers WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .fetch_one(executor)
+        .await
+    }
+
+    // Consider putting a limit here for pagination in the future
+    async fn find_all_workers<'e, E>(&self, executor: E) -> Result<Vec<Worker>, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            SELECT * FROM workers
+            "#,
+        )
+        .fetch_all(executor)
+        .await
+    }
+
+    async fn save_heartbeat<'e, E>(
         &self,
-        id: Uuid,
-        name: String,
-        task_kinds: Vec<TaskKind>,
-    ) -> Result<Worker, sqlx::Error> {
-        let mut txn = self.core.pool.begin().await?;
-
-        sqlx::query!(
+        executor: E,
+        heartbeat: &WorkerHeartbeat,
+    ) -> Result<(), sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query(
             r#"
-            INSERT INTO workers (id, name, registered_at)
-            VALUES ($1, $2, NOW())
-            ON CONFLICT (id) DO UPDATE SET name = $2
+            INSERT INTO worker_heartbeats (worker_id, heartbeat_time, created_at)
+            VALUES ($1, $2, $3)
             "#,
-            id,
-            name,
         )
-        .execute(&mut *txn)
+        .bind(heartbeat.worker_id)
+        .bind(heartbeat.heartbeat_time)
+        .bind(heartbeat.created_at)
+        .execute(executor)
         .await?;
-
-        // Clear existing task kinds
-        sqlx::query!(
-            r#"
-            DELETE FROM worker_task_kinds WHERE worker_id = $1
-            "#,
-            id
-        )
-        .execute(&mut *txn)
-        .await?;
-
-        // Insert new task kinds
-        for task_kind in &task_kinds {
-            // Create task kind if it doesn't exist
-            sqlx::query!(
-                r#"
-                INSERT INTO task_kinds (id, name)
-                VALUES ($1, $2)
-                ON CONFLICT (id) DO NOTHING
-                "#,
-                task_kind.id,
-                task_kind.name
-            )
-            .execute(&mut *txn)
-            .await?;
-
-            // Link worker to task kind
-            sqlx::query!(
-                r#"
-                INSERT INTO worker_task_kinds (worker_id, task_kind_id)
-                VALUES ($1, $2)
-                "#,
-                id,
-                task_kind.id
-            )
-            .execute(&mut *txn)
-            .await?;
-        }
-
-        txn.commit().await?;
-
-        let row = sqlx::query!(
-            r#"
-            SELECT registered_at, active FROM workers WHERE id = $1
-            "#,
-            id
-        )
-        .fetch_one(&self.core.pool)
-        .await?;
-
-        Ok(Worker {
-            id,
-            name,
-            task_kind: task_kinds,
-            registered_at: row.registered_at,
-            active: row.active,
-        })
-    }
-
-    #[instrument(skip(self, id), fields(id = %id))]
-    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error> {
-        let worker = sqlx::query!(
-            r#"
-            SELECT name, registered_at, active FROM workers WHERE id = $1
-            "#,
-            id
-        )
-        .fetch_one(&self.core.pool)
-        .await?;
-
-        let task_kinds = sqlx::query!(
-            r#"
-            SELECT tt.id, tt.name 
-            FROM task_kinds tt
-            JOIN worker_task_kinds wtt ON wtt.task_kind_id = tt.id
-            WHERE wtt.worker_id = $1
-            "#,
-            id
-        )
-        .fetch_all(&self.core.pool)
-        .await?;
-
-        Ok(Worker {
-            id: *id,
-            name: worker.name,
-            registered_at: worker.registered_at,
-            task_kind: task_kinds
-                .into_iter()
-                .map(|tt| TaskKind {
-                    id: tt.id,
-                    name: tt.name,
-                })
-                .collect(),
-            active: worker.active,
-        })
-    }
-
-    #[instrument(skip(self))]
-    async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
-        let workers = sqlx::query!(
-            r#"
-            SELECT id, name, registered_at, active FROM workers
-            "#
-        )
-        .fetch_all(&self.core.pool)
-        .await?;
-
-        let mut result = Vec::new();
-
-        for worker in workers {
-            let task_kinds = sqlx::query!(
-                r#"
-                SELECT tt.id, tt.name 
-                FROM task_kinds tt
-                JOIN worker_task_kinds wtt ON wtt.task_kind_id = tt.id
-                WHERE wtt.worker_id = $1
-                "#,
-                worker.id
-            )
-            .fetch_all(&self.core.pool)
-            .await?;
-
-            result.push(Worker {
-                id: worker.id,
-                name: worker.name,
-                registered_at: worker.registered_at,
-                task_kind: task_kinds
-                    .into_iter()
-                    .map(|tt| TaskKind {
-                        id: tt.id,
-                        name: tt.name,
-                    })
-                    .collect(),
-                active: worker.active,
-            });
-        }
-
-        Ok(result)
-    }
-
-    #[instrument(skip(self, worker_id, active), fields(worker_id = %worker_id, active = %active))]
-    async fn set_worker_active(&self, worker_id: &Uuid, active: bool) -> Result<(), sqlx::Error> {
-        let result = sqlx::query!(
-            r#"
-            UPDATE workers SET active = $1 WHERE id = $2
-            "#,
-            active,
-            worker_id
-        )
-        .execute(&self.core.pool)
-        .await?;
-
-        if result.rows_affected() == 0 {
-            return Err(sqlx::Error::RowNotFound);
-        }
-
         Ok(())
     }
 
-    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
-    async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
-        sqlx::query!(
+    async fn get_latest_heartbeat<'e, E>(
+        &self,
+        executor: E,
+        worker_id: &Uuid,
+    ) -> Result<WorkerHeartbeat, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
             r#"
-            INSERT INTO worker_heartbeats (worker_id, heartbeat_time)
-            VALUES ($1, NOW())
-            "#,
-            worker_id
-        )
-        .execute(&self.core.pool)
-        .await?;
-
-        Ok(())
-    }
-
-    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
-    async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error> {
-        let row = sqlx::query!(
-            r#"
-            SELECT heartbeat_time 
+            SELECT * 
             FROM worker_heartbeats 
             WHERE worker_id = $1 
             ORDER BY heartbeat_time DESC 
             LIMIT 1
             "#,
-            worker_id
         )
-        .fetch_one(&self.core.pool)
-        .await?;
+        .bind(worker_id)
+        .fetch_one(executor)
+        .await?
+    }
 
-        Ok(row.heartbeat_time.into())
+    async fn save_worker_kind<'e, E>(
+        &self,
+        executor: E,
+        worker_kind: &WorkerKind,
+    ) -> Result<WorkerKind, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            INSERT INTO worker_kinds (name, routing_key, queue_name, created_at)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (name) DO UPDATE 
+            SET routing_key = $2,
+                queue_name = $3
+            RETURNING *
+            "#,
+        )
+        .bind(&worker_kind.name)
+        .bind(&worker_kind.routing_key)
+        .bind(&worker_kind.queue_name)
+        .bind(worker_kind.created_at)
+        .fetch_one(executor)
+        .await
+    }
+
+    async fn find_worker_kind_by_name<'e, E>(
+        &self,
+        executor: E,
+        name: &str,
+    ) -> Result<Option<WorkerKind>, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            SELECT * FROM worker_kinds WHERE name = $1
+            "#,
+        )
+        .bind(name)
+        .fetch_optional(executor)
+        .await
+    }
+}
+
+#[async_trait]
+impl WorkerRepository for PgWorkerRepository {
+    #[instrument(skip(self, name, worker_kind_name), fields(name = %name, worker_kind_name = %worker_kind_name))]
+    async fn register_worker(
+        &self,
+        name: &str,
+        worker_kind_name: &str,
+    ) -> Result<Worker, sqlx::Error> {
+        let mut tx = self.core.pool.begin().await?;
+
+        let worker = Worker::new(name, worker_kind_name);
+        let worker_kind = WorkerKind::new(worker_kind_name, worker_kind_name, worker_kind_name);
+
+        self.save_worker_kind(&mut *tx, &worker_kind).await?;
+        let worker = self.save_worker(&mut *tx, &worker).await?;
+
+        tx.commit().await?;
+        Ok(worker)
+    }
+
+    #[instrument(skip(self, id), fields(id = %id))]
+    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error> {
+        let worker = self.find_worker(&self.core.pool, id).await?;
+        Ok(worker)
+    }
+
+    #[instrument(skip(self))]
+    async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
+        let workers = self.find_all_workers(&self.core.pool).await?;
+        Ok(workers)
+    }
+
+    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
+    async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
+        let heartbeat = WorkerHeartbeat::new(*worker_id);
+        self.save_heartbeat(&self.core.pool, &heartbeat).await
+    }
+
+    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
+    async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error> {
+        self.get_latest_heartbeat(&self.core.pool, worker_id).await
     }
 }
 
