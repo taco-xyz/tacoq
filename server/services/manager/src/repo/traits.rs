@@ -61,7 +61,11 @@ pub trait TaskKindRepository: Clone {
     ///
     /// If a task kind with the given name already exists, returns that task kind.
     /// Otherwise creates a new task kind with the given name.
-    async fn get_or_create_task_kind(&self, name: &str) -> Result<TaskKind, sqlx::Error>;
+    async fn get_or_create_task_kind(
+        &self,
+        name: &str,
+        worker_kind_name: &str,
+    ) -> Result<TaskKind, sqlx::Error>;
 
     /// Get all registered task kinds
     async fn _get_all_task_kinds(&self) -> Result<Vec<TaskKind>, sqlx::Error>;

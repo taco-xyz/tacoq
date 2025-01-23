@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use common::models::WorkerKind;
-use sqlx::{Executor, Postgres};
 use tracing::instrument;
 
 use crate::repo::{PgRepositoryCore, WorkerKindRepository};
@@ -13,50 +12,6 @@ pub struct PgWorkerKindRepository {
 impl PgWorkerKindRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
-    }
-
-    async fn save_worker_kind<'e, E>(
-        &self,
-        executor: E,
-        worker_kind: &WorkerKind,
-    ) -> Result<WorkerKind, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            INSERT INTO worker_kinds (name, routing_key, queue_name, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (name) DO UPDATE 
-            SET routing_key = $2,
-                queue_name = $3
-            RETURNING *
-            "#,
-        )
-        .bind(&worker_kind.name)
-        .bind(&worker_kind.routing_key)
-        .bind(&worker_kind.queue_name)
-        .bind(worker_kind.created_at)
-        .fetch_one(executor)
-        .await
-    }
-
-    async fn find_worker_kind_by_name<'e, E>(
-        &self,
-        executor: E,
-        name: &str,
-    ) -> Result<Option<WorkerKind>, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT * FROM worker_kinds WHERE name = $1
-            "#,
-        )
-        .bind(name)
-        .fetch_optional(executor)
-        .await
     }
 }
 
@@ -71,15 +26,13 @@ impl WorkerKindRepository for PgWorkerKindRepository {
     ) -> Result<WorkerKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let worker_kind = self.find_worker_kind_by_name(&mut *tx, name).await?;
-        if let Some(worker_kind) = worker_kind {
-            return Ok(worker_kind);
-        } else {
-            let worker_kind = WorkerKind::new(name, exchange, queue);
-            let worker_kind = self.save_worker_kind(&mut *tx, &worker_kind).await?;
-            tx.commit().await?;
-            Ok(worker_kind)
-        }
+        let worker_kind = WorkerKind::find_by_name(&mut *tx, name)
+            .await?
+            .unwrap_or_else(|| WorkerKind::new(name, exchange, queue));
+
+        worker_kind.save(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(worker_kind)
     }
 }
 

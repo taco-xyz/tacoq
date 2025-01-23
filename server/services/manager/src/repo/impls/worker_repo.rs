@@ -1,6 +1,5 @@
 use async_trait::async_trait;
-use common::models::{TaskKind, Worker, WorkerHeartbeat, WorkerKind};
-use sqlx::{Executor, Postgres};
+use common::models::{Worker, WorkerHeartbeat};
 use std::time::SystemTime;
 use tracing::instrument;
 use uuid::Uuid;
@@ -16,145 +15,6 @@ impl PgWorkerRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
     }
-
-    async fn save_worker<'e, E>(&self, executor: E, worker: &Worker) -> Result<Worker, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            INSERT INTO workers (id, name, worker_kind_name, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (id) DO UPDATE 
-            SET name = $2,
-                worker_kind_name = $3,
-                active = $4
-            RETURNING *
-            "#,
-        )
-        .bind(worker.id)
-        .bind(&worker.name)
-        .bind(&worker.worker_kind_name)
-        .bind(worker.created_at)
-        .fetch_one(executor)
-        .await
-    }
-
-    async fn find_worker<'e, E>(&self, executor: E, id: &Uuid) -> Result<Worker, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT * FROM workers WHERE id = $1
-            "#,
-        )
-        .bind(id)
-        .fetch_one(executor)
-        .await
-    }
-
-    // Consider putting a limit here for pagination in the future
-    async fn find_all_workers<'e, E>(&self, executor: E) -> Result<Vec<Worker>, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT * FROM workers
-            "#,
-        )
-        .fetch_all(executor)
-        .await
-    }
-
-    async fn save_heartbeat<'e, E>(
-        &self,
-        executor: E,
-        heartbeat: &WorkerHeartbeat,
-    ) -> Result<(), sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query(
-            r#"
-            INSERT INTO worker_heartbeats (worker_id, heartbeat_time, created_at)
-            VALUES ($1, $2, $3)
-            "#,
-        )
-        .bind(heartbeat.worker_id)
-        .bind(heartbeat.heartbeat_time)
-        .bind(heartbeat.created_at)
-        .execute(executor)
-        .await?;
-        Ok(())
-    }
-
-    async fn get_latest_heartbeat<'e, E>(
-        &self,
-        executor: E,
-        worker_id: &Uuid,
-    ) -> Result<WorkerHeartbeat, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT * 
-            FROM worker_heartbeats 
-            WHERE worker_id = $1 
-            ORDER BY heartbeat_time DESC 
-            LIMIT 1
-            "#,
-        )
-        .bind(worker_id)
-        .fetch_one(executor)
-        .await?
-    }
-
-    async fn save_worker_kind<'e, E>(
-        &self,
-        executor: E,
-        worker_kind: &WorkerKind,
-    ) -> Result<WorkerKind, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            INSERT INTO worker_kinds (name, routing_key, queue_name, created_at)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (name) DO UPDATE 
-            SET routing_key = $2,
-                queue_name = $3
-            RETURNING *
-            "#,
-        )
-        .bind(&worker_kind.name)
-        .bind(&worker_kind.routing_key)
-        .bind(&worker_kind.queue_name)
-        .bind(worker_kind.created_at)
-        .fetch_one(executor)
-        .await
-    }
-
-    async fn find_worker_kind_by_name<'e, E>(
-        &self,
-        executor: E,
-        name: &str,
-    ) -> Result<Option<WorkerKind>, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            SELECT * FROM worker_kinds WHERE name = $1
-            "#,
-        )
-        .bind(name)
-        .fetch_optional(executor)
-        .await
-    }
 }
 
 #[async_trait]
@@ -165,39 +25,30 @@ impl WorkerRepository for PgWorkerRepository {
         name: &str,
         worker_kind_name: &str,
     ) -> Result<Worker, sqlx::Error> {
-        let mut tx = self.core.pool.begin().await?;
-
         let worker = Worker::new(name, worker_kind_name);
-        let worker_kind = WorkerKind::new(worker_kind_name, worker_kind_name, worker_kind_name);
-
-        self.save_worker_kind(&mut *tx, &worker_kind).await?;
-        let worker = self.save_worker(&mut *tx, &worker).await?;
-
-        tx.commit().await?;
-        Ok(worker)
+        worker.save(&self.core.pool).await
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
     async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error> {
-        let worker = self.find_worker(&self.core.pool, id).await?;
-        Ok(worker)
+        Worker::find_by_id(&self.core.pool, id).await
     }
 
     #[instrument(skip(self))]
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
-        let workers = self.find_all_workers(&self.core.pool).await?;
-        Ok(workers)
+        Worker::find_all(&self.core.pool).await
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
         let heartbeat = WorkerHeartbeat::new(*worker_id);
-        self.save_heartbeat(&self.core.pool, &heartbeat).await
+        heartbeat.save(&self.core.pool).await
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error> {
-        self.get_latest_heartbeat(&self.core.pool, worker_id).await
+        let heartbeat = WorkerHeartbeat::get_latest(&self.core.pool, worker_id).await?;
+        Ok(heartbeat.heartbeat_time.into())
     }
 }
 

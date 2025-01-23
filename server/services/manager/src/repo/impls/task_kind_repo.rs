@@ -46,7 +46,7 @@ impl PgTaskKindRepository {
         &self,
         executor: E,
         name: &str,
-    ) -> Result<TaskKind, sqlx::Error>
+    ) -> Result<Option<TaskKind>, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
@@ -58,7 +58,7 @@ impl PgTaskKindRepository {
             "#,
         )
         .bind(name)
-        .fetch_one(executor)
+        .fetch_optional(executor)
         .await
     }
 
@@ -86,15 +86,10 @@ impl TaskKindRepository for PgTaskKindRepository {
     ) -> Result<TaskKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let result = self.find_task_kind_by_name(&mut *tx, name).await;
-        let task_kind = match result {
-            Ok(tk) => tk,
-            Err(sqlx::Error::RowNotFound) => {
-                let task_kind = TaskKind::new(name, worker_kind_name);
-                self.save_task_kind(&mut *tx, &task_kind).await?
-            }
-            Err(e) => return Err(e),
-        };
+        let task_kind = self
+            .find_task_kind_by_name(&mut *tx, name)
+            .await?
+            .unwrap_or_else(|| TaskKind::new(name, worker_kind_name));
 
         tx.commit().await?;
         Ok(task_kind)

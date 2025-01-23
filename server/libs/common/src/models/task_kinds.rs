@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{Executor, FromRow, Postgres};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -23,5 +23,46 @@ impl TaskKind {
             worker_kind_name: worker_kind_name.to_string(),
             created_at: OffsetDateTime::now_utc(),
         }
+    }
+
+    pub async fn save<'e, E>(&self, executor: E) -> Result<TaskKind, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            INSERT INTO task_kinds (id, name, worker_kind_name, created_at)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE 
+            SET name = $2,
+                worker_kind_name = $3
+            RETURNING *
+            "#,
+        )
+        .bind(self.id)
+        .bind(&self.name)
+        .bind(&self.worker_kind_name)
+        .bind(self.created_at)
+        .fetch_one(executor)
+        .await
+    }
+
+    pub async fn find_by_name<'e, E>(executor: E, name: &str) -> Result<TaskKind, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(r#"SELECT * FROM task_kinds WHERE name = $1"#)
+            .bind(name)
+            .fetch_one(executor)
+            .await
+    }
+
+    pub async fn find_all<'e, E>(executor: E) -> Result<Vec<TaskKind>, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as("SELECT * FROM task_kinds")
+            .fetch_all(executor)
+            .await
     }
 }
