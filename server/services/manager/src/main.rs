@@ -20,7 +20,7 @@ use sqlx::PgPool;
 
 use config::Config;
 use controller::{task_instance, task_result};
-use repo::{PgRepositoryCore, PgTaskKindRepository, PgTaskRepository, PgWorkerRepository};
+use repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
 
 /// Represents the shared application state that can be accessed by all routes
 ///
@@ -28,7 +28,7 @@ use repo::{PgRepositoryCore, PgTaskKindRepository, PgTaskRepository, PgWorkerRep
 #[derive(Clone)]
 pub struct AppState {
     pub task_repository: PgTaskRepository,
-    pub task_kind_repository: PgTaskKindRepository,
+    pub worker_kind_repository: PgWorkerKindRepository,
     pub worker_repository: PgWorkerRepository,
     pub broker: Arc<dyn BrokerProducer<Task>>,
 }
@@ -52,12 +52,12 @@ async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskRepository::new(core.clone());
-    let task_kind_repository = PgTaskKindRepository::new(core.clone());
+    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
     let worker_repository = PgWorkerRepository::new(core.clone());
 
     AppState {
         task_repository,
-        task_kind_repository,
+        worker_kind_repository,
         worker_repository,
         broker,
     }

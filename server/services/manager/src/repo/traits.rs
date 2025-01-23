@@ -1,7 +1,7 @@
 use std::{fmt::Debug, time::SystemTime};
 
 use async_trait::async_trait;
-use common::models::{Task, TaskKind, TaskStatus, Worker, WorkerKind};
+use common::models::{Task, TaskStatus, Worker, WorkerKind};
 use uuid::Uuid;
 
 /// Repository trait for managing task records in the database
@@ -13,7 +13,7 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
     /// Create a new task in the database
     async fn create_task(
         &self,
-        task_kind_id: Uuid,
+        task_kind_name: &str,
         input_data: Option<serde_json::Value>,
     ) -> Result<Task, sqlx::Error>;
 
@@ -49,26 +49,6 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
         worker_id: &Uuid,
         output: serde_json::Value,
     ) -> Result<Task, sqlx::Error>;
-}
-
-/// Repository trait for managing task kind records in the database
-///
-/// Provides methods for registering and managing task kinds that workers can process.
-/// Task kinds define the different kinds of work that can be performed in the system.
-#[async_trait]
-pub trait TaskKindRepository: Clone {
-    /// Get or create a task kind by name
-    ///
-    /// If a task kind with the given name already exists, returns that task kind.
-    /// Otherwise creates a new task kind with the given name.
-    async fn get_or_create_task_kind(
-        &self,
-        name: &str,
-        worker_kind_name: &str,
-    ) -> Result<TaskKind, sqlx::Error>;
-
-    /// Get all registered task kinds
-    async fn _get_all_task_kinds(&self) -> Result<Vec<TaskKind>, sqlx::Error>;
 }
 
 /// Repository trait for managing worker records in the database
