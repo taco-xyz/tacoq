@@ -1,6 +1,8 @@
 import asyncio
 
+from broker.config import BrokerConfig
 from manager.config import ManagerConfig
+from models.task import TaskKind
 from publisher.client import PublisherClient
 
 # GENERAL CONFIGURATION _______________________________________________________
@@ -9,21 +11,31 @@ from publisher.client import PublisherClient
 # Setup the manager location configuration
 manager_config = ManagerConfig(url="http://localhost:3000")
 
+# Setup the broker configuration
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+
 # Both the publisher and the worker need to know about the task kinds and
 # should have unified names for them.
+WORKER_KIND_NAME = "worker_kind"
 TASK_1_NAME = "task_1"
 TASK_2_NAME = "task_2"
 
 # APPLICATION CONFIGURATION ___________________________________________________
 
 # 1. Create a producer application
-worker_application = PublisherClient(manager_config)
+worker_application = PublisherClient(manager_config, broker_config)
 
 
 # 2. Start the application
 async def main():
-    task1 = await worker_application.publish_task(TASK_1_NAME, {"data": "task_1_data"})
-    task2 = await worker_application.publish_task(TASK_2_NAME, {"data": "task_2_data"})
+    task1 = await worker_application.publish_task(
+        TaskKind(name=TASK_1_NAME, worker_kind=WORKER_KIND_NAME),
+        {"data": "task_1_data"},
+    )
+    task2 = await worker_application.publish_task(
+        TaskKind(name=TASK_2_NAME, worker_kind=WORKER_KIND_NAME),
+        {"data": "task_2_data"},
+    )
 
     print(f"Task 1: {task1}")
     print(f"Task 2: {task2}")

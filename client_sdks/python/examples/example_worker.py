@@ -14,6 +14,7 @@ broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 
 # Both the publisher and the worker need to know about the task kinds and
 # should have unified names for them.
+WORKER_KIND_NAME = "worker_kind"
 TASK_1_NAME = "task_1"
 TASK_2_NAME = "task_2"
 
@@ -24,6 +25,7 @@ worker_config = WorkerApplicationConfig(
     name="test_worker",
     manager_config=manager_config,
     broker_config=broker_config,
+    kind=WORKER_KIND_NAME,
 )
 
 # 3. Create a worker application
