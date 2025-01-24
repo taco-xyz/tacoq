@@ -22,7 +22,7 @@ class TaskStatus(str, Enum):
     PENDING = "pending"
     """ The task is created but not yet assigned """
 
-    RUNNING = "running"
+    PROCESSING = "processing"
     """ The task is being processed by a worker """
 
     COMPLETED = "completed"
