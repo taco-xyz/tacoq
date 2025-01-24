@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::models::WorkerKind;
+use sqlx::{Executor, Postgres};
 use tracing::instrument;
 
 use crate::repo::{PgRepositoryCore, WorkerKindRepository};
@@ -12,6 +13,46 @@ pub struct PgWorkerKindRepository {
 impl PgWorkerKindRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
+    }
+
+    pub async fn save<'e, E>(&self, executor: E, w: &WorkerKind) -> Result<WorkerKind, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            INSERT INTO worker_kinds (name, routing_key, queue_name, created_at)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (name) DO UPDATE 
+            SET routing_key = $2,
+                queue_name = $3
+            RETURNING *
+            "#,
+        )
+        .bind(&w.name)
+        .bind(&w.routing_key)
+        .bind(&w.queue_name)
+        .bind(w.created_at)
+        .fetch_one(executor)
+        .await
+    }
+
+    pub async fn find_by_name<'e, E>(
+        &self,
+        executor: E,
+        name: &str,
+    ) -> Result<Option<WorkerKind>, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            SELECT * FROM worker_kinds WHERE name = $1
+            "#,
+        )
+        .bind(name)
+        .fetch_optional(executor)
+        .await
     }
 }
 
@@ -26,11 +67,12 @@ impl WorkerKindRepository for PgWorkerKindRepository {
     ) -> Result<WorkerKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let worker_kind = WorkerKind::find_by_name(&mut *tx, name)
+        let worker_kind = self
+            .find_by_name(&mut *tx, name)
             .await?
             .unwrap_or_else(|| WorkerKind::new(name, exchange, queue));
 
-        worker_kind.save(&mut *tx).await?;
+        self.save(&mut *tx, &worker_kind).await?;
         tx.commit().await?;
         Ok(worker_kind)
     }
