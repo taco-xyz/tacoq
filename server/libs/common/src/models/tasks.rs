@@ -1,6 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{Executor, FromRow, Postgres};
+use sqlx::FromRow;
 use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -99,52 +99,5 @@ impl Task {
         self.ttl = Some(Utc::now() + Duration::days(7));
         self.output_data = Some(output_data);
         self.is_error = if is_error { 1 } else { 0 };
-    }
-
-    pub async fn save<'e, E>(&self, executor: E) -> Result<Task, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as(
-            r#"
-            INSERT INTO tasks (
-                id, task_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
-                is_error, output_data, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            ON CONFLICT (id) DO UPDATE SET
-                input_data = EXCLUDED.input_data,
-                started_at = EXCLUDED.started_at,
-                completed_at = EXCLUDED.completed_at,
-                ttl = EXCLUDED.ttl,
-                assigned_to = EXCLUDED.assigned_to,
-                is_error = EXCLUDED.is_error,
-                output_data = EXCLUDED.output_data,
-                updated_at = NOW()
-            RETURNING *
-            "#,
-        )
-        .bind(self.id)
-        .bind(&self.task_kind_name)
-        .bind(&self.input_data)
-        .bind(self.started_at)
-        .bind(self.completed_at)
-        .bind(self.ttl)
-        .bind(self.assigned_to)
-        .bind(self.is_error)
-        .bind(&self.output_data)
-        .bind(self.created_at)
-        .bind(self.updated_at)
-        .fetch_one(executor)
-        .await
-    }
-
-    pub async fn find_by_id<'e, E>(executor: E, id: &Uuid) -> Result<Task, sqlx::Error>
-    where
-        E: Executor<'e, Database = Postgres>,
-    {
-        sqlx::query_as("SELECT * FROM tasks WHERE id = $1")
-            .bind(id)
-            .fetch_one(executor)
-            .await
     }
 }

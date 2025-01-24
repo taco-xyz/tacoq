@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::models::{Task, TaskStatus};
+use sqlx::{Executor, Postgres};
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -14,6 +15,53 @@ impl PgTaskRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
     }
+
+    pub async fn save<'e, E>(&self, executor: E, t: Task) -> Result<Task, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            INSERT INTO tasks (
+                id, task_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
+                is_error, output_data, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT (id) DO UPDATE SET
+                input_data = EXCLUDED.input_data,
+                started_at = EXCLUDED.started_at,
+                completed_at = EXCLUDED.completed_at,
+                ttl = EXCLUDED.ttl,
+                assigned_to = EXCLUDED.assigned_to,
+                is_error = EXCLUDED.is_error,
+                output_data = EXCLUDED.output_data,
+                updated_at = NOW()
+            RETURNING *
+            "#,
+        )
+        .bind(t.id)
+        .bind(&t.task_kind_name)
+        .bind(&t.input_data)
+        .bind(t.started_at)
+        .bind(t.completed_at)
+        .bind(t.ttl)
+        .bind(t.assigned_to)
+        .bind(t.is_error)
+        .bind(&t.output_data)
+        .bind(t.created_at)
+        .bind(t.updated_at)
+        .fetch_one(executor)
+        .await
+    }
+
+    pub async fn find_by_id<'e, E>(&self, executor: E, id: &Uuid) -> Result<Task, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as("SELECT * FROM tasks WHERE id = $1")
+            .bind(id)
+            .fetch_one(executor)
+            .await
+    }
 }
 
 #[async_trait]
@@ -25,7 +73,7 @@ impl TaskRepository for PgTaskRepository {
         input_data: Option<serde_json::Value>,
     ) -> Result<Task, sqlx::Error> {
         let task = Task::new(task_kind_name, input_data);
-        task.save(&self.core.pool).await
+        self.save(&self.core.pool, task).await
     }
 
     #[instrument(skip(self, task_id, worker_id), fields(task_id = %task_id, worker_id = %worker_id))]
@@ -35,16 +83,18 @@ impl TaskRepository for PgTaskRepository {
         worker_id: &Uuid,
     ) -> Result<(), sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = Task::find_by_id(&mut *tx, task_id).await?;
+
+        let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.mark_processing(*worker_id);
-        task.save(&mut *tx).await?;
+        self.save(&mut *tx, task).await?;
+
         tx.commit().await?;
         Ok(())
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
     async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error> {
-        Task::find_by_id(&self.core.pool, id).await
+        self.find_by_id(&self.core.pool, id).await
     }
 
     #[instrument(skip(self, task_id, status), fields(task_id = %task_id, status = %status))]
@@ -54,9 +104,9 @@ impl TaskRepository for PgTaskRepository {
         status: TaskStatus,
     ) -> Result<(), sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = Task::find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.set_status(status);
-        task.save(&mut *tx).await?;
+        self.save(&mut *tx, task).await?;
         tx.commit().await?;
         Ok(())
     }
@@ -68,9 +118,9 @@ impl TaskRepository for PgTaskRepository {
         error: serde_json::Value,
     ) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = Task::find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.mark_completed(error, true);
-        let task = task.save(&mut *tx).await?;
+        let task = self.save(&mut *tx, task).await?;
         tx.commit().await?;
         Ok(task)
     }
@@ -82,9 +132,9 @@ impl TaskRepository for PgTaskRepository {
         output: serde_json::Value,
     ) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = Task::find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.mark_completed(output, false);
-        let task = task.save(&mut *tx).await?;
+        let task = self.save(&mut *tx, task).await?;
         tx.commit().await?;
         Ok(task)
     }
