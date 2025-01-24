@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::models::{Worker, WorkerHeartbeat};
+use sqlx::{Executor, Postgres};
 use std::time::SystemTime;
 use tracing::instrument;
 use uuid::Uuid;
@@ -15,6 +16,95 @@ impl PgWorkerRepository {
     pub fn new(core: PgRepositoryCore) -> Self {
         Self { core }
     }
+
+    pub async fn save_worker<'e, E>(&self, executor: E, w: Worker) -> Result<Worker, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            INSERT INTO workers (id, name, worker_kind_name, registered_at)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (id) DO UPDATE 
+            SET name = $2,
+                worker_kind_name = $3
+            RETURNING *
+            "#,
+        )
+        .bind(w.id)
+        .bind(&w.name)
+        .bind(&w.worker_kind_name)
+        .bind(w.registered_at)
+        .fetch_one(executor)
+        .await
+    }
+
+    pub async fn find_worker_by_id<'e, E>(
+        &self,
+        executor: E,
+        id: &Uuid,
+    ) -> Result<Worker, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as("SELECT * FROM workers WHERE id = $1")
+            .bind(id)
+            .fetch_one(executor)
+            .await
+    }
+
+    pub async fn find_all_workers<'e, E>(&self, executor: E) -> Result<Vec<Worker>, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as("SELECT * FROM workers")
+            .fetch_all(executor)
+            .await
+    }
+
+    pub async fn save_heartbeat<'e, E>(
+        &self,
+        executor: E,
+        whb: WorkerHeartbeat,
+    ) -> Result<(), sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query(
+            r#"
+            INSERT INTO worker_heartbeats (worker_id, heartbeat_time, created_at)
+            VALUES ($1, $2, $3)
+            "#,
+        )
+        .bind(whb.worker_id)
+        .bind(whb.heartbeat_time)
+        .bind(whb.created_at)
+        .execute(executor)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn get_latest_heartbeat<'e, E>(
+        &self,
+        executor: E,
+        worker_id: &Uuid,
+    ) -> Result<WorkerHeartbeat, sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r#"
+            SELECT * 
+            FROM worker_heartbeats 
+            WHERE worker_id = $1 
+            ORDER BY heartbeat_time DESC 
+            LIMIT 1
+            "#,
+        )
+        .bind(worker_id)
+        .fetch_one(executor)
+        .await
+    }
 }
 
 #[async_trait]
@@ -26,28 +116,30 @@ impl WorkerRepository for PgWorkerRepository {
         worker_kind_name: &str,
     ) -> Result<Worker, sqlx::Error> {
         let worker = Worker::new(name, worker_kind_name);
-        worker.save(&self.core.pool).await
+        self.save_worker(&self.core.pool, worker).await
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
     async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error> {
-        Worker::find_by_id(&self.core.pool, id).await
+        self.find_worker_by_id(&self.core.pool, id).await
     }
 
     #[instrument(skip(self))]
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
-        Worker::find_all(&self.core.pool).await
+        self.find_all_workers(&self.core.pool).await
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
         let heartbeat = WorkerHeartbeat::new(*worker_id);
-        heartbeat.save(&self.core.pool).await
+        self.save_heartbeat(&self.core.pool, heartbeat).await
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error> {
-        let heartbeat = WorkerHeartbeat::get_latest(&self.core.pool, worker_id).await?;
+        let heartbeat = self
+            .get_latest_heartbeat(&self.core.pool, worker_id)
+            .await?;
         Ok(heartbeat.heartbeat_time.into())
     }
 }
