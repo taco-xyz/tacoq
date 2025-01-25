@@ -20,7 +20,8 @@ impl PgTaskRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as(
+        sqlx::query_as!(
+            Task,
             r#"
             INSERT INTO tasks (
                 id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
@@ -37,19 +38,19 @@ impl PgTaskRepository {
                 updated_at = NOW()
             RETURNING *
             "#,
+            t.id,
+            t.task_kind_name,
+            t.worker_kind_name,
+            t.input_data,
+            t.started_at,
+            t.completed_at,
+            t.ttl,
+            t.assigned_to,
+            t.is_error,
+            t.output_data,
+            t.created_at,
+            t.updated_at
         )
-        .bind(t.id)
-        .bind(&t.task_kind_name)
-        .bind(&t.worker_kind_name)
-        .bind(&t.input_data)
-        .bind(t.started_at)
-        .bind(t.completed_at)
-        .bind(t.ttl)
-        .bind(t.assigned_to)
-        .bind(t.is_error)
-        .bind(&t.output_data)
-        .bind(t.created_at)
-        .bind(t.updated_at)
         .fetch_one(executor)
         .await
     }
@@ -58,8 +59,7 @@ impl PgTaskRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as("SELECT * FROM tasks WHERE id = $1")
-            .bind(id)
+        sqlx::query_as!(Task, "SELECT * FROM tasks WHERE id = $1", id)
             .fetch_one(executor)
             .await
     }

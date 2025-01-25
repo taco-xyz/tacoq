@@ -19,7 +19,8 @@ impl PgWorkerKindRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as(
+        sqlx::query_as!(
+            WorkerKind,
             r#"
             INSERT INTO worker_kinds (name, routing_key, queue_name, created_at)
             VALUES ($1, $2, $3, $4)
@@ -28,11 +29,11 @@ impl PgWorkerKindRepository {
                 queue_name = $3
             RETURNING *
             "#,
+            w.name,
+            w.routing_key,
+            w.queue_name,
+            w.created_at
         )
-        .bind(&w.name)
-        .bind(&w.routing_key)
-        .bind(&w.queue_name)
-        .bind(w.created_at)
         .fetch_one(executor)
         .await
     }
@@ -45,12 +46,13 @@ impl PgWorkerKindRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as(
+        sqlx::query_as!(
+            WorkerKind,
             r#"
             SELECT * FROM worker_kinds WHERE name = $1
             "#,
+            name
         )
-        .bind(name)
         .fetch_optional(executor)
         .await
     }

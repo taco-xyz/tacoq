@@ -25,7 +25,8 @@ pub enum TaskStatus {
 /// Tasks are sent to workers to be executed with a specific payload.
 /// Workers are eligble for receiving certain tasks depending on their
 /// list of capabilities.
-#[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Default, Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
+#[sqlx(default)]
 pub struct Task {
     pub id: Uuid,
     pub task_kind_name: String,

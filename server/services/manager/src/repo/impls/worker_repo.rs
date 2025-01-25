@@ -21,7 +21,8 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as(
+        sqlx::query_as!(
+            Worker,
             r#"
             INSERT INTO workers (id, name, worker_kind_name, registered_at)
             VALUES ($1, $2, $3, $4)
@@ -30,11 +31,11 @@ impl PgWorkerRepository {
                 worker_kind_name = $3
             RETURNING *
             "#,
+            w.id,
+            w.name,
+            w.worker_kind_name,
+            w.registered_at
         )
-        .bind(w.id)
-        .bind(&w.name)
-        .bind(&w.worker_kind_name)
-        .bind(w.registered_at)
         .fetch_one(executor)
         .await
     }
@@ -47,8 +48,7 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as("SELECT * FROM workers WHERE id = $1")
-            .bind(id)
+        sqlx::query_as!(Worker, "SELECT * FROM workers WHERE id = $1", id)
             .fetch_one(executor)
             .await
     }
@@ -57,7 +57,7 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as("SELECT * FROM workers")
+        sqlx::query_as!(Worker, "SELECT * FROM workers")
             .fetch_all(executor)
             .await
     }
@@ -70,15 +70,15 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query(
+        sqlx::query!(
             r#"
             INSERT INTO worker_heartbeats (worker_id, heartbeat_time, created_at)
             VALUES ($1, $2, $3)
             "#,
+            whb.worker_id,
+            whb.heartbeat_time,
+            whb.created_at
         )
-        .bind(whb.worker_id)
-        .bind(whb.heartbeat_time)
-        .bind(whb.created_at)
         .execute(executor)
         .await?;
         Ok(())
@@ -92,7 +92,8 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as(
+        sqlx::query_as!(
+            WorkerHeartbeat,
             r#"
             SELECT * 
             FROM worker_heartbeats 
@@ -100,8 +101,8 @@ impl PgWorkerRepository {
             ORDER BY heartbeat_time DESC 
             LIMIT 1
             "#,
+            worker_id
         )
-        .bind(worker_id)
         .fetch_one(executor)
         .await
     }
