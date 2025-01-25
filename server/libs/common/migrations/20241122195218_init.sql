@@ -57,6 +57,9 @@ CREATE TABLE
         input_data JSONB,
         output_data JSONB,
         is_error INT NOT NULL DEFAULT 0,
+        -- Relations
+        assigned_to UUID REFERENCES workers (id),
+        worker_kind_name TEXT REFERENCES worker_kinds (name),
         -- Task status
         started_at TIMESTAMP
         WITH
@@ -67,8 +70,6 @@ CREATE TABLE
             ttl TIMESTAMP
         WITH
             TIME ZONE,
-            -- Relations
-            assigned_to UUID REFERENCES workers (id),
             -- Timestamps
             created_at TIMESTAMP
         WITH

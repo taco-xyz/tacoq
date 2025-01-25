@@ -16,16 +16,16 @@ impl PgTaskRepository {
         Self { core }
     }
 
-    pub async fn save<'e, E>(&self, executor: E, t: Task) -> Result<Task, sqlx::Error>
+    pub async fn save<'e, E>(&self, executor: E, t: &Task) -> Result<Task, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
         sqlx::query_as(
             r#"
             INSERT INTO tasks (
-                id, task_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
+                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
                 is_error, output_data, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
@@ -40,6 +40,7 @@ impl PgTaskRepository {
         )
         .bind(t.id)
         .bind(&t.task_kind_name)
+        .bind(&t.worker_kind_name)
         .bind(&t.input_data)
         .bind(t.started_at)
         .bind(t.completed_at)
@@ -70,10 +71,11 @@ impl TaskRepository for PgTaskRepository {
     async fn create_task(
         &self,
         task_kind_name: &str,
+        worker_kind_name: &str,
         input_data: Option<serde_json::Value>,
     ) -> Result<Task, sqlx::Error> {
-        let task = Task::new(task_kind_name, input_data);
-        self.save(&self.core.pool, task).await
+        let task = Task::new(task_kind_name, worker_kind_name, input_data);
+        self.save(&self.core.pool, &task).await
     }
 
     #[instrument(skip(self, task_id, worker_id), fields(task_id = %task_id, worker_id = %worker_id))]
@@ -86,7 +88,7 @@ impl TaskRepository for PgTaskRepository {
 
         let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.mark_processing(*worker_id);
-        self.save(&mut *tx, task).await?;
+        self.save(&mut *tx, &task).await?;
 
         tx.commit().await?;
         Ok(())
@@ -106,7 +108,7 @@ impl TaskRepository for PgTaskRepository {
         let mut tx = self.core.pool.begin().await?;
         let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.set_status(status);
-        self.save(&mut *tx, task).await?;
+        self.save(&mut *tx, &task).await?;
         tx.commit().await?;
         Ok(())
     }
@@ -120,7 +122,7 @@ impl TaskRepository for PgTaskRepository {
         let mut tx = self.core.pool.begin().await?;
         let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.mark_completed(error, true);
-        let task = self.save(&mut *tx, task).await?;
+        let task = self.save(&mut *tx, &task).await?;
         tx.commit().await?;
         Ok(task)
     }
@@ -134,7 +136,7 @@ impl TaskRepository for PgTaskRepository {
         let mut tx = self.core.pool.begin().await?;
         let mut task = self.find_by_id(&mut *tx, task_id).await?;
         task.mark_completed(output, false);
-        let task = self.save(&mut *tx, task).await?;
+        let task = self.save(&mut *tx, &task).await?;
         tx.commit().await?;
         Ok(task)
     }
@@ -172,6 +174,16 @@ mod tests {
         (worker.id, worker_kind.name)
     }
 
+    async fn setup_test_worker_kind(pool: &PgPool) -> String {
+        let core = PgRepositoryCore::new(pool.clone());
+        let worker_kind_repo = PgWorkerKindRepository::new(core);
+        worker_kind_repo
+            .get_or_create_worker_kind("test.worker", "test.worker.route", "test_worker_queue")
+            .await
+            .unwrap()
+            .name
+    }
+
     // This runs before any test in this module
     #[ctor::ctor]
     fn init() {
@@ -182,11 +194,12 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_and_get_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
         let task_kind_name = "Test Task";
 
         let input = serde_json::json!({"test": "data"});
         let task = repo
-            .create_task(task_kind_name, Some(input.clone()))
+            .create_task(task_kind_name, &worker_kind_name, Some(input.clone()))
             .await
             .unwrap();
 
@@ -209,9 +222,13 @@ mod tests {
     async fn test_assign_task_to_worker(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let (worker_id, _) = setup_test_worker(&pool, "Test Worker").await;
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
         let task_kind_name = "TaskKindTest";
 
-        let task = repo.create_task(task_kind_name, None).await.unwrap();
+        let task = repo
+            .create_task(task_kind_name, &worker_kind_name, None)
+            .await
+            .unwrap();
 
         repo.assign_task_to_worker(&task.id, &worker_id)
             .await
@@ -226,9 +243,13 @@ mod tests {
     async fn test_upload_task_result(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let (worker_id, _) = setup_test_worker(&pool, "Test Worker").await;
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
         let task_kind_name = "TaskKindTest";
 
-        let task = repo.create_task(task_kind_name, None).await.unwrap();
+        let task = repo
+            .create_task(task_kind_name, &worker_kind_name, None)
+            .await
+            .unwrap();
 
         repo.assign_task_to_worker(&task.id, &worker_id)
             .await
@@ -256,9 +277,13 @@ mod tests {
     async fn test_upload_task_error(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let (worker_id, _) = setup_test_worker(&pool, "Test Worker").await;
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
         let task_kind_name = "TaskKindTest";
 
-        let task = repo.create_task(task_kind_name, None).await.unwrap();
+        let task = repo
+            .create_task(task_kind_name, &worker_kind_name, None)
+            .await
+            .unwrap();
         repo.assign_task_to_worker(&task.id, &worker_id)
             .await
             .unwrap();
@@ -291,8 +316,12 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_task_status_update(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
 
-        let task = repo.create_task("TaskKindTest", None).await.unwrap();
+        let task = repo
+            .create_task("TaskKindTest", &worker_kind_name, None)
+            .await
+            .unwrap();
         assert!(task.started_at.is_none());
 
         repo.update_task_status(&task.id, TaskStatus::Processing)
@@ -312,8 +341,12 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_task_without_input_data(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
 
-        let task = repo.create_task("TaskKindTest", None).await.unwrap();
+        let task = repo
+            .create_task("TaskKindTest", &worker_kind_name, None)
+            .await
+            .unwrap();
         assert_eq!(task.input_data, None);
     }
 
@@ -321,8 +354,12 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_task_results_empty(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
 
-        let task = repo.create_task("TaskKindTest", None).await.unwrap();
+        let task = repo
+            .create_task("TaskKindTest", &worker_kind_name, None)
+            .await
+            .unwrap();
         let task = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(task.output_data.is_none());
     }
@@ -339,7 +376,11 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn status_transitions(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
-        let task = repo.create_task("TaskKindTest", None).await.unwrap();
+        let worker_kind_name = setup_test_worker_kind(&pool).await;
+        let task = repo
+            .create_task("TaskKindTest", &worker_kind_name, None)
+            .await
+            .unwrap();
 
         // Test full lifecycle
         assert!(task.started_at.is_none());

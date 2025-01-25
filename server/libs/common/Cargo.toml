@@ -21,7 +21,6 @@ tracing = "0.1.40"
 tokio = { version = "1.41.1", features = ["full"] }
 futures = "0.3.31"
 utoipa = { version = "5.2.0", features = ["axum_extras", "uuid", "time", "chrono"] }
-time = { version = "0.3.36", features = ["serde"] }
 mockall = "0.13.1"
 strum = { version = "0.26.3", features = ["derive"] }
 chrono = { version = "0.4.39", features = ["serde"] }

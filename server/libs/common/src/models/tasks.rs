@@ -42,7 +42,8 @@ pub struct Task {
     pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
 
     // Relations
-    pub assigned_to: Option<Uuid>,
+    pub worker_kind_name: String,
+    pub assigned_to: Option<Uuid>, // worker that it is assigned to
 
     // Metadata
     pub created_at: DateTime<Utc>,
@@ -50,10 +51,15 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(task_kind_name: &str, input_data: Option<serde_json::Value>) -> Self {
+    pub fn new(
+        task_kind_name: &str,
+        worker_kind_name: &str,
+        input_data: Option<serde_json::Value>,
+    ) -> Self {
         Task {
             id: Uuid::new_v4(),
             task_kind_name: task_kind_name.to_string(),
+            worker_kind_name: worker_kind_name.to_string(),
             input_data,
             output_data: None,
             is_error: 0,

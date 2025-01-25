@@ -14,6 +14,7 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
     async fn create_task(
         &self,
         task_kind_name: &str,
+        worker_kind_name: &str,
         input_data: Option<serde_json::Value>,
     ) -> Result<Task, sqlx::Error>;
 

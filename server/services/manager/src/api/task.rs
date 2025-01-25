@@ -72,7 +72,10 @@ mod test {
     use tracing::info;
 
     use crate::{
-        repo::{PgRepositoryCore, PgTaskRepository, TaskRepository},
+        repo::{
+            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
+            WorkerKindRepository,
+        },
         testing::test::{get_test_server, init_test_logger},
     };
 
@@ -99,9 +102,15 @@ mod test {
         let server = get_test_server(db_pools.clone(), broker).await;
         let core = PgRepositoryCore::new(db_pools.clone());
         let task_instance_repository = PgTaskRepository::new(core.clone());
+        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+
+        let worker_kind = worker_kind_repository
+            .get_or_create_worker_kind("WorkerKindName", "WorkerKindName", "WorkerKindName")
+            .await
+            .unwrap();
 
         let task = task_instance_repository
-            .create_task("TaskKindName", None)
+            .create_task("TaskKindName", &worker_kind.name, None)
             .await
             .unwrap();
 
