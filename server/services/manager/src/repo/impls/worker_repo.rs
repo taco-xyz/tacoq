@@ -17,7 +17,7 @@ impl PgWorkerRepository {
         Self { core }
     }
 
-    pub async fn save_worker<'e, E>(&self, executor: E, w: Worker) -> Result<Worker, sqlx::Error>
+    pub async fn save_worker<'e, E>(&self, executor: E, w: &Worker) -> Result<Worker, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
@@ -65,7 +65,7 @@ impl PgWorkerRepository {
     pub async fn save_heartbeat<'e, E>(
         &self,
         executor: E,
-        whb: WorkerHeartbeat,
+        whb: &WorkerHeartbeat,
     ) -> Result<(), sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
@@ -116,7 +116,7 @@ impl WorkerRepository for PgWorkerRepository {
         worker_kind_name: &str,
     ) -> Result<Worker, sqlx::Error> {
         let worker = Worker::new(name, worker_kind_name);
-        self.save_worker(&self.core.pool, worker).await
+        self.save_worker(&self.core.pool, &worker).await
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
@@ -132,7 +132,7 @@ impl WorkerRepository for PgWorkerRepository {
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
         let heartbeat = WorkerHeartbeat::new(*worker_id);
-        self.save_heartbeat(&self.core.pool, heartbeat).await
+        self.save_heartbeat(&self.core.pool, &heartbeat).await
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]

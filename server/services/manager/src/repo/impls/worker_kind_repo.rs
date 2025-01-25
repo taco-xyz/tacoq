@@ -15,7 +15,7 @@ impl PgWorkerKindRepository {
         Self { core }
     }
 
-    pub async fn save<'e, E>(&self, executor: E, w: WorkerKind) -> Result<WorkerKind, sqlx::Error>
+    pub async fn save<'e, E>(&self, executor: E, w: &WorkerKind) -> Result<WorkerKind, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
@@ -72,7 +72,7 @@ impl WorkerKindRepository for PgWorkerKindRepository {
             .await?
             .unwrap_or_else(|| WorkerKind::new(name, exchange, queue));
 
-        let worker_kind = self.save(&mut *tx, worker_kind).await?;
+        let worker_kind = self.save(&mut *tx, &worker_kind).await?;
         tx.commit().await?;
         Ok(worker_kind)
     }
