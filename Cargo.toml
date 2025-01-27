@@ -8,6 +8,5 @@ resolver = "2"
 
 members = [
     "server/libs/common",
-    "server/libs/db-common",
     "server/services/manager",
 ]

@@ -1,19 +1,19 @@
-use crate::repo::PgTaskInstanceRepository;
+use crate::repo::PgTaskRepository;
 use common::brokers::core::BrokerConsumer;
-use common::TaskResult;
+use common::models::Task;
 
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct TaskResultController {
-    consumer: Arc<dyn BrokerConsumer<TaskResult>>,
-    _task_repository: Arc<PgTaskInstanceRepository>,
+    consumer: Arc<dyn BrokerConsumer<Task>>,
+    _task_repository: Arc<PgTaskRepository>,
 }
 
 impl TaskResultController {
     pub async fn new(
-        consumer: Arc<dyn BrokerConsumer<TaskResult>>,
-        task_repository: Arc<PgTaskInstanceRepository>,
+        consumer: Arc<dyn BrokerConsumer<Task>>,
+        task_repository: Arc<PgTaskRepository>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             consumer,
@@ -22,7 +22,7 @@ impl TaskResultController {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let handler = Box::new(|result: TaskResult| {
+        let handler = Box::new(|result: Task| {
             println!("Received task result: {:?}", result);
             Ok(())
         });
