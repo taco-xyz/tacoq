@@ -1,90 +1,23 @@
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use strum_macros::Display;
-use time::OffsetDateTime;
+use sqlx::FromRow;
+use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
 use uuid::Uuid;
-
-use crate::models::TaskKind;
 
 // Task status enum
 /// # Possible Status:
 /// * `Pending`: Task is created but not yet assigned
-/// * `Queued`: Task has been assigned to a worker and sent to a queue
-/// * `Running`: Worker has started processing
-/// * `Completed`: Task completed successfully
-/// * `Failed`: Task failed to complete
-/// * `Cancelled`: Task was cancelled before completion
-/// * `Accepted`: Worker acknowledged receipt
-/// * `Paused`: Temporarily suspended
-/// * `Retrying`: Failed but attempting again
-/// * `Timeout`: Exceeded time limit
-/// * `Rejected`: Worker refused task
-/// * `Blocked`: Waiting on dependencies
-#[derive(Display, Debug, Serialize, Deserialize, PartialEq, ToSchema)]
+/// * `Processing`: Task has been assigned to a worker and sent to a queue
+/// * `Completed`: Task completed sucessfully or not
+#[derive(Display, EnumString, Debug, Serialize, Deserialize, PartialEq, ToSchema)]
 pub enum TaskStatus {
-    Pending,   // Task is created but not yet assigned
-    Accepted,  // Worker acknowledged receipt
-    Queued,    // Task has been assigned to a worker and sent to a queue
-    Running,   // Worker has started processing
-    Paused,    // Temporarily suspended
-    Retrying,  // Failed but attempting again
-    Completed, // Task completed successfully
-    Failed,    // Task failed to complete
-    Cancelled, // Task was cancelled before completion
-    Timeout,   // Exceeded time limit
-    Rejected,  // Worker refused task
-    Blocked,   // Waiting on dependencies
-}
-
-impl From<String> for TaskStatus {
-    fn from(s: String) -> Self {
-        s.to_lowercase()
-            .as_str()
-            .try_into()
-            .unwrap_or_else(|_| panic!("Invalid task status: {}", s))
-    }
-}
-
-impl TryFrom<&str> for TaskStatus {
-    type Error = String;
-
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        match s {
-            "pending" => Ok(Self::Pending),
-            "accepted" => Ok(Self::Accepted),
-            "queued" => Ok(Self::Queued),
-            "running" => Ok(Self::Running),
-            "paused" => Ok(Self::Paused),
-            "retrying" => Ok(Self::Retrying),
-            "completed" => Ok(Self::Completed),
-            "failed" => Ok(Self::Failed),
-            "cancelled" => Ok(Self::Cancelled),
-            "timeout" => Ok(Self::Timeout),
-            "rejected" => Ok(Self::Rejected),
-            "blocked" => Ok(Self::Blocked),
-            _ => Err(format!("Invalid task status: {}", s)),
-        }
-    }
-}
-
-impl From<TaskStatus> for String {
-    fn from(status: TaskStatus) -> Self {
-        match status {
-            TaskStatus::Pending => "pending",
-            TaskStatus::Accepted => "accepted",
-            TaskStatus::Queued => "queued",
-            TaskStatus::Running => "running",
-            TaskStatus::Paused => "paused",
-            TaskStatus::Retrying => "retrying",
-            TaskStatus::Completed => "completed",
-            TaskStatus::Failed => "failed",
-            TaskStatus::Cancelled => "cancelled",
-            TaskStatus::Timeout => "timeout",
-            TaskStatus::Rejected => "rejected",
-            TaskStatus::Blocked => "blocked",
-        }
-        .to_string()
-    }
+    #[strum(serialize = "pending")]
+    Pending, // Task is created but not yet assigned
+    #[strum(serialize = "processing")]
+    Processing, // Task has been assigned to a worker and sent to a queue
+    #[strum(serialize = "completed")]
+    Completed, // Task completed sucessfully or not
 }
 
 // Task
@@ -92,31 +25,86 @@ impl From<TaskStatus> for String {
 /// Tasks are sent to workers to be executed with a specific payload.
 /// Workers are eligble for receiving certain tasks depending on their
 /// list of capabilities.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct TaskInstance {
+#[derive(Default, Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
+#[sqlx(default)]
+pub struct Task {
     pub id: Uuid,
-    pub task_kind: TaskKind,
+    pub task_kind_name: String,
+
+    // Task data
     pub input_data: Option<serde_json::Value>,
-    pub status: TaskStatus,
-    #[serde(
-        serialize_with = "crate::models::serialize_datetime",
-        deserialize_with = "crate::models::deserialize_datetime"
-    )]
-    pub created_at: OffsetDateTime,
-    pub assigned_to: Option<Uuid>,
-    pub result: Option<TaskResult>,
+    pub output_data: Option<serde_json::Value>,
+    pub is_error: i32,
+
+    // Task status
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+
+    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
+
+    // Relations
+    pub worker_kind_name: String,
+    pub assigned_to: Option<Uuid>, // worker that it is assigned to
+
+    // Metadata
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
-/// Task results contain the output or error data from a completed task
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct TaskResult {
-    pub task_id: Uuid,
-    pub output_data: Option<serde_json::Value>,
-    pub error_data: Option<serde_json::Value>,
-    pub worker_id: Uuid,
-    #[serde(
-        serialize_with = "crate::models::serialize_datetime",
-        deserialize_with = "crate::models::deserialize_datetime"
-    )]
-    pub created_at: OffsetDateTime,
+impl Task {
+    pub fn new(
+        task_kind_name: &str,
+        worker_kind_name: &str,
+        input_data: Option<serde_json::Value>,
+    ) -> Self {
+        Task {
+            id: Uuid::new_v4(),
+            task_kind_name: task_kind_name.to_string(),
+            worker_kind_name: worker_kind_name.to_string(),
+            input_data,
+            output_data: None,
+            is_error: 0,
+            started_at: None,
+            completed_at: None,
+            assigned_to: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            ttl: None,
+        }
+    }
+
+    pub fn set_status(&mut self, status: TaskStatus) {
+        match status {
+            TaskStatus::Pending => {
+                self.started_at = None;
+                self.completed_at = None;
+                self.ttl = None;
+                self.assigned_to = None;
+            }
+            TaskStatus::Processing => {
+                self.started_at = Some(Utc::now());
+                self.completed_at = None;
+                self.ttl = None;
+            }
+            TaskStatus::Completed => {
+                self.completed_at = Some(Utc::now());
+                self.ttl = Some(Utc::now() + Duration::days(7));
+            }
+        }
+        self.updated_at = Utc::now();
+    }
+
+    pub fn mark_processing(&mut self, worker_id: Uuid) {
+        self.assigned_to = Some(worker_id);
+        self.started_at = Some(Utc::now());
+        self.updated_at = Utc::now();
+    }
+
+    pub fn mark_completed(&mut self, output_data: serde_json::Value, is_error: bool) {
+        self.completed_at = Some(Utc::now());
+        self.updated_at = Utc::now();
+        self.ttl = Some(Utc::now() + Duration::days(7));
+        self.output_data = Some(output_data);
+        self.is_error = if is_error { 1 } else { 0 };
+    }
 }

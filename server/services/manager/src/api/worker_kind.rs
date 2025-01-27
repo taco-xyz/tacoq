@@ -51,7 +51,7 @@ struct RegisterWorkerKindInput {
 )]
 #[axum::debug_handler]
 async fn register_worker_kind(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(kind): Path<String>,
 ) -> Result<(StatusCode, Json<RegisterWorkerKindResponse>), (StatusCode, String)> {
     info!("Registering worker kind with name: {:?}", kind);

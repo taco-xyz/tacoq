@@ -7,9 +7,9 @@ use axum::{
 use tracing::{error, info};
 use uuid::Uuid;
 
-use common::models::TaskInstance;
+use common::models::Task;
 
-use crate::{repo::TaskInstanceRepository, AppState};
+use crate::{repo::TaskRepository, AppState};
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/{id}", get(get_task_by_id))
@@ -30,7 +30,7 @@ pub fn routes() -> Router<AppState> {
         ("id" = Uuid, Path, description = "Task ID to get")
     ),
     responses(
-        (status = 200, description = "Task found", body = TaskInstance, content_type = "application/json"),
+        (status = 200, description = "Task found", body = Task, content_type = "application/json"),
         (status = 404, description = "Task not found", content_type = "text/plain"),
         (status = 500, description = "Internal server error", content_type = "text/plain")
     ),
@@ -39,10 +39,10 @@ pub fn routes() -> Router<AppState> {
 async fn get_task_by_id(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<TaskInstance>, (StatusCode, String)> {
+) -> Result<Json<Task>, (StatusCode, String)> {
     info!("Getting task by ID: {:?}", id);
 
-    let task = state.task_repository.get_task_by_id(&id, true).await;
+    let task = state.task_repository.get_task_by_id(&id).await;
 
     task.map(Json).map_err(|e| match e {
         sqlx::Error::RowNotFound => {
@@ -65,16 +65,16 @@ async fn get_task_by_id(
 #[cfg(test)]
 mod test {
     use axum::http::StatusCode;
-    use common::brokers::testing::get_mock_broker_producer;
-    use common::{TaskInstance, TaskKind, Worker};
+    use common::brokers::core::MockBrokerProducer;
+    use common::models::Task;
     use sqlx::PgPool;
     use std::sync::Arc;
     use tracing::info;
 
     use crate::{
         repo::{
-            PgRepositoryCore, PgTaskInstanceRepository, PgTaskKindRepository,
-            TaskInstanceRepository, TaskKindRepository,
+            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
+            WorkerKindRepository,
         },
         testing::test::{get_test_server, init_test_logger},
     };
@@ -85,21 +85,9 @@ mod test {
         init_test_logger();
     }
 
-    fn get_test_worker(task_kind_names: &[&str]) -> Worker {
-        Worker::new(
-            "test_worker".to_string(),
-            task_kind_names
-                .iter()
-                .map(|name| TaskKind::new(name.to_string()))
-                .collect(),
-        )
-    }
-
-    // Getting Task
-
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_non_existent_task_by_id(db_pools: PgPool) {
-        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
+        let broker = Arc::new(MockBrokerProducer::<Task>::new());
         let server = get_test_server(db_pools, broker).await;
 
         let response = server
@@ -108,20 +96,21 @@ mod test {
         assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
 
-    #[sqlx::test(migrator = "db_common::MIGRATOR")]
+    #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
-        let broker = Arc::new(get_mock_broker_producer::<TaskInstance>());
+        let broker = Arc::new(MockBrokerProducer::<Task>::new());
         let server = get_test_server(db_pools.clone(), broker).await;
         let core = PgRepositoryCore::new(db_pools.clone());
-        let task_instance_repository = PgTaskInstanceRepository::new(core.clone());
-        let task_kind_repository = PgTaskKindRepository::new(core.clone());
+        let task_instance_repository = PgTaskRepository::new(core.clone());
+        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
 
-        let task_kind = task_kind_repository
-            .get_or_create_task_kind("test_task_kind".to_string())
+        let worker_kind = worker_kind_repository
+            .get_or_create_worker_kind("WorkerKindName", "WorkerKindName", "WorkerKindName")
             .await
             .unwrap();
+
         let task = task_instance_repository
-            .create_task(task_kind.id, None)
+            .create_task("TaskKindName", &worker_kind.name, None)
             .await
             .unwrap();
 

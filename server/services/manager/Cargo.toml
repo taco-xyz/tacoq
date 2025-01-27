@@ -6,7 +6,6 @@ description = "Galactus is a monolithic service that handles communication with 
 
 [dependencies]
 common = { path = "../../libs/common" }
-db_common = { path = "../../libs/db-common" }
 async-trait = "0.1.83"
 dotenv = "0.15.0"
 futures = "0.3.31"
@@ -19,7 +18,7 @@ sqlx = { version = "0.8.2", features = [
     "postgres",
     "uuid",
     "json",
-    "time",
+    "chrono",
 ] }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"

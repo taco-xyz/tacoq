@@ -5,7 +5,7 @@ pub mod test {
     use axum_test::TestServer;
     use sqlx::PgPool;
 
-    use common::{brokers::core::BrokerProducer, TaskInstance};
+    use common::{brokers::core::BrokerProducer, models::Task};
 
     use crate::setup_app;
 
@@ -22,7 +22,7 @@ pub mod test {
     /// This provides a way to make test HTTP requests against the API endpoints.
     pub async fn get_test_server(
         db_pools: PgPool,
-        broker: Arc<dyn BrokerProducer<TaskInstance>>,
+        broker: Arc<dyn BrokerProducer<Task>>,
     ) -> TestServer {
         let (router, _) = setup_app(&db_pools, broker).await;
         TestServer::new(router).unwrap()
