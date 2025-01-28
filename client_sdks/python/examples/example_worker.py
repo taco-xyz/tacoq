@@ -20,17 +20,14 @@ TASK_2_NAME = "task_2"
 
 # APPLICATION CONFIGURATION ___________________________________________________
 
-# 2. Configure the worker
-worker_config = WorkerApplicationConfig(
-    name="test_worker",
-    manager_config=manager_config,
-    broker_config=broker_config,
-    kind=WORKER_KIND_NAME,
-)
-
-# 3. Create a worker application
+# 1. Create a worker application
 worker_application = WorkerApplication(
-    config=worker_config,
+    config=WorkerApplicationConfig(
+        name="test_worker",
+        manager_config=manager_config,
+        broker_config=broker_config,
+        kind=WORKER_KIND_NAME,
+    ),
 )
 
 
