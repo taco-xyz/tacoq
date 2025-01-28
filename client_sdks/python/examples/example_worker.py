@@ -29,7 +29,9 @@ worker_config = WorkerApplicationConfig(
 )
 
 # 3. Create a worker application
-worker_application = WorkerApplication(worker_config)
+worker_application = WorkerApplication(
+    config=worker_config,
+)
 
 
 # 4. Create tasks and register them with the worker application

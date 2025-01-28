@@ -2,7 +2,6 @@ import asyncio
 
 from broker.config import BrokerConfig
 from manager.config import ManagerConfig
-from models.task import TaskKind
 from publisher.client import PublisherClient
 
 # GENERAL CONFIGURATION _______________________________________________________
@@ -23,17 +22,21 @@ TASK_2_NAME = "task_2"
 # APPLICATION CONFIGURATION ___________________________________________________
 
 # 1. Create a producer application
-worker_application = PublisherClient(manager_config, broker_config)
+worker_application = PublisherClient(
+    manager_config=manager_config, broker_config=broker_config
+)
 
 
 # 2. Start the application
 async def main():
     task1 = await worker_application.publish_task(
-        TaskKind(name=TASK_1_NAME, worker_kind=WORKER_KIND_NAME),
+        TASK_1_NAME,
+        WORKER_KIND_NAME,
         {"data": "task_1_data"},
     )
     task2 = await worker_application.publish_task(
-        TaskKind(name=TASK_2_NAME, worker_kind=WORKER_KIND_NAME),
+        TASK_2_NAME,
+        WORKER_KIND_NAME,
         {"data": "task_2_data"},
     )
 
