@@ -19,6 +19,7 @@ dependencies = [
     "aiohttp-retry>=2.9.1",
     "aiohttp>=3.11.8",
     "aioredis>=2.0.1",
+    "aioresponses>=0.7.8",
     "click>=8.1.7",
     "pydantic>=2.10.5",
     "uuid>=1.30",
@@ -30,6 +31,9 @@ asyncio_mode = "auto"
 pythonpath = ["."]
 markers = [
     "bench: benchmark a function",
+    "target: current target test. Used locally.",
+    "unit: unit tests",
+    "service: tests that interact with external services",
 ]
 
 [build-system]
