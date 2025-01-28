@@ -1,4 +1,4 @@
-from src.manager import ManagerClient, ManagerConfig, ManagerStates
+from src.manager import ManagerClient, ManagerConfig
 from src.worker import WorkerApplication, WorkerApplicationConfig
 from src.broker import BrokerConfig
 import pytest
@@ -10,9 +10,15 @@ BROKER_TEST_URL = os.environ.get(
     "BROKER_TEST_URL", "amqp://user:password@localhost:5672/"
 )
 
+WORKER_KIND_NAME = "test_worker_kind"
 WORKER_NAME = "test_worker"
 
 pytest_plugins = ["pytest_asyncio"]
+
+
+## ==============================
+## Manager Fixtures
+## ==============================
 
 
 @pytest.fixture
@@ -22,19 +28,13 @@ async def manager_config() -> ManagerConfig:
 
 
 @pytest.fixture
-async def manager_client(manager_config: ManagerConfig) -> ManagerClient:
-    """Fixture that provides a configured ManagerClient instance. Also checks
-    whether the manager client is running and healthy before starting the tests."""
+def mock_manager_client(manager_config: ManagerConfig) -> ManagerClient:
+    return ManagerClient(config=manager_config)
 
-    client = ManagerClient(config=manager_config)
 
-    # Check if the manager is healthy
-    client_health = await client.check_health()
-
-    if client_health != ManagerStates.HEALTHY:
-        raise RuntimeError(f"Manager is not healthy. Current state: {client_health}")
-
-    return client
+## ==============================
+## Broker Fixtures
+## ==============================
 
 
 @pytest.fixture
@@ -43,13 +43,21 @@ async def broker_config() -> BrokerConfig:
     return BrokerConfig(url=BROKER_TEST_URL)
 
 
+## ==============================
+## Worker Fixtures
+## ==============================
+
+
 @pytest.fixture
 async def worker_config(
     manager_config: ManagerConfig, broker_config: BrokerConfig
 ) -> WorkerApplicationConfig:
     """Fixture that provides a configured WorkerConfig instance."""
     return WorkerApplicationConfig(
-        name=WORKER_NAME, manager_config=manager_config, broker_config=broker_config
+        kind=WORKER_KIND_NAME,
+        name=WORKER_NAME,
+        manager_config=manager_config,
+        broker_config=broker_config,
     )
 
 
