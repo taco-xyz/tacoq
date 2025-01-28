@@ -31,7 +31,7 @@ worker_application = WorkerApplication(
 )
 
 
-# 4. Create tasks and register them with the worker application
+# 2. Create tasks and register them with the worker application
 @worker_application.task(TASK_1_NAME)
 async def task_1(input_data: dict[Any, Any]) -> dict[Any, Any]:
     await asyncio.sleep(1)
@@ -39,9 +39,11 @@ async def task_1(input_data: dict[Any, Any]) -> dict[Any, Any]:
 
 
 @worker_application.task(TASK_2_NAME)
-async def task_2(input_data: dict[Any, Any]) -> dict[Any, Any]:
+async def task_2(_: dict[Any, Any]) -> dict[Any, Any]:
     raise Exception("This is a test exception")
 
+
+# 3. Run the worker application
 
 if __name__ == "__main__":
     # Application can be run either as a standalone script or via the CLI.
