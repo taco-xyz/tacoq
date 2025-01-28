@@ -97,6 +97,19 @@ wheels = [
 ]
 
 [[package]]
+name = "aioresponses"
+version = "0.7.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/03/532bbc645bdebcf3b6af3b25d46655259d66ce69abba7720b71ebfabbade/aioresponses-0.7.8.tar.gz", hash = "sha256:b861cdfe5dc58f3b8afac7b0a6973d5d7b2cb608dd0f6253d16b8ee8eaf6df11", size = 40253 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/b7/584157e43c98aa89810bc2f7099e7e01c728ecf905a66cf705106009228f/aioresponses-0.7.8-py2.py3-none-any.whl", hash = "sha256:b73bd4400d978855e55004b23a3a84cb0f018183bcf066a85ad392800b5b9a94", size = 12518 },
+]
+
+[[package]]
 name = "aiormq"
 version = "6.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -498,6 +511,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "aiohttp-retry" },
     { name = "aioredis" },
+    { name = "aioresponses" },
     { name = "click" },
     { name = "pydantic" },
     { name = "uuid" },
@@ -518,6 +532,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.11.8" },
     { name = "aiohttp-retry", specifier = ">=2.9.1" },
     { name = "aioredis", specifier = ">=2.0.1" },
+    { name = "aioresponses", specifier = ">=0.7.8" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "pydantic", specifier = ">=2.10.5" },
     { name = "uuid", specifier = ">=1.30" },
