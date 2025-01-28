@@ -28,8 +28,13 @@ async def manager_config() -> ManagerConfig:
 
 
 @pytest.fixture
-def mock_manager_client(manager_config: ManagerConfig) -> ManagerClient:
+def manager_client(manager_config: ManagerConfig) -> ManagerClient:
     return ManagerClient(config=manager_config)
+
+
+@pytest.fixture
+def mock_manager_client() -> ManagerClient:
+    return ManagerClient(config=ManagerConfig(url="http://test"))
 
 
 ## ==============================
