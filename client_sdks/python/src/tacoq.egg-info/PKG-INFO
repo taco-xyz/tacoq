@@ -12,6 +12,7 @@ Requires-Dist: aio-pika>=9.5.3
 Requires-Dist: aiohttp-retry>=2.9.1
 Requires-Dist: aiohttp>=3.11.8
 Requires-Dist: aioredis>=2.0.1
+Requires-Dist: aioresponses>=0.7.8
 Requires-Dist: click>=8.1.7
 Requires-Dist: pydantic>=2.10.5
 Requires-Dist: uuid>=1.30
