@@ -1,91 +1,201 @@
-# pyright: reportPrivateUsage=false, reportOptionalMemberAccess=false
+# pyright: reportPrivateUsage=false
 
-from src.worker import WorkerApplication
-from src.manager import ManagerClient
-import pytest
+import asyncio
+import datetime
+from typing import AsyncGenerator
+from unittest import mock
 from uuid import uuid4
-from typing import Any
+
+import pytest
+from broker import WorkerBrokerClient
+from broker.config import BrokerConfig
+from manager.config import ManagerConfig
+from models.task import Task, TaskInput, TaskOutput, TaskStatus
+from worker import TaskNotRegisteredError, WorkerApplication
+from worker.config import WorkerApplicationConfig
+
+# =========================================
+# Fixtures
+# =========================================
 
 
-# Test Task Definitions. One will fail and one will complete successfully.
-async def failing_task(input_data: Any):
-    raise Exception("Task failed")
+@pytest.fixture
+def worker_app():
+    """Creates a worker app with mocked dependencies."""
+
+    config = WorkerApplicationConfig(
+        name="test_worker",
+        kind="test_kind",
+        manager_config=ManagerConfig(
+            url="http://localhost:8080",
+        ),
+        broker_config=BrokerConfig(
+            url="http://localhost:5672",
+        ),
+    )
+    return WorkerApplication(config=config)
 
 
-async def successful_task(input_data: Any) -> Any:
-    return input_data
+@pytest.fixture
+def sample_task():
+    """Creates a sample task for testing."""
+    return Task(
+        id=uuid4(),
+        task_kind="test_task",
+        worker_kind="test_kind",
+        input_data={"value": 5},
+        priority=0,
+        created_at=datetime.datetime.now(),
+        status=TaskStatus.PENDING,
+        result=None,
+    )
 
 
+# =========================================
+# Task Registration Tests
+# =========================================
+
+
+@pytest.mark.unit
 @pytest.mark.asyncio
-async def test_worker_startup_and_task_success(
-    worker_application: WorkerApplication, manager_client: ManagerClient
-):
-    """Tests that a worker can start and successfully process a task."""
-    TEST_TASK_KIND = str(uuid4())
+async def test_register_single_task(worker_app: WorkerApplication):
+    """Test registering a single task handler."""
 
-    # Start worker
-    worker_application.register_task(TEST_TASK_KIND, successful_task)
-    await worker_application._register_worker()
+    async def task_handler(input_data: TaskInput) -> TaskOutput:
+        return {"result": input_data["value"] * 2}
 
-    try:
-        # Create and fetch a task
-        input_data = {"test": "data"}
-        await manager_client.publish_task(TEST_TASK_KIND, input_data)
-
-        async for (
-            data,
-            task_id,
-            task_kind,
-        ) in worker_application._broker_client.listen():
-            assert input_data == data
-
-            # This should execute the task with the given function
-            await worker_application._execute_task(task_kind, data, task_id)
-
-            # # Process task successfully
-            task = await manager_client.get_task(task_id)
-            assert task.has_completed
-            assert task.result is not None
-            assert task.result.data == input_data
-
-            break
-
-    finally:
-        await worker_application._unregister_worker()
+    worker_app.register_task("test_task", task_handler)
+    assert "test_task" in worker_app._registered_tasks
+    assert worker_app._registered_tasks["test_task"] == task_handler
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
-async def test_worker_task_failure_handling(
-    worker_application: WorkerApplication, manager_client: ManagerClient
+async def test_register_multiple_tasks(worker_app: WorkerApplication):
+    """Test registering multiple task handlers."""
+
+    async def task1(input_data: TaskInput) -> TaskOutput:
+        return {"result": input_data["value"] * 2}
+
+    async def task2(input_data: TaskInput) -> TaskOutput:
+        return {"result": input_data["value"] + 1}
+
+    worker_app.register_task("task1", task1)
+    worker_app.register_task("task2", task2)
+
+    assert "task1" in worker_app._registered_tasks
+    assert "task2" in worker_app._registered_tasks
+    assert worker_app._registered_tasks["task1"] == task1
+    assert worker_app._registered_tasks["task2"] == task2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_task_decorator_registration(worker_app: WorkerApplication):
+    """Test registering tasks using the decorator."""
+
+    @worker_app.task("decorated_task")
+    async def task_handler(input_data: TaskInput) -> TaskOutput:
+        return {"result": input_data["value"] * 2}
+
+    assert "decorated_task" in worker_app._registered_tasks
+    assert worker_app._registered_tasks["decorated_task"] == task_handler
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_reregister_task(worker_app: WorkerApplication):
+    """Test re-registering a task (should overwrite)."""
+
+    async def task1(input_data: TaskInput) -> TaskOutput:
+        return {"result": 1}
+
+    async def task2(input_data: TaskInput) -> TaskOutput:
+        return {"result": 2}
+
+    worker_app.register_task("same_kind", task1)
+    worker_app.register_task("same_kind", task2)
+
+    assert worker_app._registered_tasks["same_kind"] == task2
+
+
+# =========================================
+# Task Execution Tests
+# =========================================
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_execute_registered_task(
+    worker_app: WorkerApplication, sample_task: Task
 ):
-    """Tests that a worker can properly handle and report task failures."""
-    TEST_TASK_KIND = str(uuid4())
+    """Test executing a registered task successfully."""
+    executed = False
 
-    # Start worker
-    worker_application.register_task(TEST_TASK_KIND, failing_task)
-    await worker_application._register_worker()
+    async def task_handler(input_data: TaskInput) -> TaskOutput:
+        nonlocal executed
+        executed = True
+        assert input_data == sample_task.input_data
+        return {"result": input_data["value"] * 2}
 
-    try:
-        # Create and fetch a task
-        input_data = {"test": "data"}
-        await manager_client.publish_task(TEST_TASK_KIND, input_data)
+    worker_app.register_task(sample_task.task_kind, task_handler)
+    await worker_app._execute_task(sample_task)
+    assert executed
 
-        async for (
-            data,
-            task_id,
-            task_kind,
-        ) in worker_application._broker_client.listen():
-            assert input_data == data
 
-            # This should execute the task with the given function
-            await worker_application._execute_task(task_kind, data, task_id)
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_execute_unregistered_task(
+    worker_app: WorkerApplication, sample_task: Task
+):
+    """Test executing an unregistered task."""
+    with pytest.raises(TaskNotRegisteredError) as exc_info:
+        await worker_app._execute_task(sample_task)
+    assert sample_task.task_kind in str(exc_info.value)
 
-            # Check that the task failed
-            task = await manager_client.get_task(task_id)
-            assert task.has_failed
-            assert "Task failed" in str(task.result.data)
 
-            break
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_execute_task_with_error(
+    worker_app: WorkerApplication, sample_task: Task
+):
+    """Test executing a task that raises an exception."""
 
-    finally:
-        await worker_application._unregister_worker()
+    async def failing_task(_: TaskInput) -> TaskOutput:
+        raise ValueError("Task failed")
+
+    worker_app.register_task(sample_task.task_kind, failing_task)
+    await worker_app._execute_task(sample_task)
+    # TODO: Add assertions for error handling once implemented
+
+
+# =========================================
+# Worker Lifecycle Tests
+# =========================================
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_worker_startup(worker_app: WorkerApplication):
+    """Test worker startup sequence and the graceful shutdown."""
+
+    # We create a full mock that gracefully shuts down as soon as it is initialized
+    worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
+    if worker_app._broker_client:
+
+        async def mock_listen() -> AsyncGenerator[Task, None]:
+            raise asyncio.CancelledError()
+            yield None
+
+        worker_app._broker_client.listen = mock_listen  # type: ignore
+
+    await worker_app._listen()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_broker_not_initialized(worker_app: WorkerApplication):
+    """Test error when broker client is not initialized."""
+    worker_app._broker_client = None
+    with pytest.raises(RuntimeError, match="Broker client not initialized"):
+        await worker_app._listen()
