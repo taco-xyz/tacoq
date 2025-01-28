@@ -1,0 +1,66 @@
+import pytest
+from uuid import UUID
+from aiohttp import ClientResponseError
+from aioresponses import aioresponses
+
+from manager.client import ManagerClient
+from models.task import Task, TaskStatus
+
+
+@pytest.mark.asyncio
+async def test_get_task_success(mock_manager_client: ManagerClient):
+    task_id = UUID("00000000-0000-0000-0000-000000000000")
+    task_data = {
+        "id": str(task_id),
+        "task_kind": "test_kind",
+        "worker_kind": "test_worker_kind",
+        "created_at": "2024-01-01T00:00:00Z",
+        "input_data": {"foo": "bar"},
+        "status": TaskStatus.PENDING.value,  # Use enum value for serialization
+        "priority": 5,
+        "result": None,
+    }
+
+    with aioresponses() as m:
+        m.get(  # type: ignore
+            f"http://test/tasks/{task_id}",
+            payload=task_data,
+            status=200,
+        )
+        task = await mock_manager_client.get_task(task_id)
+        assert isinstance(task, Task)
+        assert task.id == task_id
+        assert task.task_kind == "test_kind"
+        assert task.status == TaskStatus.PENDING
+
+
+@pytest.mark.asyncio
+async def test_get_task_not_found(mock_manager_client: ManagerClient):
+    task_id = UUID("00000000-0000-0000-0000-000000000000")
+
+    with aioresponses() as m:
+        m.get(  # type: ignore
+            f"http://test/tasks/{task_id}",
+            status=404,
+            body=b"Task not found",
+            repeat=True,
+        )
+        with pytest.raises(ClientResponseError) as exc_info:
+            await mock_manager_client.get_task(task_id)
+        assert exc_info.value.status == 404
+
+
+@pytest.mark.asyncio
+async def test_get_task_server_error(mock_manager_client: ManagerClient):
+    task_id = UUID("00000000-0000-0000-0000-000000000000")
+
+    with aioresponses() as m:
+        m.get(  # type: ignore
+            f"http://test/tasks/{task_id}",
+            status=500,
+            body=b"Internal server error",
+            repeat=True,
+        )
+        with pytest.raises(ClientResponseError) as exc_info:
+            await mock_manager_client.get_task(task_id)
+        assert exc_info.value.status == 500
