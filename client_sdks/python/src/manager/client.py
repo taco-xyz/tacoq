@@ -49,13 +49,9 @@ class ManagerClient(BaseModel):
     config: ManagerConfig
     """Configuration for the manager client."""
 
-    worker_kind_broker_info: dict[str, WorkerKindBrokerInfo]
+    worker_kind_broker_info: dict[str, WorkerKindBrokerInfo] = {}
     """Cache of worker kind broker information. Read 
     `get_worker_kind_broker_info()` for more details."""
-
-    def __init__(self, config: ManagerConfig):
-        self.config = config
-        self.worker_kind_broker_info = {}
 
     # ================================
     # Health Checking

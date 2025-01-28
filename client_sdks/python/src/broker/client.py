@@ -155,7 +155,7 @@ class WorkerBrokerClient(BaseBrokerClient):
     Each worker kind has its own queue for task assignments, but all workers
     share a single queue for publishing results."""
 
-    _task_assignment_queue_name: str
+    task_assignment_queue_name: str
     """ The name of the task assignment queue. """
 
     _task_assignment_queue: Optional[AbstractQueue] = None
@@ -163,10 +163,6 @@ class WorkerBrokerClient(BaseBrokerClient):
 
     _result_exchange: Optional[AbstractExchange] = None
     """ Exchange for publishing results (shared by all workers). """
-
-    def __init__(self, config: BrokerConfig, task_assignment_queue_name: str):
-        super().__init__(config=config)
-        self._task_assignment_queue_name = task_assignment_queue_name
 
     async def connect(self) -> None:
         await super().connect()
@@ -181,7 +177,7 @@ class WorkerBrokerClient(BaseBrokerClient):
         # =========================================
 
         self._task_assignment_queue = await self._channel.declare_queue(
-            self._task_assignment_queue_name,
+            self.task_assignment_queue_name,
             passive=True,  # We only want to connect to the queue if it already exists.
         )
 

@@ -5,32 +5,31 @@ from aiohttp_retry import RetryOptionsBase
 
 from broker import PublisherBrokerClient, BrokerConfig
 from manager import ManagerClient, ManagerConfig
-from models.task import TaskInput, Task, TaskKind
+from models.task import TaskInput, Task
+from pydantic import BaseModel
 
 
-class PublisherClient:
+class PublisherClient(BaseModel):
     """A client for publishing and retrieving tasks."""
 
     # Broker
-    _broker_config: BrokerConfig
-    _broker_client: Optional[PublisherBrokerClient]
+    broker_config: BrokerConfig
+    _broker_client: Optional[PublisherBrokerClient] = None
 
     # Manager
-    _manager_config: ManagerConfig
-    _manager_client: ManagerClient
+    manager_config: ManagerConfig
+    _manager_client: ManagerClient = None  # type: ignore
 
-    def __init__(self, manager_config: ManagerConfig, broker_config: BrokerConfig):
-        self._manager_config = manager_config
-        self._manager_client = ManagerClient(config=manager_config)
-
-        self._broker_config = broker_config
+    def model_post_init(self, _) -> None:
+        self._manager_client = ManagerClient(config=self.manager_config)
 
     def _connect_to_broker(self):
-        self._broker_client = PublisherBrokerClient(config=self._broker_config)
+        self._broker_client = PublisherBrokerClient(config=self.broker_config)
 
     async def publish_task(
         self,
-        task_kind: str | TaskKind,
+        task_kind: str,
+        worker_kind: str,
         input_data: Optional[TaskInput] = None,
         task_id: Optional[UUID] = None,
         priority: int = 0,
@@ -49,24 +48,20 @@ class PublisherClient:
         if not self._broker_client:
             self._connect_to_broker()
         if not self._broker_client:
-            raise Exception("Failed to connect to the broker")
-
-        # Convert the task kind to a TaskKind if it is a string
-        kind: TaskKind = (
-            TaskKind.from_str(task_kind) if isinstance(task_kind, str) else task_kind
-        )
+            raise ConnectionError("Failed to connect to the broker")
 
         # Create a task with base values
         task = Task(
             id=task_id or uuid4(),
-            task_kind=kind,
+            task_kind=task_kind,
+            worker_kind=worker_kind,
             input_data=input_data,
             priority=priority,
         )
 
         # Get the worker kind info
         worker_kind_info = await self._manager_client.get_worker_kind_broker_info(
-            kind.worker_kind
+            worker_kind
         )
 
         # Publish the task to the manager
@@ -75,6 +70,7 @@ class PublisherClient:
             task,
         )
 
+        # Return the task
         return task
 
     async def get_task(
