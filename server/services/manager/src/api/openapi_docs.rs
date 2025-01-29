@@ -4,7 +4,11 @@ use utoipa::OpenApi;
 use crate::AppState;
 
 #[derive(OpenApi)]
-#[openapi(paths(openapi, crate::api::task::get_task_by_id))]
+#[openapi(paths(
+    openapi,
+    crate::api::task::get_task_by_id,
+    crate::api::task::publish_task
+))]
 struct ApiDoc;
 
 pub fn routes() -> Router<AppState> {
