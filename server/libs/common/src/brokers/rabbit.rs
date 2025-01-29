@@ -87,8 +87,15 @@ where
             let message = delivery.unwrap_or_else(|_| panic!("Error in consumer {}", self.queue));
             let payload = message.data;
 
-            let parsed_message = serde_json::from_slice(&payload)?;
-            handler(parsed_message).await?;
+            if let Ok(parsed_message) = serde_json::from_slice(&payload) {
+                handler(parsed_message).await?;
+            } else {
+                // TODO: Check what to do to handle mishandled diserialization
+                warn!(
+                    "Received a task that does not follow the correct format {}",
+                    String::from_utf8(payload)?
+                )
+            }
 
             self.channel
                 .basic_ack(message.delivery_tag, BasicAckOptions::default())

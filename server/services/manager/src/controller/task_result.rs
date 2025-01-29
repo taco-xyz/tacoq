@@ -2,6 +2,7 @@ use crate::repo::PgTaskRepository;
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
 use futures::future::BoxFuture;
+use tracing::info;
 
 use std::sync::Arc;
 
@@ -26,7 +27,7 @@ impl TaskResultController {
         let handler = Box::new(
             |result: Task| -> BoxFuture<'_, Result<(), Box<dyn std::error::Error>>> {
                 Box::pin(async move {
-                    println!("Received task result: {:?}", result);
+                    info!("Received task result: {:?}", result);
                     Ok(())
                 })
             },

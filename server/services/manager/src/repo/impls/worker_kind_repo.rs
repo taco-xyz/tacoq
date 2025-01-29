@@ -5,7 +5,7 @@ use tracing::instrument;
 
 use crate::repo::{PgRepositoryCore, WorkerKindRepository};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PgWorkerKindRepository {
     core: PgRepositoryCore,
 }
