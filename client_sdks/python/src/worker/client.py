@@ -1,9 +1,10 @@
+from datetime import datetime
 from typing import Callable, Awaitable, Optional, Dict
 
 import asyncio
 from broker import WorkerBrokerClient
 from manager import ManagerClient
-from models.task import Task, TaskInput, TaskOutput
+from models.task import Task, TaskInput, TaskOutput, TaskResult, TaskStatus
 
 from pydantic import BaseModel
 from worker.config import WorkerApplicationConfig
@@ -31,6 +32,16 @@ class TaskNotRegisteredError(Exception):
 # =========================================
 
 
+class SerializableException(BaseModel):
+    """A serializable exception."""
+
+    type: str
+    """ The type of the exception. `RuntimeError` evaluates to `"RuntimeError"`."""
+
+    message: str
+    """ The message of the exception. """
+
+
 class WorkerApplication(BaseModel):
     """A worker application that processes tasks from a task queue."""
 
@@ -48,6 +59,9 @@ class WorkerApplication(BaseModel):
 
     _queue_name: Optional[str] = None
     """ The queue name that this worker application listens to. """
+
+    _shutdown: bool = False
+    """ Whether the worker application is shutting down. """
 
     def model_post_init(self, _) -> None:
         self._registered_tasks = {}
@@ -95,13 +109,15 @@ class WorkerApplication(BaseModel):
         """Execute a task and update its status in the manager.
 
         ### Parameters
-        - `kind`: Type of task to execute
-        - `input_data`: Input data for the task
-        - `task_id`: Unique identifier for the task
+        - `task`: Task to execute
 
         ### Raises
         - `ValueError`: If task kind is not registered
         """
+
+        # Check if broker client is initialized
+        if self._broker_client is None:
+            raise RuntimeError("Broker client not initialized")
 
         # Find task handler
         task_func = self._registered_tasks.get(task.task_kind)
@@ -112,15 +128,35 @@ class WorkerApplication(BaseModel):
         result: Optional[TaskOutput | Exception] = None
         is_error: bool = False
 
+        # Start timer
+        started_at = datetime.now()
+
+        # Execute task
         try:
             result = await task_func(task.input_data)
         except Exception as e:
-            result = Exception(e)
+            result = SerializableException(
+                type=e.__class__.__name__,
+                message=e.__str__(),
+            )
             is_error = True
 
-        # TODO Submit task result via broker
-        print(f"Task {task.task_kind} {is_error}: {result}")
-        ...
+        # Stop timer
+        completed_at = datetime.now()
+
+        # Update task
+        task.result = TaskResult(
+            data=result,
+            is_error=is_error,
+            started_at=started_at,
+            completed_at=completed_at,
+        )
+        task.status = TaskStatus.COMPLETED
+
+        # Submit task result via broker
+        await self._broker_client.publish_task_result(
+            task=task,
+        )
 
     # ================================
     # Worker Lifecycle
@@ -135,16 +171,10 @@ class WorkerApplication(BaseModel):
         if self._manager_client is None:
             raise RuntimeError("Manager client not initialized")
 
-        # Register the worker kind with the manager
-        worker_kind_info = await self._manager_client.get_worker_kind_broker_info(
-            self.config.kind
-        )
-        self._queue_name = worker_kind_info.queue_name
-
         # Init the broker client using the queue name of the worker kind
         self._broker_client = WorkerBrokerClient(
             config=self.config.broker_config,
-            task_assignment_queue_name=self._queue_name,
+            worker_kind=self.config.kind,
         )
         await self._broker_client.connect()
 
@@ -155,6 +185,8 @@ class WorkerApplication(BaseModel):
         starts listening for tasks, and handles graceful shutdown.
         """
         await self._init_broker_client()
+
+        print("Worker application initialized!")
 
         # Begin loop
         try:
@@ -176,14 +208,22 @@ class WorkerApplication(BaseModel):
 
         try:
             async for task in self._broker_client.listen():
+                if self._shutdown:
+                    break
                 await self._execute_task(task)
         except asyncio.CancelledError:
-            await self._broker_client.disconnect()
+            pass
+        finally:
+            await self._cleanup()
+
+    def shutdown(self):
+        """Shutdown the worker application."""
+        self._shutdown = True
 
     async def _cleanup(self):
         """Cleanup the worker application.
 
         This method is called when the worker is shutting down. Used for cleaning internal state.
         """
-        # TODO - Add tracing and potential cleanup logic if needed
-        ...
+        if self._broker_client is not None:
+            await self._broker_client.disconnect()
