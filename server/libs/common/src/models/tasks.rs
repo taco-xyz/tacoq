@@ -25,8 +25,7 @@ pub enum TaskStatus {
 /// Tasks are sent to workers to be executed with a specific payload.
 /// Workers are eligble for receiving certain tasks depending on their
 /// list of capabilities.
-#[derive(Default, Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
-#[sqlx(default)]
+#[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
     pub id: Uuid,
     #[sqlx(rename = "task_kind_name")]
@@ -43,17 +42,17 @@ pub struct Task {
     pub assigned_to: Option<Uuid>, // worker that it is assigned to
 
     // Task status
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     pub started_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     pub completed_at: Option<DateTime<Utc>>,
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
 
     // Metadata
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     pub created_at: DateTime<Utc>,
-    #[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip)]
     pub updated_at: DateTime<Utc>,
 }
 
