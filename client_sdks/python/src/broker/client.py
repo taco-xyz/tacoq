@@ -278,16 +278,19 @@ class WorkerBrokerClient(BaseBrokerClient):
         await _result_queue.bind(TASK_RESULT_EXCHANGE)
 
     async def listen(self) -> AsyncGenerator[Task, None]:
-        """Listen for tasks assigned to this worker's kind."""
+        """Listen for tasks assigned to this worker's kind.
+        Messages are only acknowledged after the task has been processed."""
 
         if self._task_assignment_queue is None:
             raise QueueNotDeclaredError(
                 "Tried to listen for tasks, but queue was not declared."
             )
 
-        async for message in self._task_assignment_queue.iterator():
-            async with message.process():
-                yield Task(**json.loads(message.body.decode()))
+        async with self._task_assignment_queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                task = Task(**json.loads(message.body.decode()))
+                yield task
+                await message.ack()
 
     async def publish_task_result(self, task: Task) -> None:
         """Publish a task result to the shared results queue."""
