@@ -67,7 +67,11 @@ impl PgTaskRepository {
         .await
     }
 
-    pub async fn find_by_id<'e, E>(&self, executor: E, id: &Uuid) -> Result<Task, sqlx::Error>
+    pub async fn find_by_id<'e, E>(
+        &self,
+        executor: E,
+        id: &Uuid,
+    ) -> Result<Option<Task>, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
@@ -89,7 +93,7 @@ impl PgTaskRepository {
                 FROM tasks WHERE id = $1"#,
             id
         )
-        .fetch_one(executor)
+        .fetch_optional(executor)
         .await
     }
 }
@@ -115,7 +119,7 @@ impl TaskRepository for PgTaskRepository {
     ) -> Result<(), sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let mut task = self.find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?.unwrap();
         task.mark_processing(*worker_id);
         self.save(&mut *tx, &task).await?;
 
@@ -124,7 +128,7 @@ impl TaskRepository for PgTaskRepository {
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
-    async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error> {
+    async fn get_task_by_id(&self, id: &Uuid) -> Result<Option<Task>, sqlx::Error> {
         self.find_by_id(&self.core.pool, id).await
     }
 
@@ -135,7 +139,7 @@ impl TaskRepository for PgTaskRepository {
         status: TaskStatus,
     ) -> Result<(), sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = self.find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?.unwrap();
         task.set_status(status);
         self.save(&mut *tx, &task).await?;
         tx.commit().await?;
@@ -149,7 +153,7 @@ impl TaskRepository for PgTaskRepository {
         error: serde_json::Value,
     ) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = self.find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?.unwrap();
         task.mark_completed(error, true);
         let task = self.save(&mut *tx, &task).await?;
         tx.commit().await?;
@@ -163,7 +167,7 @@ impl TaskRepository for PgTaskRepository {
         output: serde_json::Value,
     ) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
-        let mut task = self.find_by_id(&mut *tx, task_id).await?;
+        let mut task = self.find_by_id(&mut *tx, task_id).await?.unwrap();
         task.mark_completed(output, false);
         let task = self.save(&mut *tx, &task).await?;
         tx.commit().await?;
@@ -240,7 +244,7 @@ mod tests {
         assert_eq!(task.is_error, 0, "Task should not be an error");
         assert_eq!(task.assigned_to, None, "Task should not be assigned");
 
-        let retrieved = repo.get_task_by_id(&task.id).await.unwrap();
+        let retrieved = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert_eq!(
             task.id, retrieved.id,
             "Task ID should match after being created"
@@ -262,7 +266,7 @@ mod tests {
         repo.assign_task_to_worker(&task.id, &worker_id)
             .await
             .unwrap();
-        let updated = repo.get_task_by_id(&task.id).await.unwrap();
+        let updated = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert_eq!(updated.assigned_to, Some(worker_id));
         assert!(updated.started_at.is_some());
     }
@@ -356,13 +360,13 @@ mod tests {
         repo.update_task_status(&task.id, TaskStatus::Processing)
             .await
             .unwrap();
-        let updated = repo.get_task_by_id(&task.id).await.unwrap();
+        let updated = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert!(updated.started_at.is_some());
 
         repo.update_task_status(&task.id, TaskStatus::Completed)
             .await
             .unwrap();
-        let completed = repo.get_task_by_id(&task.id).await.unwrap();
+        let completed = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert!(completed.completed_at.is_some());
     }
 
@@ -389,7 +393,7 @@ mod tests {
             .create_task("TaskKindTest", &worker_kind_name, None)
             .await
             .unwrap();
-        let task = repo.get_task_by_id(&task.id).await.unwrap();
+        let task = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert!(task.output_data.is_none());
     }
 
@@ -397,8 +401,8 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn get_nonexistent_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
-        let task = repo.get_task_by_id(&Uuid::new_v4()).await;
-        assert!(task.is_err());
+        let task = repo.get_task_by_id(&Uuid::new_v4()).await.unwrap();
+        assert!(task.is_none());
     }
 
     /// Creates a task and then updates its status through all possible transitions
@@ -418,13 +422,13 @@ mod tests {
         repo.update_task_status(&task.id, TaskStatus::Processing)
             .await
             .unwrap();
-        let task = repo.get_task_by_id(&task.id).await.unwrap();
+        let task = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert!(task.started_at.is_some());
 
         repo.update_task_status(&task.id, TaskStatus::Completed)
             .await
             .unwrap();
-        let task = repo.get_task_by_id(&task.id).await.unwrap();
+        let task = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
         assert!(task.completed_at.is_some());
     }
 }

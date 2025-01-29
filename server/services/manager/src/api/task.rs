@@ -42,24 +42,33 @@ async fn get_task_by_id(
 ) -> Result<Json<Task>, (StatusCode, String)> {
     info!("Getting task by ID: {:?}", id);
 
-    let task = state.task_repository.get_task_by_id(&id).await;
-
-    task.map(Json).map_err(|e| match e {
-        sqlx::Error::RowNotFound => {
-            info!("Task with ID {:?} not found", id);
-            (
-                StatusCode::NOT_FOUND,
-                format!("Task with ID {} not found", id),
-            )
-        }
-        _ => {
+    state
+        .task_repository
+        .get_task_by_id(&id)
+        .await
+        .map_err(|e| {
             error!("Error getting task by id: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to get task: {}", e),
             )
-        }
-    })
+        })
+        .and_then(|task_opt| {
+            task_opt.map(Json).ok_or_else(|| {
+                info!("Task with ID {:?} not found", id);
+                (
+                    StatusCode::NOT_FOUND,
+                    format!("Task with ID {} not found", id),
+                )
+            })
+        })
+}
+
+async fn publish_task(
+    State(_): State<AppState>,
+    _: Json<Task>,
+) -> Result<(), (StatusCode, String)> {
+    Ok(())
 }
 
 #[cfg(test)]

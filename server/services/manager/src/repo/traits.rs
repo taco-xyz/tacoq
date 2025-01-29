@@ -26,7 +26,7 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
     ) -> Result<(), sqlx::Error>;
 
     /// Get a task by its ID
-    async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error>;
+    async fn get_task_by_id(&self, id: &Uuid) -> Result<Option<Task>, sqlx::Error>;
 
     /// Update the status of a task
     async fn update_task_status(
