@@ -8,14 +8,16 @@ from manager.config import ManagerConfig
 class WorkerApplicationConfig:
     """Configuration for a worker application. This is passed in on
     initialization of the `WorkerApplication` class, and can come from a config
-    file or other sources.
-
-    ### Attributes
-    - `name`: The name of the worker.
-    - `broker_config`: Configuration for the broker.
-    - `manager_config`: Configuration for the manager.
-    """
+    file or other sources."""
 
     name: str
+    """ The name of the worker. This is used to identify the worker in the manager."""
+
+    kind: str
+    """ The kind of worker. This dictates which tasks get routed to this worker."""
+
     broker_config: BrokerConfig
+    """ Configuration for the broker. """
+
     manager_config: ManagerConfig
+    """ Configuration for the manager. """

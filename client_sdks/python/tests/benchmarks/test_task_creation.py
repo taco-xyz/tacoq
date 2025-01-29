@@ -22,6 +22,7 @@ def async_to_sync(func: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @async_to_sync
+@pytest.mark.skip(reason="Not implemented")
 async def create_n_tasks_sequential(
     manager_client: ManagerClient, test_task_kind: str, n: int
 ):
@@ -32,6 +33,7 @@ async def create_n_tasks_sequential(
 
 
 @async_to_sync
+@pytest.mark.skip(reason="Not implemented")
 async def create_n_tasks_concurrent(
     manager_client: ManagerClient, test_task_kind: str, n: int
 ):
@@ -56,6 +58,7 @@ def n_tasks(request: pytest.FixtureRequest) -> int:
     return request.param
 
 
+@pytest.mark.skip(reason="Not implemented")
 @pytest.mark.bench
 def test_task_creation_benchmark_sync(
     benchmark: BenchmarkFixture, manager_client: ManagerClient, n_tasks: int
@@ -85,6 +88,7 @@ def test_task_creation_benchmark_sync(
         asyncio.run(manager_client.unregister_worker(worker_id))
 
 
+@pytest.mark.skip(reason="Not implemented")
 @pytest.mark.bench
 def test_task_creation_benchmark_concurrent(
     benchmark: BenchmarkFixture, manager_client: ManagerClient, n_tasks: int

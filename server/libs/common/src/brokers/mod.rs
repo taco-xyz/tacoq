@@ -38,13 +38,13 @@ where
 pub async fn setup_consumer_broker<T>(
     url_str: &str,
     queue: &str,
-    is_running: Arc<AtomicBool>,
+    shutdown: Arc<AtomicBool>,
 ) -> Result<Arc<dyn BrokerConsumer<T>>, Box<dyn std::error::Error>>
 where
     T: Debug + Send + Sync + serde::de::DeserializeOwned + 'static,
 {
     match url_str.split_once("://") {
-        Some(("amqp", _)) => Ok(setup_rabbit_consumer::<T>(url_str, queue, is_running).await?),
+        Some(("amqp", _)) => Ok(setup_rabbit_consumer::<T>(url_str, queue, shutdown).await?),
         _ => Err("Unsupported broker".into()),
     }
 }

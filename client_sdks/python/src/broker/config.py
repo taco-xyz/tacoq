@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 
-@dataclass
-class BrokerConfig:
-    """Configuration for a broker."""
+class BrokerConfig(BaseModel):
+    """Configuration for a RabbitMQ broker."""
 
     url: str
+    """ The URL of the broker. """
