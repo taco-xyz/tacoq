@@ -193,5 +193,14 @@ async fn main() {
         _ = server_handle => {},
     }
 
+    // Graceful shutdown
+    if let Err(e) = task_input_controller.shutdown().await {
+        info!("Failed to shutdown task input controller: {:?}", e);
+    }
+
+    if let Err(e) = task_result_controller.shutdown().await {
+        info!("Failed to shutdown task result controller: {:?}", e);
+    }
+
     info!("Cleanup complete");
 }

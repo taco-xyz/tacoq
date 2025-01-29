@@ -88,6 +88,11 @@ where
 
         Ok(())
     }
+
+    async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.shutdown.store(true, Ordering::SeqCst);
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]

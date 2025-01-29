@@ -29,4 +29,8 @@ impl TaskResultController {
 
         self.consumer.consume_messages(handler).await
     }
+
+    pub async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.consumer.shutdown().await
+    }
 }
