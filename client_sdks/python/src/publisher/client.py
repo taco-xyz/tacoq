@@ -59,14 +59,8 @@ class PublisherClient(BaseModel):
             priority=priority,
         )
 
-        # Get the worker kind info
-        worker_kind_info = await self._manager_client.get_worker_kind_broker_info(
-            worker_kind
-        )
-
         # Publish the task to the manager
         await self._broker_client.publish_task(
-            worker_kind_info.queue_name,
             task,
         )
 
@@ -75,7 +69,7 @@ class PublisherClient(BaseModel):
 
     async def get_task(
         self, task_id: UUID, override_retry_options: Optional[RetryOptionsBase] = None
-    ) -> Task:
+    ) -> Optional[Task]:
         """Get the status of a task by its UUID.
 
         ### Arguments
