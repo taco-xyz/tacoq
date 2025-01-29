@@ -36,11 +36,23 @@ impl PgTaskRepository {
                 is_error = EXCLUDED.is_error,
                 output_data = EXCLUDED.output_data,
                 updated_at = NOW()
-            RETURNING *
+            RETURNING 
+                id, 
+                task_kind_name AS "task_kind!", 
+                input_data, 
+                output_data, 
+                is_error, 
+                started_at, 
+                completed_at, 
+                ttl, 
+                worker_kind_name AS "worker_kind!", 
+                assigned_to, 
+                created_at, 
+                updated_at
             "#,
             t.id,
-            t.task_kind_name,
-            t.worker_kind_name,
+            t.task_kind,
+            t.worker_kind,
             t.input_data,
             t.started_at,
             t.completed_at,
@@ -59,9 +71,26 @@ impl PgTaskRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as!(Task, "SELECT * FROM tasks WHERE id = $1", id)
-            .fetch_one(executor)
-            .await
+        sqlx::query_as!(
+            Task,
+            r#"SELECT 
+                id, 
+                task_kind_name AS "task_kind!", 
+                input_data, 
+                output_data, 
+                is_error, 
+                started_at, 
+                completed_at, 
+                ttl, 
+                worker_kind_name AS "worker_kind!", 
+                assigned_to, 
+                created_at, 
+                updated_at
+                FROM tasks WHERE id = $1"#,
+            id
+        )
+        .fetch_one(executor)
+        .await
     }
 }
 
@@ -204,7 +233,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            task.task_kind_name, task_kind_name,
+            task.task_kind, task_kind_name,
             "Task kind name should match"
         );
         assert_eq!(task.input_data, Some(input), "Input data should match");

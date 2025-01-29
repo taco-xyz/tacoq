@@ -29,22 +29,26 @@ pub enum TaskStatus {
 #[sqlx(default)]
 pub struct Task {
     pub id: Uuid,
-    pub task_kind_name: String,
+    #[sqlx(rename = "task_kind_name")]
+    pub task_kind: String,
 
     // Task data
     pub input_data: Option<serde_json::Value>,
     pub output_data: Option<serde_json::Value>,
     pub is_error: i32,
 
-    // Task status
-    pub started_at: Option<DateTime<Utc>>,
-    pub completed_at: Option<DateTime<Utc>>,
-
-    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
-
     // Relations
-    pub worker_kind_name: String,
+    #[sqlx(rename = "worker_kind_name")]
+    pub worker_kind: String,
     pub assigned_to: Option<Uuid>, // worker that it is assigned to
+
+    // Task status
+    #[serde(skip_serializing, skip_deserializing)]
+    pub started_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub completed_at: Option<DateTime<Utc>>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
 
     // Metadata
     #[serde(skip_serializing, skip_deserializing)]
@@ -61,8 +65,8 @@ impl Task {
     ) -> Self {
         Task {
             id: Uuid::new_v4(),
-            task_kind_name: task_kind_name.to_string(),
-            worker_kind_name: worker_kind_name.to_string(),
+            task_kind: task_kind_name.to_string(),
+            worker_kind: worker_kind_name.to_string(),
             input_data,
             output_data: None,
             is_error: 0,
