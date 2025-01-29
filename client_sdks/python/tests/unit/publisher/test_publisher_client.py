@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from broker.config import BrokerConfig
 from manager.config import ManagerConfig
-from models.task import Task, TaskStatus, WorkerKindBrokerInfo
+from models.task import Task, TaskStatus
 from publisher import PublisherClient
 
 
@@ -47,17 +47,6 @@ async def test_publish_task_success(publisher_client: PublisherClient):
         PublisherBrokerClient, instance=True
     )
 
-    publisher_client._manager_client = mock.create_autospec(
-        ManagerClient, instance=True
-    )
-    publisher_client._manager_client.get_worker_kind_broker_info.return_value = (  # type: ignore
-        WorkerKindBrokerInfo(
-            queue_name="test_queue",
-            routing_key="test_routing_key",
-            worker_kind=worker_kind,
-        )
-    )
-
     task = await publisher_client.publish_task(
         task_kind=task_kind,
         worker_kind=worker_kind,
@@ -75,7 +64,6 @@ async def test_publish_task_success(publisher_client: PublisherClient):
 
     # Verify broker client calls
     publisher_client._broker_client.publish_task.assert_called_once_with(  # type: ignore
-        "test_queue",  # From mock_manager_client fixture
         task,
     )
 

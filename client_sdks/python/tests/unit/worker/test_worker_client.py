@@ -131,6 +131,7 @@ async def test_execute_registered_task(
 ):
     """Test executing a registered task successfully."""
     executed = False
+    worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
 
     async def task_handler(input_data: TaskInput) -> TaskOutput:
         nonlocal executed
@@ -149,6 +150,7 @@ async def test_execute_unregistered_task(
     worker_app: WorkerApplication, sample_task: Task
 ):
     """Test executing an unregistered task."""
+    worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
     with pytest.raises(TaskNotRegisteredError) as exc_info:
         await worker_app._execute_task(sample_task)
     assert sample_task.task_kind in str(exc_info.value)
@@ -160,6 +162,7 @@ async def test_execute_task_with_error(
     worker_app: WorkerApplication, sample_task: Task
 ):
     """Test executing a task that raises an exception."""
+    worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
 
     async def failing_task(_: TaskInput) -> TaskOutput:
         raise ValueError("Task failed")

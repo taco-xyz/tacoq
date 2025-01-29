@@ -45,9 +45,8 @@ async def test_get_task_not_found(mock_manager_client: ManagerClient):
             body=b"Task not found",
             repeat=True,
         )
-        with pytest.raises(ClientResponseError) as exc_info:
-            await mock_manager_client.get_task(task_id)
-        assert exc_info.value.status == 404
+        response = await mock_manager_client.get_task(task_id)
+        assert response is None
 
 
 @pytest.mark.asyncio
