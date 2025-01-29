@@ -14,6 +14,7 @@ use std::{
         Arc,
     },
 };
+use tracing::warn;
 
 #[derive(Clone, Debug)]
 pub struct RabbitMQConsumer<T>
@@ -39,7 +40,14 @@ where
         let channel = connection.create_channel().await?;
 
         channel
-            .queue_declare(queue, QueueDeclareOptions::default(), FieldTable::default())
+            .queue_declare(
+                queue,
+                QueueDeclareOptions {
+                    durable: true,
+                    ..QueueDeclareOptions::default()
+                },
+                FieldTable::default(),
+            )
             .await?;
 
         Ok(Self {
@@ -72,6 +80,7 @@ where
 
         while let Some(delivery) = consumer.next().await {
             if self.shutdown.load(Ordering::SeqCst) {
+                warn!("Shutting down consumer due to shutdown signal");
                 break;
             }
 
@@ -111,8 +120,11 @@ where
         channel
             .exchange_declare(
                 exchange,
-                ExchangeKind::Direct,
-                ExchangeDeclareOptions::default(),
+                ExchangeKind::Topic,
+                ExchangeDeclareOptions {
+                    durable: true,
+                    ..ExchangeDeclareOptions::default()
+                },
                 FieldTable::default(),
             )
             .await?;
@@ -162,12 +174,12 @@ where
 pub async fn setup_rabbit_consumer<T>(
     url_string: &str,
     queue: &str,
-    is_running: Arc<AtomicBool>,
+    shutdown: Arc<AtomicBool>,
 ) -> Result<Arc<RabbitMQConsumer<T>>, Box<dyn std::error::Error>>
 where
     T: Debug,
 {
     Ok(Arc::new(
-        RabbitMQConsumer::<T>::new(url_string, queue, is_running).await?,
+        RabbitMQConsumer::<T>::new(url_string, queue, shutdown).await?,
     ))
 }
