@@ -47,7 +47,9 @@ pub struct Task {
     pub assigned_to: Option<Uuid>, // worker that it is assigned to
 
     // Metadata
+    #[serde(skip_serializing, skip_deserializing)]
     pub created_at: DateTime<Utc>,
+    #[serde(skip_serializing, skip_deserializing)]
     pub updated_at: DateTime<Utc>,
 }
 

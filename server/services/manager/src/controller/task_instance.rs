@@ -1,6 +1,7 @@
 use crate::repo::impls::task_repo::PgTaskRepository;
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
+use futures::future::BoxFuture;
 
 use std::sync::Arc;
 
@@ -22,15 +23,14 @@ impl NewTaskController {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // let producer = self.producer.clone();
-
-        let handler = Box::new(move |task: Task| {
-            // Here we would process the input and create a new task instance
-            println!("Received task input: {:?}", task);
-            // Example of publishing (you'll want to implement actual logic)
-            // producer.publish_message(new_task).await?;
-            Ok(())
-        });
+        let handler = Box::new(
+            |result: Task| -> BoxFuture<'_, Result<(), Box<dyn std::error::Error>>> {
+                Box::pin(async move {
+                    println!("Received task input: {:?}", result);
+                    Ok(())
+                })
+            },
+        );
 
         self.consumer.consume_messages(handler).await
     }

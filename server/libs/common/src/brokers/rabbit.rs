@@ -79,7 +79,7 @@ where
             let payload = message.data;
 
             let parsed_message = serde_json::from_slice(&payload)?;
-            handler(parsed_message)?;
+            handler(parsed_message).await?;
 
             self.channel
                 .basic_ack(message.delivery_tag, BasicAckOptions::default())

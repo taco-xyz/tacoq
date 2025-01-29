@@ -1,6 +1,7 @@
 use crate::repo::PgTaskRepository;
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
+use futures::future::BoxFuture;
 
 use std::sync::Arc;
 
@@ -22,10 +23,14 @@ impl TaskResultController {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let handler = Box::new(|result: Task| {
-            println!("Received task result: {:?}", result);
-            Ok(())
-        });
+        let handler = Box::new(
+            |result: Task| -> BoxFuture<'_, Result<(), Box<dyn std::error::Error>>> {
+                Box::pin(async move {
+                    println!("Received task result: {:?}", result);
+                    Ok(())
+                })
+            },
+        );
 
         self.consumer.consume_messages(handler).await
     }
