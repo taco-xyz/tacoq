@@ -10,7 +10,7 @@ use common::brokers::{setup_consumer_broker, setup_publisher_broker};
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
-use tracing::{info, info_span};
+use tracing::{info, info_span, warn};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
@@ -96,7 +96,7 @@ async fn initialize_system(
     ),
     Box<dyn std::error::Error>,
 > {
-    let is_running = Arc::new(AtomicBool::new(true));
+    let shutdown = Arc::new(AtomicBool::new(false));
 
     let db_pools = setup_db_pools(config).await;
     info!("Database connection pools created");
@@ -107,12 +107,12 @@ async fn initialize_system(
             .expect("Failed to setup publisher broker");
 
     let task_result_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_RESULT_QUEUE, is_running.clone())
+        setup_consumer_broker::<Task>(&config.broker_addr, TASK_RESULT_QUEUE, shutdown.clone())
             .await
             .expect("Failed to setup task result consumer");
 
     let new_task_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, is_running.clone())
+        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, shutdown.clone())
             .await
             .expect("Failed to setup task instance consumer");
     info!("Brokers initialized");
@@ -188,9 +188,15 @@ async fn main() {
 
     // Wait for shutdown
     tokio::select! {
-        _ = input_handle => {},
-        _ = result_handle => {},
-        _ = server_handle => {},
+        _ = input_handle => {
+            warn!("Task input controller shutdown");
+        },
+        _ = result_handle => {
+            warn!("Task result controller shutdown");
+        },
+        _ = server_handle => {
+            warn!("Server shutdown");
+        },
     }
 
     // Graceful shutdown
