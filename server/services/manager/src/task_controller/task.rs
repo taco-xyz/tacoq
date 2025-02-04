@@ -1,16 +1,15 @@
-use crate::repo::PgTaskRepository;
+use crate::repo::impls::task_repo::PgTaskRepository;
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
 
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct TaskResultController {
+pub struct TaskController {
     consumer: Arc<dyn BrokerConsumer<Task>>,
     _task_repository: Arc<PgTaskRepository>,
 }
-
-impl TaskResultController {
+impl TaskController {
     pub async fn new(
         consumer: Arc<dyn BrokerConsumer<Task>>,
         task_repository: Arc<PgTaskRepository>,
@@ -22,8 +21,12 @@ impl TaskResultController {
     }
 
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let handler = Box::new(|result: Task| {
-            println!("Received task result: {:?}", result);
+        // let producer = self.producer.clone();
+
+        let handler = Box::new(move |task: Task| {
+            // Here we would process the input and create a new task instance
+            println!("Received task input: {:?}", task);
+            // Example of publishing (you'll want to implement actual logic)
             Ok(())
         });
 
