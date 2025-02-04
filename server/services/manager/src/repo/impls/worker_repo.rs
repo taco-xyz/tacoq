@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, WorkerRepository};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PgWorkerRepository {
     core: PgRepositoryCore,
 }

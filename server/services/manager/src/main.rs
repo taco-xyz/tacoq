@@ -15,11 +15,11 @@ use tracing::{info, info_span, warn};
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use common::{brokers::core::BrokerProducer, models::Task};
-use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE, TASK_RESULT_QUEUE};
+use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE};
 use sqlx::PgPool;
 
 use config::Config;
-use controller::{task_instance, task_result};
+use controller::task;
 use repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
 
 /// Represents the shared application state that can be accessed by all routes
@@ -42,6 +42,22 @@ async fn setup_db_pools(config: &Config) -> PgPool {
     PgPool::connect(&config.db_reader_url).await.unwrap()
 }
 
+/// Creates all repositories needed for the application
+///
+/// # Arguments
+///
+/// * `pool` - The database connection pool
+fn create_repositories(
+    pool: &PgPool,
+) -> (PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository) {
+    let core = PgRepositoryCore::new(pool.clone());
+    let task_repository = PgTaskRepository::new(core.clone());
+    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+    let worker_repository = PgWorkerRepository::new(core.clone());
+
+    (task_repository, worker_kind_repository, worker_repository)
+}
+
 /// Initializes the application state based on the given configuration
 ///
 /// # Arguments
@@ -49,11 +65,8 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
 async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> AppState {
-    // Setup the repositories
-    let core = PgRepositoryCore::new(db_pools.clone());
-    let task_repository = PgTaskRepository::new(core.clone());
-    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
-    let worker_repository = PgWorkerRepository::new(core.clone());
+    let (task_repository, worker_kind_repository, worker_repository) =
+        create_repositories(db_pools);
 
     AppState {
         task_repository,
@@ -87,15 +100,7 @@ async fn setup_app(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> 
 
 async fn initialize_system(
     config: &Config,
-) -> Result<
-    (
-        AppState,
-        Server,
-        Arc<task_instance::NewTaskController>,
-        Arc<task_result::TaskResultController>,
-    ),
-    Box<dyn std::error::Error>,
-> {
+) -> Result<(AppState, Server, Arc<task::TaskController>), Box<dyn std::error::Error>> {
     let shutdown = Arc::new(AtomicBool::new(false));
 
     let db_pools = setup_db_pools(config).await;
@@ -106,36 +111,22 @@ async fn initialize_system(
             .await
             .expect("Failed to setup publisher broker");
 
-    let task_result_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_RESULT_QUEUE, shutdown.clone())
+    let task_consumer =
+        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, shutdown.clone())
             .await
             .expect("Failed to setup task result consumer");
 
-    let new_task_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, shutdown.clone())
-            .await
-            .expect("Failed to setup task instance consumer");
-    info!("Brokers initialized");
-
     let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
 
-    let core = PgRepositoryCore::new(db_pools);
-    let task_repo = Arc::new(PgTaskRepository::new(core));
+    let (task_repo, worker_kind_repo, worker_repo) = create_repositories(&db_pools);
 
-    let task_input_controller = Arc::new(
-        task_instance::NewTaskController::new(new_task_consumer, task_repo.clone()).await?,
+    let task_controller = Arc::new(
+        task::TaskController::new(task_consumer, worker_repo, worker_kind_repo, task_repo).await?,
     );
-    let task_result_controller =
-        Arc::new(task_result::TaskResultController::new(task_result_consumer, task_repo).await?);
 
     let server = Server::new(app, 3000);
 
-    Ok((
-        app_state,
-        server,
-        task_input_controller,
-        task_result_controller,
-    ))
+    Ok((app_state, server, task_controller))
 }
 
 #[tokio::main]
@@ -146,7 +137,7 @@ async fn main() {
 
     let span = info_span!("manager_startup_real").entered();
 
-    let (_, server, task_input_controller, task_result_controller) = initialize_system(&config)
+    let (_, server, task_controller) = initialize_system(&config)
         .await
         .expect("Failed to initialize system");
 
@@ -160,23 +151,13 @@ async fn main() {
         }
     });
 
-    let input_handle = tokio::spawn({
-        let controller = task_input_controller.clone();
+    let task_handle = tokio::spawn({
+        let controller = task_controller.clone();
         async move {
             controller
                 .run()
                 .await
                 .expect("Task input controller failed");
-        }
-    });
-
-    let result_handle = tokio::spawn({
-        let controller = task_result_controller.clone();
-        async move {
-            controller
-                .run()
-                .await
-                .expect("Task result controller failed");
         }
     });
 
@@ -188,11 +169,8 @@ async fn main() {
 
     // Wait for shutdown
     tokio::select! {
-        _ = input_handle => {
-            warn!("Task input controller shutdown");
-        },
-        _ = result_handle => {
-            warn!("Task result controller shutdown");
+        _ = task_handle => {
+            warn!("Task controller shutdown");
         },
         _ = server_handle => {
             warn!("Server shutdown");
@@ -200,12 +178,8 @@ async fn main() {
     }
 
     // Graceful shutdown
-    if let Err(e) = task_input_controller.shutdown().await {
+    if let Err(e) = task_controller.shutdown().await {
         info!("Failed to shutdown task input controller: {:?}", e);
-    }
-
-    if let Err(e) = task_result_controller.shutdown().await {
-        info!("Failed to shutdown task result controller: {:?}", e);
     }
 
     info!("Cleanup complete");
