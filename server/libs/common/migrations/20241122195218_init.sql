@@ -59,7 +59,7 @@ CREATE TABLE
         is_error INT NOT NULL DEFAULT 0,
         -- Relations
         assigned_to UUID REFERENCES workers (id),
-        worker_kind_name TEXT REFERENCES worker_kinds (name) NOT NULL,
+        worker_kind_name TEXT NOT NULL,
         -- Task status
         started_at TIMESTAMP
         WITH
