@@ -65,10 +65,7 @@ async fn get_task_by_id(
 #[cfg(test)]
 mod test {
     use axum::http::StatusCode;
-    use common::brokers::core::MockBrokerProducer;
-    use common::models::Task;
     use sqlx::PgPool;
-    use std::sync::Arc;
     use tracing::info;
 
     use crate::{
@@ -87,21 +84,21 @@ mod test {
 
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_non_existent_task_by_id(db_pools: PgPool) {
-        let broker = Arc::new(MockBrokerProducer::<Task>::new());
-        let server = get_test_server(db_pools, broker).await;
+        let server = get_test_server(db_pools).await;
 
         let response = server
             .get("/tasks/123e4567-e89b-12d3-a456-426614174000")
             .await;
+
         assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
 
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
-        let broker = Arc::new(MockBrokerProducer::<Task>::new());
-        let server = get_test_server(db_pools.clone(), broker).await;
+        let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
         let task_instance_repository = PgTaskRepository::new(core.clone());
+
         let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
 
         let worker_kind = worker_kind_repository
