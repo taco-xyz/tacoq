@@ -65,14 +65,13 @@ async fn get_task_by_id(
 #[cfg(test)]
 mod test {
     use axum::http::StatusCode;
-    use sqlx::PgPool;
+    use common::models::Task;
+    use sqlx::{types::chrono::Utc, PgPool};
     use tracing::info;
+    use uuid::Uuid;
 
     use crate::{
-        repo::{
-            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
-            WorkerKindRepository,
-        },
+        repo::{PgRepositoryCore, PgTaskRepository, TaskRepository},
         testing::test::{get_test_server, init_test_logger},
     };
 
@@ -82,13 +81,27 @@ mod test {
         init_test_logger();
     }
 
+    fn get_test_task() -> Task {
+        Task::new(
+            Some(Uuid::new_v4()),
+            "TaskKindName",
+            "WorkerKindName",
+            None,
+            None,
+            None,
+            Utc::now(),
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn test_non_existent_task_by_id(db_pools: PgPool) {
         let server = get_test_server(db_pools).await;
 
-        let response = server
-            .get("/tasks/123e4567-e89b-12d3-a456-426614174000")
-            .await;
+        let response = server.get(&format!("/tasks/{}", Uuid::new_v4())).await;
 
         assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
@@ -99,15 +112,8 @@ mod test {
         let core = PgRepositoryCore::new(db_pools.clone());
         let task_instance_repository = PgTaskRepository::new(core.clone());
 
-        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
-
-        let worker_kind = worker_kind_repository
-            .get_or_create_worker_kind("WorkerKindName", "WorkerKindName", "WorkerKindName")
-            .await
-            .unwrap();
-
         let task = task_instance_repository
-            .create_task("TaskKindName", &worker_kind.name, None)
+            .update_task(&get_test_task())
             .await
             .unwrap();
 
