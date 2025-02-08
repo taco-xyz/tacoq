@@ -1,7 +1,7 @@
 use std::{fmt::Debug, time::SystemTime};
 
 use async_trait::async_trait;
-use common::models::{Task, TaskStatus, Worker, WorkerKind};
+use common::models::{Task, Worker, WorkerKind};
 use uuid::Uuid;
 
 /// Repository trait for managing task records in the database
@@ -10,44 +10,20 @@ use uuid::Uuid;
 /// Tasks represent units of work that can be assigned to and processed by workers.
 #[async_trait]
 pub trait TaskRepository: Send + Sync + Clone + Debug {
-    /// Create a new task in the database
-    async fn create_task(
-        &self,
-        task_kind_name: &str,
-        worker_kind_name: &str,
-        input_data: Option<serde_json::Value>,
-    ) -> Result<Task, sqlx::Error>;
-
-    /// Assign a task to a worker
-    async fn assign_task_to_worker(
-        &self,
-        task_id: &Uuid,
-        worker_id: &Uuid,
-    ) -> Result<(), sqlx::Error>;
-
     /// Get a task by its ID
     async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error>;
 
-    /// Update the status of a task
-    async fn update_task_status(
-        &self,
-        task_id: &Uuid,
-        status: TaskStatus,
-    ) -> Result<(), sqlx::Error>;
-
-    /// Upload an error result for a task, marking it as failed
-    async fn upload_task_error(
-        &self,
-        task_id: &Uuid,
-        error: serde_json::Value,
-    ) -> Result<Task, sqlx::Error>;
-
-    /// Upload a successful result for a task, marking it as completed
-    async fn upload_task_result(
-        &self,
-        task_id: &Uuid,
-        output: serde_json::Value,
-    ) -> Result<Task, sqlx::Error>;
+    /// Update a task. If it doesn't already exist, it is created. Whether or
+    /// not the task is updated is based on the status of the task, where the
+    /// priority order of statuses is:
+    /// 1. `COMPLETED`
+    /// 3. `IN_PROGRESS`
+    /// 4. `PENDING`
+    /// 5. New Task (not a status)
+    ///
+    /// This is done because in a distributed system, the events may arrive
+    /// out of order.
+    async fn update_task(&self, task: &Task) -> Result<Task, sqlx::Error>;
 }
 
 /// Repository trait for managing worker records in the database

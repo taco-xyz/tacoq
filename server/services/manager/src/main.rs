@@ -1,12 +1,12 @@
 mod api;
 mod config;
 mod constants;
-mod controller;
 mod repo;
 mod server;
+mod task_controller;
 mod testing;
 
-use common::brokers::{setup_consumer_broker, setup_publisher_broker};
+use common::brokers::setup_consumer_broker;
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
@@ -14,13 +14,13 @@ use tracing::{info, info_span, warn};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use common::{brokers::core::BrokerProducer, models::Task};
-use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE, TASK_RESULT_QUEUE};
+use common::models::Task;
+use constants::MANAGER_QUEUE;
 use sqlx::PgPool;
 
 use config::Config;
-use controller::{task_instance, task_result};
 use repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
+use task_controller::task;
 
 /// Represents the shared application state that can be accessed by all routes
 ///
@@ -30,7 +30,6 @@ pub struct AppState {
     pub task_repository: PgTaskRepository,
     pub worker_kind_repository: PgWorkerKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Arc<dyn BrokerProducer<Task>>,
 }
 
 /// Creates database connection pools
@@ -47,11 +46,11 @@ async fn setup_db_pools(config: &Config) -> PgPool {
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-/// * `broker` - The broker
-async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> AppState {
+async fn setup_app_state(db_pools: &PgPool) -> AppState {
     // Setup the repositories
     let core = PgRepositoryCore::new(db_pools.clone());
     let task_repository = PgTaskRepository::new(core.clone());
+
     let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
     let worker_repository = PgWorkerRepository::new(core.clone());
 
@@ -59,7 +58,6 @@ async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>
         task_repository,
         worker_kind_repository,
         worker_repository,
-        broker,
     }
 }
 
@@ -71,8 +69,8 @@ async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> (Router, AppState) {
-    let app_state = setup_app_state(db_pools, broker).await;
+async fn setup_app(db_pools: &PgPool) -> (Router, AppState) {
+    let app_state = setup_app_state(db_pools).await;
     info!("App state created");
 
     // Create base router with routes and state
@@ -87,55 +85,29 @@ async fn setup_app(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> 
 
 async fn initialize_system(
     config: &Config,
-) -> Result<
-    (
-        AppState,
-        Server,
-        Arc<task_instance::NewTaskController>,
-        Arc<task_result::TaskResultController>,
-    ),
-    Box<dyn std::error::Error>,
-> {
+) -> Result<(AppState, Server, Arc<task::TaskController>), Box<dyn std::error::Error>> {
     let shutdown = Arc::new(AtomicBool::new(false));
 
     let db_pools = setup_db_pools(config).await;
     info!("Database connection pools created");
 
-    let publisher_broker =
-        setup_publisher_broker::<Task>(&config.broker_addr, TASK_OUTPUT_EXCHANGE)
-            .await
-            .expect("Failed to setup publisher broker");
-
-    let task_result_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_RESULT_QUEUE, shutdown.clone())
-            .await
-            .expect("Failed to setup task result consumer");
-
     let new_task_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, shutdown.clone())
+        setup_consumer_broker::<Task>(&config.broker_addr, MANAGER_QUEUE, shutdown.clone())
             .await
             .expect("Failed to setup task instance consumer");
     info!("Brokers initialized");
 
-    let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
+    let (app, app_state) = setup_app(&db_pools).await;
 
     let core = PgRepositoryCore::new(db_pools);
     let task_repo = Arc::new(PgTaskRepository::new(core));
 
-    let task_input_controller = Arc::new(
-        task_instance::NewTaskController::new(new_task_consumer, task_repo.clone()).await?,
-    );
-    let task_result_controller =
-        Arc::new(task_result::TaskResultController::new(task_result_consumer, task_repo).await?);
+    let task_controller =
+        Arc::new(task::TaskController::new(new_task_consumer, task_repo.clone()).await?);
 
     let server = Server::new(app, 3000);
 
-    Ok((
-        app_state,
-        server,
-        task_input_controller,
-        task_result_controller,
-    ))
+    Ok((app_state, server, task_controller))
 }
 
 #[tokio::main]
@@ -146,7 +118,7 @@ async fn main() {
 
     let span = info_span!("manager_startup_real").entered();
 
-    let (_, server, task_input_controller, task_result_controller) = initialize_system(&config)
+    let (_, server, task_controller) = initialize_system(&config)
         .await
         .expect("Failed to initialize system");
 
@@ -161,22 +133,12 @@ async fn main() {
     });
 
     let input_handle = tokio::spawn({
-        let controller = task_input_controller.clone();
+        let controller = task_controller.clone();
         async move {
             controller
                 .run()
                 .await
                 .expect("Task input controller failed");
-        }
-    });
-
-    let result_handle = tokio::spawn({
-        let controller = task_result_controller.clone();
-        async move {
-            controller
-                .run()
-                .await
-                .expect("Task result controller failed");
         }
     });
 
@@ -190,9 +152,6 @@ async fn main() {
     tokio::select! {
         _ = input_handle => {
             warn!("Task input controller shutdown");
-        },
-        _ = result_handle => {
-            warn!("Task result controller shutdown");
         },
         _ = server_handle => {
             warn!("Server shutdown");

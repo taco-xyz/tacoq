@@ -4,7 +4,7 @@ use utoipa::OpenApi;
 use crate::AppState;
 
 #[derive(OpenApi)]
-#[openapi(paths(openapi, crate::api::worker_kind::register_worker_kind,))]
+#[openapi(paths(openapi, crate::api::task::get_task_by_id))]
 struct ApiDoc;
 
 pub fn routes() -> Router<AppState> {

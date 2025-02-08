@@ -37,6 +37,7 @@ pub struct Task {
     pub is_error: i32,
 
     // Task status
+    pub created_at: DateTime<Utc>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
 
@@ -47,29 +48,44 @@ pub struct Task {
     pub assigned_to: Option<Uuid>, // worker that it is assigned to
 
     // Metadata
-    pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
 impl Task {
     pub fn new(
+        id: Option<Uuid>,
         task_kind_name: &str,
         worker_kind_name: &str,
         input_data: Option<serde_json::Value>,
+        output_data: Option<serde_json::Value>,
+        is_error: Option<bool>,
+        created_at: DateTime<Utc>,
+        started_at: Option<DateTime<Utc>>,
+        completed_at: Option<DateTime<Utc>>,
+        assigned_to: Option<Uuid>,
+        ttl: Option<DateTime<Utc>>,
     ) -> Self {
         Task {
-            id: Uuid::new_v4(),
+            id: id.unwrap_or(Uuid::new_v4()),
             task_kind_name: task_kind_name.to_string(),
             worker_kind_name: worker_kind_name.to_string(),
             input_data,
-            output_data: None,
-            is_error: 0,
-            started_at: None,
-            completed_at: None,
-            assigned_to: None,
-            created_at: Utc::now(),
+            output_data,
+            is_error: if is_error.is_some() {
+                if is_error.unwrap() {
+                    1
+                } else {
+                    0
+                }
+            } else {
+                0
+            },
+            started_at,
+            completed_at,
+            assigned_to,
+            created_at,
             updated_at: Utc::now(),
-            ttl: None,
+            ttl,
         }
     }
 
@@ -94,17 +110,13 @@ impl Task {
         self.updated_at = Utc::now();
     }
 
-    pub fn mark_processing(&mut self, worker_id: Uuid) {
-        self.assigned_to = Some(worker_id);
-        self.started_at = Some(Utc::now());
-        self.updated_at = Utc::now();
-    }
-
-    pub fn mark_completed(&mut self, output_data: serde_json::Value, is_error: bool) {
-        self.completed_at = Some(Utc::now());
-        self.updated_at = Utc::now();
-        self.ttl = Some(Utc::now() + Duration::days(7));
-        self.output_data = Some(output_data);
-        self.is_error = if is_error { 1 } else { 0 };
+    pub fn status(&self) -> TaskStatus {
+        if self.completed_at.is_some() {
+            TaskStatus::Completed
+        } else if self.started_at.is_some() {
+            TaskStatus::Processing
+        } else {
+            TaskStatus::Pending
+        }
     }
 }

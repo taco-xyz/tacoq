@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import AsyncGenerator, Optional
 from broker.config import BrokerConfig
@@ -15,45 +14,20 @@ from aio_pika.abc import (
 )
 
 # =========================================
-# Constants - Exchange and queue names
+# Constants
 # =========================================
 
-# Publisher
+TASK_EXCHANGE = "task_exchange"
+""" Single exchange for all task-related messages. """
 
-TASK_ASSIGNMENT_EXCHANGE = "task_assignment_exchange"
-""" Exchange for task assignments. Used by the publisher to 
-send tasks to the manager and workers. """
+MANAGER_QUEUE = "manager_queue"
+""" Queue for manager to receive ALL tasks. """
 
-TASK_ASSIGNMENT_QUEUE = "task_assignment_queue"
-""" Queue for task assignments. Used by the publisher to send 
-tasks to the manager and workers. """
+MANAGER_ROUTING_KEY = "#"  # Wildcard to receive all messages
+""" Manager receives all messages. """
 
-MANAGER_ROUTING_KEY = "tasks.#"  # Matches all tasks
-""" Routing key for the manager queue. Receives all tasks to 
-save them. """
-
-WORKER_ROUTING_KEY_PREFIX = "tasks.{worker_kind}"  # Will be combined with worker_kind
-""" Routing key for worker queues. Only workers of a 
-specific kind will receive these tasks. """
-
-
-def get_worker_routing_key(worker_kind: str) -> str:
-    """Get the routing key for a worker kind.
-
-    ### Args:
-    - `worker_kind`: The kind of worker to get the routing key for.
-    """
-    return WORKER_ROUTING_KEY_PREFIX.format(worker_kind=worker_kind)
-
-
-# Worker
-
-TASK_RESULT_EXCHANGE = "task_result_exchange"
-""" Exchange for task results. Used by all workers to
-publish their results. """
-
-TASK_RESULT_QUEUE = "task_results"
-""" Queue for task results. Used by all workers to publish their results. """
+WORKER_ROUTING_KEY = "tasks.{worker_kind}"
+""" Workers only receive tasks for their kind. """
 
 
 # =========================================
@@ -106,15 +80,25 @@ class BaseBrokerClient(BaseModel):
     _channel: Optional[AbstractChannel] = None
     """ The channel to the RabbitMQ server. """
 
-    async def connect(self) -> None:
-        """Establish connection to RabbitMQ server and setup channel.
+    _task_exchange: Optional[AbstractExchange] = None
+    """ The exchange for task assignments. """
 
-        ### Raises
-        - `ConnectionError`: If connection to RabbitMQ fails
-        """
+    async def connect(self) -> None:
+        """Establish connection to RabbitMQ server and setup channel."""
 
         self._connection = await connect_robust(self.config.url)
         self._channel = await self._connection.channel()
+
+        # All clients use the same exchange
+        self._task_exchange = await self._channel.declare_exchange(
+            TASK_EXCHANGE,
+            type="topic",  # Topic exchange for routing by worker kind
+            durable=True,
+        )
+
+        # Declare manager queue - all clients ensure it exists
+        manager_queue = await self._channel.declare_queue(MANAGER_QUEUE, durable=True)
+        await manager_queue.bind(self._task_exchange, routing_key=MANAGER_ROUTING_KEY)
 
     async def disconnect(self) -> None:
         """Close RabbitMQ connection.
@@ -138,80 +122,52 @@ class BaseBrokerClient(BaseModel):
 
 
 class PublisherBrokerClient(BaseBrokerClient):
-    """RabbitMQ client for publishing tasks to workers.
-    Uses a fanout exchange to send tasks to both the manager queue
-    and the appropriate worker kind queue."""
-
-    _task_exchange: Optional[AbstractExchange] = None
-    """ The exchange for task assignments. """
+    """RabbitMQ client for publishing tasks to workers."""
 
     _binded_worker_queues: set[str] = set()
-    """ The queues that have been binded to the exchange. We keep track of them
-    so we don't have to bind them again every time we submit a new task. """
-
-    async def connect(self) -> None:
-        await super().connect()
-
-        if self._channel is None:
-            raise NoChannelError(
-                "Tried to connect to RabbitMQ, but channel was not established."
-            )
-
-        # Declare a topic exchange instead of the default direct
-        self._task_exchange = await self._channel.declare_exchange(
-            TASK_ASSIGNMENT_EXCHANGE, type="topic", durable=True
-        )
-
-        # Declare both queues without binding to them
-        manager_queue = await self._channel.declare_queue(
-            TASK_ASSIGNMENT_QUEUE, durable=True
-        )
-        await manager_queue.bind(
-            TASK_ASSIGNMENT_EXCHANGE, routing_key=MANAGER_ROUTING_KEY
-        )
+    """ Track which worker queues we've already declared. """
 
     async def _declare_worker_queue(self, worker_kind: str) -> None:
-        """Declare a worker queue and bind it to the exchange."""
-
+        """Declare a worker queue if it doesn't exist yet."""
         if worker_kind in self._binded_worker_queues:
             return
 
-        if self._channel is None:
-            raise NoChannelError(
-                "Tried to declare worker queue, but channel was not established."
+        if not self._channel:
+            raise RuntimeError("Channel not initialized")
+
+        if not self._task_exchange:
+            raise ExchangeNotDeclaredError(
+                "Tried to declare worker queue, but exchange was not declared."
             )
 
-        worker_queue = await self._channel.declare_queue(worker_kind, durable=True)
+        # Create queue for this worker kind
+        worker_queue = await self._channel.declare_queue(
+            worker_kind,
+            durable=True,  # Survive broker restarts
+        )
         await worker_queue.bind(
-            TASK_ASSIGNMENT_EXCHANGE, routing_key=get_worker_routing_key(worker_kind)
+            self._task_exchange,
+            routing_key=WORKER_ROUTING_KEY.format(worker_kind=worker_kind),
         )
         self._binded_worker_queues.add(worker_kind)
 
     async def publish_task(self, task: Task) -> None:
-        """Publish a task to both manager and worker queues via exchange and routing mechanisms.
+        """Publish a task. The manager will receive it and workers of the correct kind will too."""
 
-        ### Arguments
-        - `routing_key`: The routing key for the task. This is based on the worker kind. The publisher
-        client will know the routing key based on the requests it has made to the manager, who creates
-        the queues and binds them to the exchange.
-
-        ### Raises
-        - `RuntimeError`: If the exchange was not declared.
-        """
-
-        if self._channel is None:
+        if not self._task_exchange:
             await self.connect()
+        if not self._task_exchange:
+            raise ExchangeNotDeclaredError(
+                "Tried to publish task, but exchange was not declared."
+            )
 
+        # Ensure worker queue exists
         await self._declare_worker_queue(task.worker_kind)
 
-        if self._task_exchange is None:
-            raise RuntimeError("Tried to publish task, but exchange was not declared.")
-
         message = Message(body=task.model_dump_json().encode())
+        routing_key = WORKER_ROUTING_KEY.format(worker_kind=task.worker_kind)
 
-        await self._task_exchange.publish(
-            message, routing_key=get_worker_routing_key(task.worker_kind)
-        )
+        await self._task_exchange.publish(message, routing_key=routing_key)
 
 
 ## =========================================
@@ -227,85 +183,60 @@ class WorkerBrokerClient(BaseBrokerClient):
     worker_kind: str
     """ The name of the worker kind. """
 
-    _task_assignment_queue: Optional[AbstractQueue] = None
+    _queue: Optional[AbstractQueue] = None
     """ Queue for task assignments. """
-
-    _result_exchange: Optional[AbstractExchange] = None
-    """ Exchange for publishing results (shared by all workers). """
 
     async def connect(self) -> None:
         await super().connect()
-
-        if self._channel is None:
-            raise NoChannelError(
-                "Tried to connect to RabbitMQ, but channel was not established."
+        if not self._channel:
+            raise RuntimeError("Channel not initialized")
+        if not self._task_exchange:
+            raise ExchangeNotDeclaredError(
+                "Tried to declare worker queue, but exchange was not declared."
             )
 
-        # =========================================
-        # Setup task assignment queue for this worker kind
-        # =========================================
-
-        # Set prefetch to one to enable fair dispatching
+        # Set prefetch to 1 for fair dispatch
         await self._channel.set_qos(prefetch_count=1)
 
-        while True:
-            try:
-                self._task_assignment_queue = await self._channel.declare_queue(
-                    self.worker_kind,
-                    passive=True,  # We only want to connect to the queue if it already exists.
-                )
-                break
-            except Exception as e:
-                warn(
-                    f"Failed to passively declare task assignment queue: {e}. Retrying in 1 second...\nThis might mean the queue doesn't exist because: 1. no tasks for this worker kind have been published yet, or 2. there is a mismatch between the worker kind named on the publisher vs the worker kind named on the worker."
-                )
-                await asyncio.sleep(1)
-
-        # =========================================
-        # Setup result publishing infrastructure
-        # =========================================
-
-        # Exchange
-        self._result_exchange = await self._channel.declare_exchange(
-            TASK_RESULT_EXCHANGE,
-            durable=True,
-        )
-
-        # Set up the result queue and bind it to the exchange
-        _result_queue = await self._channel.declare_queue(
-            TASK_RESULT_QUEUE, durable=True
-        )
-        await _result_queue.bind(TASK_RESULT_EXCHANGE)
+        # Worker's queue - named after its kind
+        routing_key = WORKER_ROUTING_KEY.format(worker_kind=self.worker_kind)
+        self._queue = await self._channel.declare_queue(self.worker_kind, durable=True)
+        await self._queue.bind(self._task_exchange, routing_key=routing_key)
 
     async def listen(self) -> AsyncGenerator[Task, None]:
-        """Listen for tasks assigned to this worker's kind.
-        Messages are only acknowledged after the task has been processed."""
+        """Listen for tasks for this worker's kind. Only acknowledges tasks after they are processed."""
+        if not self._queue:
+            raise RuntimeError("Queue not initialized")
 
-        if self._task_assignment_queue is None:
-            raise QueueNotDeclaredError(
-                "Tried to listen for tasks, but queue was not declared."
-            )
-
-        async with self._task_assignment_queue.iterator() as queue_iter:
+        async with self._queue.iterator() as queue_iter:
             async for message in queue_iter:
                 task = Task(**json.loads(message.body.decode()))
-                yield task
-                await message.ack()
+                try:
+                    yield task
+                    await message.ack()  # After the task is processed, acknowledge it
+                except Exception as e:
+                    await message.reject(requeue=True)
+                    warn(f"Failed to process task {task.id}: {e}")
 
     async def publish_task_result(self, task: Task) -> None:
-        """Publish a task result to the shared results queue."""
+        """Publish a task result to the shared results queue.
+
+        ### Args:
+            task: The task to publish the result of.
+        """
 
         # Check if the task has a result attached
+
         if task.result is None:
             raise ValueError(
                 "Tried to publish task result, but task has no result attached. How did it get to this point?"
             )
 
-        if self._result_exchange is None:
+        if self._task_exchange is None:
             raise ExchangeNotDeclaredError(
                 "Tried to publish task result, but exchange was not declared."
             )
 
         message = Message(body=task.model_dump_json().encode())
 
-        await self._result_exchange.publish(message, routing_key=TASK_RESULT_QUEUE)
+        await self._task_exchange.publish(message, routing_key=TASK_EXCHANGE)
