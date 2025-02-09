@@ -9,6 +9,9 @@ from models.task import Task, TaskInput, TaskOutput, TaskResult, TaskStatus
 from pydantic import BaseModel
 from worker.config import WorkerApplicationConfig
 
+from aio_pika.abc import (
+    AbstractIncomingMessage,
+)
 
 # =========================================
 # Errors
@@ -105,7 +108,7 @@ class WorkerApplication(BaseModel):
 
         return decorator
 
-    async def _execute_task(self, task: Task):
+    async def _execute_task(self, task: Task, message: AbstractIncomingMessage):
         """Execute a task and update its status in the manager.
 
         ### Parameters
@@ -158,6 +161,9 @@ class WorkerApplication(BaseModel):
             task=task,
         )
 
+        # Acknowledge the message
+        await message.ack()
+
     # ================================
     # Worker Lifecycle
     # ================================
@@ -179,6 +185,32 @@ class WorkerApplication(BaseModel):
         await self._broker_client.connect()
 
     async def entrypoint(self):
+        if self.config.workers == 1:
+            return await self._entrypoint()
+
+        import multiprocessing
+        import sys
+
+        # Create worker processes
+        processes: list[multiprocessing.Process] = []
+        for _ in range(self.config.workers):
+            process = multiprocessing.Process(
+                target=asyncio.run, args=(self._entrypoint(),)
+            )
+            process.start()
+            processes.append(process)
+
+        # Wait for all processes to complete
+        for process in processes:
+            process.join()
+
+        # Exit with error if any process failed
+        for process in processes:
+            if process.exitcode != 0:
+                sys.exit(1)
+        return
+
+    async def _entrypoint(self):
         """Start the worker application.
 
         This method registers the worker kind with the manager,
@@ -207,10 +239,10 @@ class WorkerApplication(BaseModel):
             raise RuntimeError("Broker client not initialized")
 
         try:
-            async for task in self._broker_client.listen():
+            async for task, message in self._broker_client.listen():
                 if self._shutdown:
                     break
-                await self._execute_task(task)
+                asyncio.create_task(self._execute_task(task, message))
         except asyncio.CancelledError:
             pass
         finally:
