@@ -1,4 +1,4 @@
 // This is the file for all the project constants
-pub const TASK_INPUT_QUEUE: &str = "manager_queue";
 
-pub const TASK_OUTPUT_EXCHANGE: &str = "task_assignment_exchange";
+/// Queue for the manager to receive all tasks
+pub static MANAGER_QUEUE: &str = "manager_queue";

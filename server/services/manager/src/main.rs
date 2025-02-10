@@ -6,7 +6,7 @@ mod repo;
 mod server;
 mod testing;
 
-use common::brokers::{setup_consumer_broker, setup_publisher_broker};
+use common::brokers::setup_consumer_broker;
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
@@ -14,8 +14,8 @@ use tracing::{info, info_span, warn};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use common::{brokers::core::BrokerProducer, models::Task};
-use constants::{TASK_INPUT_QUEUE, TASK_OUTPUT_EXCHANGE};
+use common::models::Task;
+use constants::MANAGER_QUEUE;
 use sqlx::PgPool;
 
 use config::Config;
@@ -30,7 +30,6 @@ pub struct AppState {
     pub task_repository: PgTaskRepository,
     pub worker_kind_repository: PgWorkerKindRepository,
     pub worker_repository: PgWorkerRepository,
-    pub broker: Arc<dyn BrokerProducer<Task>>,
 }
 
 /// Creates database connection pools
@@ -64,7 +63,7 @@ fn create_repositories(
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> AppState {
+async fn setup_app_state(db_pools: &PgPool) -> AppState {
     let (task_repository, worker_kind_repository, worker_repository) =
         create_repositories(db_pools);
 
@@ -72,7 +71,6 @@ async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>
         task_repository,
         worker_kind_repository,
         worker_repository,
-        broker,
     }
 }
 
@@ -84,8 +82,8 @@ async fn setup_app_state(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>
 ///
 /// * `db_pools` - The database connection pools
 /// * `broker` - The broker
-async fn setup_app(db_pools: &PgPool, broker: Arc<dyn BrokerProducer<Task>>) -> (Router, AppState) {
-    let app_state = setup_app_state(db_pools, broker).await;
+async fn setup_app(db_pools: &PgPool) -> (Router, AppState) {
+    let app_state = setup_app_state(db_pools).await;
     info!("App state created");
 
     // Create base router with routes and state
@@ -106,22 +104,19 @@ async fn initialize_system(
     let db_pools = setup_db_pools(config).await;
     info!("Database connection pools created");
 
-    let publisher_broker =
-        setup_publisher_broker::<Task>(&config.broker_addr, TASK_OUTPUT_EXCHANGE)
+    let new_task_consumer =
+        setup_consumer_broker::<Task>(&config.broker_addr, MANAGER_QUEUE, shutdown.clone())
             .await
-            .expect("Failed to setup publisher broker");
+            .expect("Failed to setup task instance consumer");
+    info!("Brokers initialized");
 
-    let task_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, TASK_INPUT_QUEUE, shutdown.clone())
-            .await
-            .expect("Failed to setup task result consumer");
-
-    let (app, app_state) = setup_app(&db_pools, publisher_broker).await;
+    let (app, app_state) = setup_app(&db_pools).await;
 
     let (task_repo, worker_kind_repo, worker_repo) = create_repositories(&db_pools);
 
     let task_controller = Arc::new(
-        task::TaskController::new(task_consumer, worker_repo, worker_kind_repo, task_repo).await?,
+        task::TaskController::new(new_task_consumer, worker_repo, worker_kind_repo, task_repo)
+            .await?,
     );
 
     let server = Server::new(app, 3000);
