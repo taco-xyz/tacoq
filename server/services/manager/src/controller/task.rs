@@ -4,7 +4,7 @@ use crate::repo::{
 };
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
-use tracing::info;
+use tracing::{error, info, warn};
 
 use std::sync::Arc;
 
@@ -31,25 +31,43 @@ impl TaskController {
         })
     }
 
-    async fn consume_task(&self, task: Task) -> Result<(), Box<dyn std::error::Error>> {
-        // I get/create the worker kind -> necessary for relationship
-        let worker_kind = self
+    async fn consume_task(&self, task: Task) {
+        info!("Starting to process task: {:?}", task);
+
+        let kind = match self
             .worker_kind_repository
             .get_or_create_worker_kind(&task.worker_kind)
-            .await?;
+            .await
+        {
+            Ok(kind) => kind,
+            Err(e) => {
+                error!("Failed to process worker kind: {}", e);
+                return;
+            }
+        };
+        info!("Worker kind processed successfully: {:?}", kind);
 
-        // I get a task -> save it into the database
-        let task = self.task_repository.update_task(&task).await?;
+        let task = match self.task_repository.update_task(&task).await {
+            Ok(task) => task,
+            Err(e) => {
+                error!("Failed to update task: {}", e);
+                return;
+            }
+        };
+        info!("Task updated successfully: {:?}", task);
 
-        // I check the worker and add it to the DB if it exists as well
         if let Some(assigned_to) = task.assigned_to {
-            self.worker_repository
-                .update_worker(assigned_to, &worker_kind.name)
-                .await?;
+            match self
+                .worker_repository
+                .update_worker(assigned_to, &kind.name)
+                .await
+            {
+                Ok(_) => info!("Worker updated successfully: {}", assigned_to),
+                Err(e) => warn!("Failed to update worker {}: {}", assigned_to, e),
+            }
         }
 
-        info!("Received task input: {:?}", task);
-        Ok(())
+        info!("Task processing completed successfully");
     }
 
     pub async fn run(self: Arc<Self>) -> Result<(), Box<dyn std::error::Error>> {
@@ -60,7 +78,9 @@ impl TaskController {
             .consume_messages(Box::new(move |task| {
                 // Same thing here, we need to clone the self object so it can live inside the closure for 'static lifetime
                 let this = this.clone();
-                Box::pin(async move { this.consume_task(task).await })
+                Box::pin(async move {
+                    this.consume_task(task).await;
+                })
             }))
             .await
     }

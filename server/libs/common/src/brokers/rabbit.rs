@@ -88,7 +88,7 @@ where
             let payload = message.data;
 
             if let Ok(parsed_message) = serde_json::from_slice(&payload) {
-                handler(parsed_message).await?;
+                handler(parsed_message).await;
             } else {
                 // TODO: Check what to do to handle mishandled diserialization
                 warn!(

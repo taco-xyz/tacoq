@@ -6,8 +6,7 @@ use std::marker::{Send, Sync};
 
 // The message handler function serves as a callback for consumed messages
 // It is expected to return a result indicating if the message was processed successfully
-pub type MessageHandlerFn<T> =
-    Box<dyn Fn(T) -> BoxFuture<'static, Result<(), Box<dyn std::error::Error>>> + Send + Sync>;
+pub type MessageHandlerFn<T> = Box<dyn Fn(T) -> BoxFuture<'static, ()> + Send + Sync>;
 
 #[automock]
 #[async_trait]
