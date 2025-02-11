@@ -91,7 +91,10 @@ mod test {
     use uuid::Uuid;
 
     use crate::{
-        repo::{PgRepositoryCore, PgTaskRepository, TaskRepository},
+        repo::{
+            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
+            WorkerKindRepository,
+        },
         testing::test::{get_test_server, init_test_logger},
     };
 
@@ -131,13 +134,19 @@ mod test {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
         let task_instance_repository = PgTaskRepository::new(core.clone());
+        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
 
-        let task = task_instance_repository
-            .update_task(&get_test_task())
+        let test_task = get_test_task();
+
+        worker_kind_repository
+            .get_or_create_worker_kind(&test_task.worker_kind)
             .await
             .unwrap();
 
-        info!("Task Created: {:?}", task);
+        let task = task_instance_repository
+            .update_task(&test_task)
+            .await
+            .unwrap();
 
         let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
         assert_eq!(response.status_code(), StatusCode::OK);

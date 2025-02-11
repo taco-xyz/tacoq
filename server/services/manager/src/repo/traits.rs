@@ -35,7 +35,7 @@ pub trait WorkerRepository: Clone {
     async fn update_worker(&self, id: Uuid, worker_kind_name: &str) -> Result<Worker, sqlx::Error>;
 
     /// Get a worker by ID
-    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error>;
+    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Option<Worker>, sqlx::Error>;
 
     /// Get all registered workers
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error>;

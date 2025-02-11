@@ -42,12 +42,12 @@ impl PgWorkerRepository {
         &self,
         executor: E,
         id: &Uuid,
-    ) -> Result<Worker, sqlx::Error>
+    ) -> Result<Option<Worker>, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
         sqlx::query_as!(Worker, "SELECT * FROM workers WHERE id = $1", id)
-            .fetch_one(executor)
+            .fetch_optional(executor)
             .await
     }
 
@@ -112,8 +112,12 @@ impl WorkerRepository for PgWorkerRepository {
     async fn update_worker(&self, id: Uuid, worker_kind_name: &str) -> Result<Worker, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let worker = Worker::new(id, worker_kind_name);
-        self.save_worker(&mut *tx, &worker).await?;
+        let worker = if let Some(worker) = self.find_worker_by_id(&mut *tx, &id).await? {
+            worker
+        } else {
+            let worker = Worker::new(id, worker_kind_name);
+            self.save_worker(&mut *tx, &worker).await?
+        };
 
         let heartbeat = WorkerHeartbeat::new(worker.id);
         self.save_heartbeat(&mut *tx, &heartbeat).await?;
@@ -124,7 +128,7 @@ impl WorkerRepository for PgWorkerRepository {
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
-    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error> {
+    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Option<Worker>, sqlx::Error> {
         self.find_worker_by_id(&self.core.pool, id).await
     }
 
@@ -191,8 +195,8 @@ mod tests {
         assert_eq!(worker2.worker_kind_name, "testing.worker");
 
         // Verify worker kinds are preserved when fetching
-        let fetched1 = repo._get_worker_by_id(&worker1.id).await.unwrap();
-        let fetched2 = repo._get_worker_by_id(&worker2.id).await.unwrap();
+        let fetched1 = repo._get_worker_by_id(&worker1.id).await.unwrap().unwrap();
+        let fetched2 = repo._get_worker_by_id(&worker2.id).await.unwrap().unwrap();
 
         assert_eq!(fetched1.worker_kind_name, "coding.worker");
         assert_eq!(fetched2.worker_kind_name, "testing.worker");
@@ -210,7 +214,7 @@ mod tests {
         assert_eq!(worker.id, id);
         assert_eq!(worker.worker_kind_name, "test.worker");
 
-        let retrieved = repo._get_worker_by_id(&worker.id).await.unwrap();
+        let retrieved = repo._get_worker_by_id(&worker.id).await.unwrap().unwrap();
         assert_eq!(worker.id, retrieved.id);
         assert_eq!(worker.worker_kind_name, retrieved.worker_kind_name);
     }
@@ -253,14 +257,18 @@ mod tests {
 
         // Wait a bit and record a new heartbeat
         tokio::time::sleep(Duration::from_millis(100)).await;
-        repo.update_worker(Uuid::new_v4(), &test_kind.name)
+        repo.update_worker(worker.id, &test_kind.name)
             .await
             .unwrap();
 
         let new_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
 
         // New heartbeat should be more recent than the initial one
-        assert!(new_heartbeat > initial_heartbeat);
+        assert!(
+            new_heartbeat > initial_heartbeat,
+            "{}",
+            format!("{:?} > {:?}", new_heartbeat, initial_heartbeat)
+        );
 
         // Verify the new heartbeat is recent
         let now = SystemTime::now();
@@ -305,6 +313,6 @@ mod tests {
     async fn get_nonexistent_heartbeat(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let result = repo._get_latest_heartbeat(&Uuid::new_v4()).await;
-        assert!(result.is_err());
+        assert!(result.is_err(), "{:?}", result);
     }
 }

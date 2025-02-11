@@ -64,12 +64,13 @@ impl WorkerKindRepository for PgWorkerKindRepository {
     async fn get_or_create_worker_kind(&self, name: &str) -> Result<WorkerKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let worker_kind = self
-            .find_by_name(&mut *tx, name)
-            .await?
-            .unwrap_or_else(|| WorkerKind::new(name, name, name));
+        let worker_kind = if let Some(kind) = self.find_by_name(&mut *tx, name).await? {
+            kind
+        } else {
+            let worker_kind = WorkerKind::new(name, name, name);
+            self.save(&mut *tx, &worker_kind).await?
+        };
 
-        let worker_kind = self.save(&mut *tx, &worker_kind).await?;
         tx.commit().await?;
         Ok(worker_kind)
     }
