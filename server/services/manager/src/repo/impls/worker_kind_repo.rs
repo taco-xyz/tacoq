@@ -61,18 +61,13 @@ impl PgWorkerKindRepository {
 #[async_trait]
 impl WorkerKindRepository for PgWorkerKindRepository {
     #[instrument(skip(self, name), fields(name = %name))]
-    async fn get_or_create_worker_kind(
-        &self,
-        name: &str,
-        exchange: &str,
-        queue: &str,
-    ) -> Result<WorkerKind, sqlx::Error> {
+    async fn get_or_create_worker_kind(&self, name: &str) -> Result<WorkerKind, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
         let worker_kind = self
             .find_by_name(&mut *tx, name)
             .await?
-            .unwrap_or_else(|| WorkerKind::new(name, exchange, queue));
+            .unwrap_or_else(|| WorkerKind::new(name, name, name));
 
         let worker_kind = self.save(&mut *tx, &worker_kind).await?;
         tx.commit().await?;
@@ -91,7 +86,7 @@ mod tests {
 
         // Test creation
         let worker_kind = repo
-            .get_or_create_worker_kind("test", "test.route", "test_queue")
+            .get_or_create_worker_kind("test" /* , "test.route", "test_queue" */)
             .await
             .unwrap();
         assert_eq!(worker_kind.name, "test");
@@ -100,7 +95,7 @@ mod tests {
 
         // Test retrieval of existing
         let same_kind = repo
-            .get_or_create_worker_kind("test", "test.route", "test_queue")
+            .get_or_create_worker_kind("test" /* , "test.route", "test_queue" */)
             .await
             .unwrap();
         assert_eq!(worker_kind.name, same_kind.name);

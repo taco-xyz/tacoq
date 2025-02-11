@@ -1,5 +1,7 @@
 #[cfg(test)]
 pub mod test {
+    use uuid::Uuid;
+
     use crate::models::{Worker, WorkerKind};
 
     pub fn get_worker_kinds() -> Vec<WorkerKind> {
@@ -12,9 +14,9 @@ pub mod test {
 
     pub fn get_workers(worker_kinds: &Vec<WorkerKind>) -> Vec<Worker> {
         vec![
-            Worker::new("worker1", &worker_kinds[0].name),
-            Worker::new("worker2", &worker_kinds[1].name),
-            Worker::new("worker3", &worker_kinds[2].name),
+            Worker::new(Uuid::new_v4(), &worker_kinds[0].name),
+            Worker::new(Uuid::new_v4(), &worker_kinds[1].name),
+            Worker::new(Uuid::new_v4(), &worker_kinds[2].name),
         ]
     }
 }

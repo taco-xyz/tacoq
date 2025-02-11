@@ -146,14 +146,14 @@ async fn main() {
         }
     });
 
-    let task_handle = tokio::spawn({
+    // Needed for static lifetime
+    let task_controller_shutdown = task_controller.clone();
+    let task_handle = tokio::spawn(async move {
         let controller = task_controller.clone();
-        async move {
-            controller
-                .run()
-                .await
-                .expect("Task input controller failed");
-        }
+        controller
+            .run()
+            .await
+            .expect("Task input controller failed");
     });
 
     let server_handle = tokio::spawn(async move {
@@ -172,8 +172,7 @@ async fn main() {
         },
     }
 
-    // Graceful shutdown
-    if let Err(e) = task_controller.shutdown().await {
+    if let Err(e) = task_controller_shutdown.shutdown().await {
         info!("Failed to shutdown task input controller: {:?}", e);
     }
 

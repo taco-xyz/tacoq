@@ -32,20 +32,13 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
 #[async_trait]
 pub trait WorkerRepository: Clone {
     /// Register a new worker with its supported task types
-    async fn register_worker(
-        &self,
-        name: &str,
-        worker_kind_name: &str,
-    ) -> Result<Worker, sqlx::Error>;
+    async fn update_worker(&self, id: Uuid, worker_kind_name: &str) -> Result<Worker, sqlx::Error>;
 
     /// Get a worker by ID
     async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error>;
 
     /// Get all registered workers
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error>;
-
-    /// Record a heartbeat for a worker
-    async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error>;
 
     /// Get the latest heartbeat for a worker
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error>;
@@ -60,7 +53,7 @@ pub trait WorkerKindRepository: Clone {
     async fn get_or_create_worker_kind(
         &self,
         name: &str,
-        exchange: &str,
-        queue: &str,
+        // exchange: &str,
+        // queue: &str,
     ) -> Result<WorkerKind, sqlx::Error>;
 }

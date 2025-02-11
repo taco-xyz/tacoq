@@ -24,15 +24,13 @@ impl PgWorkerRepository {
         sqlx::query_as!(
             Worker,
             r#"
-            INSERT INTO workers (id, name, worker_kind_name, registered_at)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO workers (id, worker_kind_name, registered_at)
+            VALUES ($1, $2, $3)
             ON CONFLICT (id) DO UPDATE 
-            SET name = $2,
-                worker_kind_name = $3
+            SET worker_kind_name = $2
             RETURNING *
             "#,
             w.id,
-            w.name,
             w.worker_kind_name,
             w.registered_at
         )
@@ -110,14 +108,19 @@ impl PgWorkerRepository {
 
 #[async_trait]
 impl WorkerRepository for PgWorkerRepository {
-    #[instrument(skip(self, name, worker_kind_name), fields(name = %name, worker_kind_name = %worker_kind_name))]
-    async fn register_worker(
-        &self,
-        name: &str,
-        worker_kind_name: &str,
-    ) -> Result<Worker, sqlx::Error> {
-        let worker = Worker::new(name, worker_kind_name);
-        self.save_worker(&self.core.pool, &worker).await
+    #[instrument(skip(self, id, worker_kind_name), fields(id = %id, worker_kind_name = %worker_kind_name))]
+    async fn update_worker(&self, id: Uuid, worker_kind_name: &str) -> Result<Worker, sqlx::Error> {
+        let mut tx = self.core.pool.begin().await?;
+
+        let worker = Worker::new(id, worker_kind_name);
+        self.save_worker(&mut *tx, &worker).await?;
+
+        let heartbeat = WorkerHeartbeat::new(worker.id);
+        self.save_heartbeat(&mut *tx, &heartbeat).await?;
+
+        tx.commit().await?;
+
+        Ok(worker)
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
@@ -128,12 +131,6 @@ impl WorkerRepository for PgWorkerRepository {
     #[instrument(skip(self))]
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
         self.find_all_workers(&self.core.pool).await
-    }
-
-    #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
-    async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error> {
-        let heartbeat = WorkerHeartbeat::new(*worker_id);
-        self.save_heartbeat(&self.core.pool, &heartbeat).await
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
@@ -164,9 +161,11 @@ mod tests {
 
     async fn setup_test_worker_kind(pool: &PgPool, name: &str) -> WorkerKind {
         let repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
-        repo.get_or_create_worker_kind(name, &format!("{}.route", name), &format!("{}_queue", name))
-            .await
-            .unwrap()
+        repo.get_or_create_worker_kind(
+            name, /*, &format!("{}.route", name), &format!("{}_queue", name) */
+        )
+        .await
+        .unwrap()
     }
 
     /// Tests registering workers with different worker kinds
@@ -180,11 +179,11 @@ mod tests {
 
         // Register workers with different kinds
         let worker1 = repo
-            .register_worker("Worker 1", &coding_kind.name)
+            .update_worker(Uuid::new_v4(), &coding_kind.name)
             .await
             .unwrap();
         let worker2 = repo
-            .register_worker("Worker 2", &testing_kind.name)
+            .update_worker(Uuid::new_v4(), &testing_kind.name)
             .await
             .unwrap();
 
@@ -204,18 +203,15 @@ mod tests {
     async fn register_and_get_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
+        let id = Uuid::new_v4();
 
-        let worker = repo
-            .register_worker("Test Worker", &test_kind.name)
-            .await
-            .unwrap();
+        let worker = repo.update_worker(id, &test_kind.name).await.unwrap();
 
-        assert_eq!(worker.name, "Test Worker");
+        assert_eq!(worker.id, id);
         assert_eq!(worker.worker_kind_name, "test.worker");
 
         let retrieved = repo._get_worker_by_id(&worker.id).await.unwrap();
         assert_eq!(worker.id, retrieved.id);
-        assert_eq!(worker.name, retrieved.name);
         assert_eq!(worker.worker_kind_name, retrieved.worker_kind_name);
     }
 
@@ -226,12 +222,12 @@ mod tests {
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker1 = repo
-            .register_worker("Worker 1", &test_kind.name)
+            .update_worker(Uuid::new_v4(), &test_kind.name)
             .await
             .unwrap();
 
         let worker2 = repo
-            .register_worker("Worker 2", &test_kind.name)
+            .update_worker(Uuid::new_v4(), &test_kind.name)
             .await
             .unwrap();
 
@@ -241,28 +237,34 @@ mod tests {
         assert!(all_workers.iter().any(|w| w.id == worker2.id));
     }
 
-    /// Tests recording and retrieving worker heartbeats
+    /// Tests recording and retrieving worker heartbeats after worker registration
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn worker_heartbeat(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker = repo
-            .register_worker("Test Worker", &test_kind.name)
+            .update_worker(Uuid::new_v4(), &test_kind.name)
             .await
             .unwrap();
 
-        // Record initial heartbeat
-        repo._record_heartbeat(&worker.id).await.unwrap();
-        let first_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
+        // Get the initial heartbeat that was created during registration
+        let initial_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
 
-        // Wait a bit and record another heartbeat
+        // Wait a bit and record a new heartbeat
         tokio::time::sleep(Duration::from_millis(100)).await;
-        repo._record_heartbeat(&worker.id).await.unwrap();
-        let second_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
+        repo.update_worker(Uuid::new_v4(), &test_kind.name)
+            .await
+            .unwrap();
 
-        // Second heartbeat should be more recent than first
-        assert!(second_heartbeat > first_heartbeat);
+        let new_heartbeat = repo._get_latest_heartbeat(&worker.id).await.unwrap();
+
+        // New heartbeat should be more recent than the initial one
+        assert!(new_heartbeat > initial_heartbeat);
+
+        // Verify the new heartbeat is recent
+        let now = SystemTime::now();
+        assert!(now.duration_since(new_heartbeat).unwrap().as_secs() < 1);
     }
 
     /// Tests multiple heartbeats from different workers
@@ -272,17 +274,13 @@ mod tests {
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
 
         let worker1 = repo
-            .register_worker("Worker 1", &test_kind.name)
+            .update_worker(Uuid::new_v4(), &test_kind.name)
             .await
             .unwrap();
         let worker2 = repo
-            .register_worker("Worker 2", &test_kind.name)
+            .update_worker(Uuid::new_v4(), &test_kind.name)
             .await
             .unwrap();
-
-        // Record heartbeats for both workers
-        repo._record_heartbeat(&worker1.id).await.unwrap();
-        repo._record_heartbeat(&worker2.id).await.unwrap();
 
         // Each worker should have its own heartbeat
         let heartbeat1 = repo._get_latest_heartbeat(&worker1.id).await.unwrap();
