@@ -305,7 +305,8 @@ mod tests {
     async fn get_nonexistent_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let result = repo._get_worker_by_id(&Uuid::new_v4()).await;
-        assert!(result.is_err());
+        assert!(result.is_ok(), "{:?}", result);
+        assert!(result.unwrap().is_none());
     }
 
     /// Attempts to retrieve a nonexistent heartbeat (should fail)

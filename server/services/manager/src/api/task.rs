@@ -87,7 +87,6 @@ mod test {
     use axum::http::StatusCode;
     use common::models::Task;
     use sqlx::{types::chrono::Utc, PgPool};
-    use tracing::info;
     use uuid::Uuid;
 
     use crate::{

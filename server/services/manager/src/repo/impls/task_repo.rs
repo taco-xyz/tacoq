@@ -140,7 +140,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
-    use crate::repo::PgRepositoryCore;
+    use crate::repo::{PgRepositoryCore, PgWorkerKindRepository, WorkerKindRepository};
     use crate::testing::test::init_test_logger;
 
     // This runs before any test in this module
@@ -170,8 +170,13 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_and_get_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
 
         let task = get_test_task();
+        worker_kind_repo
+            .get_or_create_worker_kind(&task.worker_kind)
+            .await
+            .unwrap();
 
         let saved = repo.update_task(&task).await.unwrap();
 
@@ -185,8 +190,16 @@ mod tests {
     /// Tests task updating logic
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn update_task_progressive_status(pool: PgPool) {
-        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
+
         let task = get_test_task();
+
+        worker_kind_repo
+            .get_or_create_worker_kind(&task.worker_kind)
+            .await
+            .unwrap();
+
         let saved = repo.update_task(&task).await.unwrap();
         assert_eq!(saved.id, task.id, "Created Task ID should match");
 

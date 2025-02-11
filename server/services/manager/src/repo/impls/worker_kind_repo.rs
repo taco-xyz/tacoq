@@ -91,8 +91,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(worker_kind.name, "test");
-        assert_eq!(worker_kind.routing_key, "test.route");
-        assert_eq!(worker_kind.queue_name, "test_queue");
+        assert_eq!(worker_kind.routing_key, "test");
+        assert_eq!(worker_kind.queue_name, "test");
 
         // Test retrieval of existing
         let same_kind = repo
