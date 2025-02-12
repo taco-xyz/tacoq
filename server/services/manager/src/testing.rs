@@ -1,6 +1,5 @@
 #[cfg(test)]
 pub mod test {
-
     use axum_test::TestServer;
     use sqlx::PgPool;
 

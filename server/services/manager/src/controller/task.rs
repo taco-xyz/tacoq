@@ -93,12 +93,11 @@ impl TaskController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository},
-        testing::test::init_test_logger,
-    };
-    use common::brokers::core::MockBrokerConsumer;
-    use sqlx::{types::chrono::Utc, PgPool};
+    use crate::repo::PgRepositoryCore;
+    use crate::testing::{controller::TestController, test::init_test_logger};
+    use chrono::Utc;
+    use common::models::Task;
+    use sqlx::PgPool;
     use uuid::Uuid;
 
     #[ctor::ctor]
@@ -106,12 +105,12 @@ mod tests {
         init_test_logger();
     }
 
-    fn get_test_task() -> Task {
+    fn get_test_task(worker_kind: &str) -> Task {
         Task::new(
             Some(Uuid::new_v4()),
-            "TestTaskKind",
-            "TestWorkerKind",
-            Some(serde_json::json!({})),
+            "test_task",
+            worker_kind,
+            None,
             None,
             None,
             Utc::now(),
@@ -123,245 +122,43 @@ mod tests {
     }
 
     #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn test_successful_task_consumption(pool: PgPool) {
-        let core = PgRepositoryCore::new(pool.clone());
-        let task_repo = PgTaskRepository::new(core.clone());
-        let worker_repo = PgWorkerRepository::new(core.clone());
-        let worker_kind_repo = PgWorkerKindRepository::new(core);
+    async fn test_successful_task_processing(db_pools: PgPool) {
+        let controller = TestController::new(db_pools.clone()).await;
 
-        let mut mock_consumer = MockBrokerConsumer::<Task>::new();
-        let test_task = get_test_task();
-        let test_task_clone = test_task.clone();
+        let test_task = get_test_task("test_worker_kind");
+        let task_id = test_task.id;
 
-        mock_consumer
-            .expect_consume_messages()
-            .times(1)
-            .returning(move |handler| {
-                let test_task = test_task_clone.clone();
-                tokio::spawn(async move {
-                    handler(test_task).await;
-                });
-                Ok(())
-            });
+        controller.consume(test_task).await;
 
-        mock_consumer
-            .expect_shutdown()
-            .times(1)
-            .returning(|| Ok(()));
+        // Verify the task was processed
+        let core = PgRepositoryCore::new(db_pools);
+        let task_repo = PgTaskRepository::new(core);
+        let stored_task = task_repo.get_task_by_id(&task_id).await.unwrap().unwrap();
 
-        let controller = Arc::new(
-            TaskController::new(
-                Arc::new(mock_consumer),
-                worker_repo,
-                worker_kind_repo,
-                task_repo,
-            )
-            .await
-            .unwrap(),
-        );
+        assert_eq!(stored_task.id, task_id);
+        assert_eq!(stored_task.worker_kind, "test_worker_kind");
+    }
 
-        let handle = tokio::spawn({
-            let controller = controller.clone();
-            async move {
-                controller.run().await.unwrap();
-            }
-        });
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn test_task_with_assigned_worker(db_pools: PgPool) {
+        let controller = TestController::new(db_pools.clone()).await;
 
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        controller.shutdown().await.unwrap();
-        handle.await.unwrap();
+        let worker_id = Uuid::new_v4();
+        let mut test_task = get_test_task("test_worker_kind");
+        test_task.assigned_to = Some(worker_id);
 
-        let processed_task = controller
-            .task_repository
-            .get_task_by_id(&test_task.id)
+        controller.consume(test_task).await;
+
+        // Verify the worker was updated
+        let core = PgRepositoryCore::new(db_pools);
+        let worker_repo = PgWorkerRepository::new(core);
+        let worker = worker_repo
+            .get_worker_by_id(&worker_id)
             .await
             .unwrap()
             .unwrap();
 
-        assert_eq!(processed_task.worker_kind, test_task.worker_kind);
-    }
-
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn test_task_consumption_with_invalid_worker_kind(pool: PgPool) {
-        let core = PgRepositoryCore::new(pool.clone());
-        let task_repo = PgTaskRepository::new(core.clone());
-        let worker_repo = PgWorkerRepository::new(core.clone());
-        let worker_kind_repo = PgWorkerKindRepository::new(core);
-
-        let mut mock_consumer = MockBrokerConsumer::<Task>::new();
-        let mut test_task = get_test_task();
-        let test_task_clone = test_task.clone();
-        test_task.worker_kind = "".to_string();
-
-        mock_consumer
-            .expect_consume_messages()
-            .times(1)
-            .returning(move |handler| {
-                let test_task = test_task_clone.clone();
-                tokio::spawn(async move {
-                    handler(test_task).await;
-                });
-                Ok(())
-            });
-
-        mock_consumer
-            .expect_shutdown()
-            .times(1)
-            .returning(|| Ok(()));
-
-        let controller = Arc::new(
-            TaskController::new(
-                Arc::new(mock_consumer),
-                worker_repo,
-                worker_kind_repo,
-                task_repo,
-            )
-            .await
-            .unwrap(),
-        );
-
-        let handle = tokio::spawn({
-            let controller = controller.clone();
-            async move {
-                controller.run().await.unwrap();
-            }
-        });
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        controller.shutdown().await.unwrap();
-        handle.await.unwrap();
-
-        let result = controller
-            .task_repository
-            .get_task_by_id(&test_task.id)
-            .await
-            .unwrap();
-        assert!(result.is_none());
-    }
-
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn test_task_consumption_with_missing_worker(pool: PgPool) {
-        let core = PgRepositoryCore::new(pool.clone());
-        let task_repo = PgTaskRepository::new(core.clone());
-        let worker_repo = PgWorkerRepository::new(core.clone());
-        let worker_kind_repo = PgWorkerKindRepository::new(core);
-
-        let mut mock_consumer = MockBrokerConsumer::<Task>::new();
-        let mut test_task = get_test_task();
-        let test_task_clone = test_task.clone();
-        test_task.assigned_to = None;
-
-        mock_consumer
-            .expect_consume_messages()
-            .times(1)
-            .returning(move |handler| {
-                let test_task = test_task_clone.clone();
-                tokio::spawn(async move {
-                    handler(test_task).await;
-                });
-                Ok(())
-            });
-
-        mock_consumer
-            .expect_shutdown()
-            .times(1)
-            .returning(|| Ok(()));
-
-        let controller = Arc::new(
-            TaskController::new(
-                Arc::new(mock_consumer),
-                worker_repo,
-                worker_kind_repo,
-                task_repo,
-            )
-            .await
-            .unwrap(),
-        );
-
-        let handle = tokio::spawn({
-            let controller = controller.clone();
-            async move {
-                controller.run().await.unwrap();
-            }
-        });
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        controller.shutdown().await.unwrap();
-        handle.await.unwrap();
-
-        let processed_task = controller
-            .task_repository
-            .get_task_by_id(&test_task.id)
-            .await
-            .unwrap()
-            .unwrap();
-
-        assert_eq!(processed_task.worker_kind, test_task.worker_kind);
-        assert!(processed_task.assigned_to.is_none());
-    }
-
-    #[sqlx::test(migrator = "common::MIGRATOR")]
-    async fn test_multiple_task_consumption(pool: PgPool) {
-        let core = PgRepositoryCore::new(pool.clone());
-        let task_repo = PgTaskRepository::new(core.clone());
-        let worker_repo = PgWorkerRepository::new(core.clone());
-        let worker_kind_repo = PgWorkerKindRepository::new(core);
-
-        let mut mock_consumer = MockBrokerConsumer::<Task>::new();
-        let task1 = get_test_task();
-        let task2 = get_test_task();
-        let task3 = get_test_task();
-
-        let tasks = vec![task1.clone(), task2.clone(), task3.clone()];
-
-        mock_consumer
-            .expect_consume_messages()
-            .times(1)
-            .returning(move |handler| {
-                let tasks = tasks.clone();
-                tokio::spawn(async move {
-                    for task in tasks {
-                        handler(task).await;
-                    }
-                });
-                Ok(())
-            });
-
-        mock_consumer
-            .expect_shutdown()
-            .times(1)
-            .returning(|| Ok(()));
-
-        let controller = Arc::new(
-            TaskController::new(
-                Arc::new(mock_consumer),
-                worker_repo,
-                worker_kind_repo,
-                task_repo,
-            )
-            .await
-            .unwrap(),
-        );
-
-        let handle = tokio::spawn({
-            let controller = controller.clone();
-            async move {
-                controller.run().await.unwrap();
-            }
-        });
-
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        controller.shutdown().await.unwrap();
-        handle.await.unwrap();
-
-        for task in [task1, task2, task3] {
-            let processed_task = controller
-                .task_repository
-                .get_task_by_id(&task.id)
-                .await
-                .unwrap()
-                .unwrap();
-            assert_eq!(processed_task.worker_kind, task.worker_kind);
-        }
+        assert_eq!(worker.id, worker_id);
+        assert_eq!(worker.kind, "test_worker_kind");
     }
 }

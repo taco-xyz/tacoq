@@ -31,6 +31,8 @@ init-tracing-opentelemetry = { version = "0.25.0", features = [
   "otlp",
   "tracing_subscriber_ext",
 ] }
+mockall = "0.13.1"
+chrono = { version = "0.4.39", features = ["serde"] }
 
 
 [dev-dependencies]
