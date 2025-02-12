@@ -120,11 +120,13 @@ export default function PageLinksBar() {
 
   return (
     <nav className="flex flex-col gap-y-2 text-sm w-full">
+      {/* Title */}
       <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2">
         <Bars3CenterLeftIcon className="w-4 h-4" />
         On this page
       </span>
 
+      {/* Links */}
       <div className="flex flex-col gap-y-2">
         {currentPage.content.map((heading, index) => {
           const headingId = getHeaderId(heading);

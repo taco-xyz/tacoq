@@ -1,5 +1,5 @@
 // Component Imports
-import Logo from "./components/Logo";
+import Logo from "../Logo";
 import Search from "./components/Search";
 import ThemeToggle from "./components/ThemeToggle";
 import GitHubLink from "./components/GitHubLink";
