@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 // React Imports
 import { useCallback } from "react";
@@ -12,12 +12,12 @@ import { SunIcon, MoonIcon } from "@heroicons/react/24/outline";
  */
 export default function ThemeToggle() {
   const changeToDarkTheme = useCallback(() => {
-    localStorage.setItem("taco-docs-theme", "dark");
+    localStorage.setItem("theme", "dark");
     document.documentElement.classList.add("dark");
   }, []);
 
   const changeToLightTheme = useCallback(() => {
-    localStorage.setItem("taco-docs-theme", "light");
+    localStorage.setItem("theme", "light");
     document.documentElement.classList.remove("dark");
   }, []);
 

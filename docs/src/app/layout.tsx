@@ -19,7 +19,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="">
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              document.documentElement.classList.toggle(
+                "dark",
+                localStorage.theme === "dark" ||
+                (!("theme" in localStorage) &&
+                  window.matchMedia("(prefers-color-scheme: dark)").matches)
+              );
+            `,
+          }}
+        />
+      </head>
       <body className="flex pt-[76px] pb-[68px] items-center text-zinc-700 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
         <div className="fixed top-0 w-full z-10">
           <TopBar />
@@ -41,7 +55,7 @@ export default function RootLayout({
               <PageLinksBar />
             </div>
           </PageTreeProvider>
-        </div>
+          </div>
         <Footer />
       </body>
     </html>

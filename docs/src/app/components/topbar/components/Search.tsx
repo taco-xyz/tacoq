@@ -1,14 +1,28 @@
-"use client"
+"use client";
 
 // React Imports
 import { useEffect, useCallback, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+
+// Next Imports
+import dynamic from "next/dynamic";
 
 // Heroicons Imports
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 // Utils Imports
 import clsx from "clsx";
+
+// Components Imports
+const SearchPortal = dynamic<{ children: React.ReactNode }>(
+  () =>
+    Promise.resolve(({ children }: { children: React.ReactNode }) =>
+      createPortal(children, document.body)
+    ),
+  {
+    ssr: false,
+  }
+);
 
 /**
  * Search component that provides a search interface for documentation
@@ -109,7 +123,7 @@ export default function Search() {
         </p>
       </button>
 
-      {createPortal(
+      <SearchPortal>
         <div
           className={clsx(
             "fixed inset-0 z-50",
@@ -154,11 +168,8 @@ export default function Search() {
               </div>
             </div>
           </div>
-        </div>,
-
-        // Create a portal for the search modal on the body element
-        document.body
-      )}
+        </div>
+      </SearchPortal>
     </>
   );
 }
