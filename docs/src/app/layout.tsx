@@ -8,10 +8,55 @@ import SideBar from "./components/sidebar/SideBar";
 import DocsPageLayout from "./components/DocsPageLayout";
 import PageLinksBar from "./components/PageLinksBar";
 
+// Custom Icons Imports
+import { GithubIcon, XIcon, DiscordIcon } from "./components/icons/social";
+
 // Context imports
 import { TooltipProvider } from "@/app/components/sidebar/context/TooltipContext";
 import { PageTreeProvider } from "@/contexts/PageTreeContext";
 import { PageNavigationProvider } from "@/app/components/sidebar/context/PageNavigationContext";
+
+const footerInfo = {
+  linkGroups: [
+    {
+      groupName: "Product",
+      links: [
+        { linkName: "Features", url: "/features" },
+        { linkName: "Pricing", url: "/pricing" },
+        { linkName: "Documentation", url: "/docs" },
+      ],
+    },
+    {
+      groupName: "Resources",
+      links: [
+        { linkName: "Blog", url: "/blog" },
+        { linkName: "Support", url: "/support" },
+        { linkName: "API", url: "/api" },
+      ],
+    },
+    {
+      groupName: "Company",
+      links: [
+        { linkName: "About", url: "/about" },
+        { linkName: "Careers", url: "/careers" },
+        { linkName: "Contact", url: "/contact" },
+      ],
+    },
+    {
+      groupName: "Legal",
+      links: [
+        { linkName: "Privacy", url: "/privacy" },
+        { linkName: "Terms", url: "/terms" },
+        { linkName: "Security", url: "/security" },
+      ],
+    },
+  ],
+  socialLinks: [
+    { Icon: GithubIcon, url: "https://github.com/your-repo" },
+    { Icon: XIcon, url: "https://twitter.com/your-handle" },
+    { Icon: DiscordIcon, url: "https://discord.gg/your-server" },
+  ],
+};
 
 export default function RootLayout({
   children,
@@ -55,8 +100,10 @@ export default function RootLayout({
               <PageLinksBar />
             </div>
           </PageTreeProvider>
-          </div>
-        <Footer />
+        </div>
+        <div className="absolute top-full w-full">
+          <Footer footerInfo={footerInfo} />
+        </div>
       </body>
     </html>
   );
