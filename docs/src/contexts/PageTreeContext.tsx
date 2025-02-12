@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 import type { Page } from "@/types/page/Page";
 import type { Anchor } from "@/types/Anchor";
 import { HeadingTypes } from "@/types/page/Heading";
+import FooterContent from "@/types/FooterContent";
 
 // Heroicons Imports
 import {
@@ -33,6 +34,9 @@ import {
   PencilIcon,
   RocketLaunchIcon,
 } from "@heroicons/react/24/outline";
+
+// Custom Icons Imports
+import { GithubIcon, XIcon, DiscordIcon } from "@/app/components/icons/social";
 
 const anchors: Anchor[] = [
   {
@@ -235,6 +239,48 @@ const pages: Page[] = [
   },
 ];
 
+const footerContent: FooterContent = {
+  linkGroups: [
+    {
+      groupName: "Product",
+      links: [
+        { linkName: "Features", url: "/features" },
+        { linkName: "Pricing", url: "/pricing" },
+        { linkName: "Documentation", url: "/docs" },
+      ],
+    },
+    {
+      groupName: "Resources",
+      links: [
+        { linkName: "Blog", url: "/blog" },
+        { linkName: "Support", url: "/support" },
+        { linkName: "API", url: "/api" },
+      ],
+    },
+    {
+      groupName: "Company",
+      links: [
+        { linkName: "About", url: "/about" },
+        { linkName: "Careers", url: "/careers" },
+        { linkName: "Contact", url: "/contact" },
+      ],
+    },
+    {
+      groupName: "Legal",
+      links: [
+        { linkName: "Privacy", url: "/privacy" },
+        { linkName: "Terms", url: "/terms" },
+        { linkName: "Security", url: "/security" },
+      ],
+    },
+  ],
+  socialLinks: [
+    { Icon: GithubIcon, url: "https://github.com/your-repo" },
+    { Icon: XIcon, url: "https://twitter.com/your-handle" },
+    { Icon: DiscordIcon, url: "https://discord.gg/your-server" },
+  ],
+};
+
 /**
  * Context for managing the page navigation tree state
  */
@@ -255,6 +301,8 @@ interface PageTreeContextType {
   pages: Page[];
   /** Array of anchor links */
   anchors: Anchor[];
+  /** Footer content */
+  footerContent: FooterContent;
 }
 
 const PageTreeContext = createContext<PageTreeContextType | null>(null);
@@ -322,11 +370,7 @@ function findPageAndParents(
   return [];
 }
 
-export function PageTreeProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function PageTreeProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // A set of page titles that are currently expanded
@@ -408,6 +452,7 @@ export function PageTreeProvider({
         visiblePagesTitles,
         pages,
         anchors,
+        footerContent,
       }}
     >
       {children}
