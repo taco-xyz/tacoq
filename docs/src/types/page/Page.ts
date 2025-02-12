@@ -1,3 +1,7 @@
+// React Imports
+import type { SVGProps } from "react";
+
+// Types Imports
 import type { Heading } from "./Heading";
 
 /**
@@ -35,7 +39,7 @@ export interface PageBadgeMetadata {
   /** Text to show in the badge */
   text: string;
   /** Optional icon component to show in the badge */
-  Icon?: React.ComponentType<{ className?: string }>;
+  Icon?: React.ComponentType<SVGProps<SVGSVGElement>>;
 }
 
 /**
@@ -45,5 +49,5 @@ export interface PageSidebarMetadata {
   /** Optional title text for the sidebar */
   title?: string;
   /** Optional icon component to show in the sidebar */
-  Icon?: React.ComponentType<{ className?: string }>;
+  Icon?: React.ComponentType<SVGProps<SVGSVGElement>>;
 }

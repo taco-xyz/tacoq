@@ -1,3 +1,6 @@
+// React Imports
+import { SVGProps } from "react";
+
 /**
  * Represents a navigation anchor link
  */
@@ -7,5 +10,5 @@ export interface Anchor {
   /** URL the anchor links to */
   url: string;
   /** Optional icon component */
-  Icon?: React.ComponentType<{ className?: string }>;
+  Icon?: React.ComponentType<SVGProps<SVGSVGElement>>;
 }
