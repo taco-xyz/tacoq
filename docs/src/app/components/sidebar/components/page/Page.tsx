@@ -73,7 +73,7 @@ export default function PageComponent({
               focusedPageTitle !== title &&
                 currentPageTitle !== title &&
                 "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-              "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-150 ease-in-out"
+              "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
             )}
             onClick={() => {
               if (children && !isPageExpanded(title)) {
@@ -85,7 +85,7 @@ export default function PageComponent({
             {sidebar?.Icon && (
               <sidebar.Icon
                 className={clsx(
-                  "size-3.5 mr-1  transition-all duration-150 ease-in-out",
+                  "size-3.5 mr-1  transition-all duration-50 ease-in-out",
                   currentPageTitle === title
                     ? "text-zinc-950 dark:text-white/100"
                     : "text-zinc-500 dark:text-white/50"
@@ -141,13 +141,13 @@ export default function PageComponent({
             focusedPageTitle !== title &&
               currentPageTitle !== title &&
               "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-            "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-150 ease-in-out"
+            "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
           )}
         >
           {sidebar?.Icon && (
             <sidebar.Icon
               className={clsx(
-                "size-3.5 mr-1  transition-all duration-150 ease-in-out",
+                "size-3.5 mr-1  transition-all duration-50 ease-in-out",
                 currentPageTitle === title
                   ? "text-zinc-950 dark:text-white/100"
                   : "text-zinc-500 dark:text-white/50"

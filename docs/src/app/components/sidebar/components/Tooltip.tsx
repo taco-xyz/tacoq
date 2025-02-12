@@ -29,7 +29,7 @@ export default function Tooltip() {
     <div
       className={clsx(
         "absolute dark:bg-zinc-900 bg-white rounded-md flex w-fit flex-col items-center justify-center min-w-72 ring-1 ring-zinc-200 dark:ring-white/10 shadow-sm shadow-zinc-900/10 dark:shadow-white/5",
-        "transition-all duration-150 ease-in-out",
+        "transition-all duration-100 ease-in-out",
         visible
           ? "opacity-100 pointer-events-auto"
           : "opacity-0 pointer-events-none"
