@@ -4,7 +4,8 @@ from broker.config import BrokerConfig
 from aio_pika import Message, connect_robust
 from models.task import Task
 from pydantic import BaseModel
-from logging import warn
+from logging import warning
+from base64 import b64encode
 
 from aio_pika.abc import (
     AbstractChannel,
@@ -216,7 +217,7 @@ class WorkerBrokerClient(BaseBrokerClient):
                     await message.ack()  # After the task is processed, acknowledge it
                 except Exception as e:
                     await message.reject(requeue=True)
-                    warn(f"Failed to process task {task.id}: {e}")
+                    warning(f"Failed to process task {task.id}: {e}")
 
     async def publish_task_result(self, task: Task) -> None:
         """Publish a task result to the shared results queue.
@@ -236,6 +237,10 @@ class WorkerBrokerClient(BaseBrokerClient):
             raise ExchangeNotDeclaredError(
                 "Tried to publish task result, but exchange was not declared."
             )
+
+        if isinstance(task.input_data, dict):
+            task.input_data = json.dumps(task.input_data)
+        task.result = json.dumps(task.result.model_dump_json())
 
         message = Message(body=task.model_dump_json().encode())
 

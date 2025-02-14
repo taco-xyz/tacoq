@@ -1,4 +1,3 @@
-use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -12,11 +11,7 @@ where
     S: serde::Serializer,
 {
     match bytes {
-        Some(data) => {
-            // Always use base64 for consistency
-            let encoded = STANDARD.encode(data);
-            serializer.serialize_str(&encoded)
-        }
+        Some(data) => serializer.serialize_str(&String::from_utf8_lossy(data)),
         None => serializer.serialize_none(),
     }
 }
@@ -26,15 +21,10 @@ fn deserialize_bytes<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Erro
 where
     D: serde::Deserializer<'de>,
 {
-    if let Some(input) = Option::<String>::deserialize(deserializer)? {
-        // First try to decode as base64
-        if let Ok(decoded) = STANDARD.decode(&input) {
-            return Ok(Some(decoded));
-        }
-        // If not base64, treat as JSON string and convert to bytes
-        Ok(Some(input.into_bytes()))
-    } else {
-        Ok(None)
+    let input: Option<String> = Option::deserialize(deserializer)?;
+    match input {
+        Some(bytes) => Ok(Some(bytes.into_bytes())),
+        None => Ok(None),
     }
 }
 
@@ -73,10 +63,13 @@ where
 #[derive(Display, EnumString, Debug, Serialize, Deserialize, PartialEq, ToSchema, Clone)]
 pub enum TaskStatus {
     #[strum(serialize = "pending")]
+    #[serde(rename = "pending")]
     Pending, // Task is created but not yet assigned
     #[strum(serialize = "processing")]
+    #[serde(rename = "processing")]
     Processing, // Task has been assigned to a worker and sent to a queue
     #[strum(serialize = "completed")]
+    #[serde(rename = "completed")]
     Completed, // Task completed successfully or not
 }
 
@@ -106,12 +99,11 @@ pub struct Task {
     #[serde(
         serialize_with = "serialize_bytes",
         deserialize_with = "deserialize_bytes",
-        alias = "result"
+        rename = "result"
     )]
     pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,
 
-    // #[sqlx(try_from = "String")]
     pub status: TaskStatus,
     pub priority: i32,
 

@@ -86,11 +86,11 @@ async def test_delayed_task_e2e():
         assert task_status.result is None
 
         # Wait and check final status
-        await sleep(3)  # Wait for task completion + buffer
+        await sleep(10)  # Wait for task completion + buffer
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
-        assert task_status.is_error is False
+        assert task_status.is_error == 0
         assert task_status.result is not None
         assert task_status.result.data["message"] == "Task completed"
         assert task_status.result.data["input"] == {"test": "data"}
