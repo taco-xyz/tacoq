@@ -53,6 +53,8 @@ CREATE TABLE
         input_data BYTEA,
         output_data BYTEA,
         is_error INT NOT NULL DEFAULT 0,
+        status VARCHAR(255) NOT NULL,
+        priority INT NOT NULL DEFAULT 0,
         -- Relations
         assigned_to UUID REFERENCES workers (id),
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),

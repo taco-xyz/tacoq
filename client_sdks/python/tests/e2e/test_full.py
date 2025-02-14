@@ -1,6 +1,7 @@
 from asyncio import sleep, get_event_loop
 import pytest
 from uuid import uuid4
+import json
 
 from models.task import TaskInput, TaskOutput, TaskStatus
 from publisher import PublisherClient
@@ -73,7 +74,7 @@ async def test_delayed_task_e2e():
         task = await publisher.publish_task(
             task_kind=DELAYED_TASK,
             worker_kind=WORKER_KIND,
-            input_data={"test": "data"},
+            input_data=json.dumps({"test": "data"}),
         )
 
         await sleep(1)

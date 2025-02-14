@@ -85,7 +85,7 @@ async fn publish_task(
 #[cfg(test)]
 mod test {
     use axum::http::StatusCode;
-    use common::models::Task;
+    use common::models::{Task, TaskStatus};
     use sqlx::{types::chrono::Utc, PgPool};
     use uuid::Uuid;
 
@@ -111,6 +111,8 @@ mod test {
             None,
             None,
             None,
+            TaskStatus::Pending,
+            0,
             Utc::now(),
             None,
             None,

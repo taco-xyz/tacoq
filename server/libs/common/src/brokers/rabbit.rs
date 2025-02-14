@@ -87,14 +87,17 @@ where
             let message = delivery.unwrap_or_else(|_| panic!("Error in consumer {}", self.queue));
             let payload = message.data;
 
-            if let Ok(parsed_message) = serde_json::from_slice(&payload) {
-                handler(parsed_message).await;
-            } else {
-                // TODO: Check what to do to handle mishandled diserialization
-                warn!(
-                    "Received a task that does not follow the correct format {}",
-                    String::from_utf8(payload)?
-                )
+            match serde_json::from_slice(&payload) {
+                Ok(parsed_message) => {
+                    handler(parsed_message).await;
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to deserialize message: {}. Payload: {}",
+                        e,
+                        String::from_utf8_lossy(&payload)
+                    );
+                }
             }
 
             self.channel

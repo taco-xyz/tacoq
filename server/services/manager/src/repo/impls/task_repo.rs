@@ -25,8 +25,8 @@ impl PgTaskRepository {
             r#"
             INSERT INTO tasks (
                 id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
-                is_error, output_data, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                is_error, output_data, created_at, updated_at, status, priority
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
@@ -35,20 +35,26 @@ impl PgTaskRepository {
                 assigned_to = EXCLUDED.assigned_to,
                 is_error = EXCLUDED.is_error,
                 output_data = EXCLUDED.output_data,
+                status = EXCLUDED.status,
+                priority = EXCLUDED.priority,
                 updated_at = NOW()
             RETURNING 
                 id, 
                 task_kind_name AS "task_kind!", 
                 input_data, 
                 output_data, 
-                is_error, 
+                is_error,
+                status,
+                priority, 
                 started_at, 
                 completed_at, 
                 ttl, 
                 worker_kind_name AS "worker_kind!", 
                 assigned_to, 
                 created_at, 
-                updated_at
+                updated_at,
+                status,
+                priority
             "#,
             t.id,
             t.task_kind,
@@ -61,7 +67,9 @@ impl PgTaskRepository {
             t.is_error,
             t.output_data,
             t.created_at,
-            t.updated_at
+            t.updated_at,
+            t.status as TaskStatus,
+            t.priority,
         )
         .fetch_one(executor)
         .await
@@ -89,7 +97,9 @@ impl PgTaskRepository {
                 worker_kind_name AS "worker_kind!", 
                 assigned_to, 
                 created_at, 
-                updated_at
+                updated_at,
+                status,
+                priority
                 FROM tasks WHERE id = $1"#,
             id
         )
@@ -158,6 +168,8 @@ mod tests {
             None,
             None,
             None,
+            TaskStatus::Pending,
+            0,
             Utc::now(),
             None,
             None,

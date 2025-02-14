@@ -76,7 +76,7 @@ class Task(BaseModel):
     priority: int = Field(default=0)
     """ The priority of the task. """
 
-    is_error: bool = Field(default=False)
+    is_error: int = Field(default=0)
     """ Whether the task failed. """
 
     @property
