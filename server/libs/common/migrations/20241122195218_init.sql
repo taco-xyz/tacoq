@@ -50,8 +50,8 @@ CREATE TABLE
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
         -- Task data
         task_kind_name TEXT NOT NULL,
-        input_data JSONB,
-        output_data JSONB,
+        input_data BYTEA,
+        output_data BYTEA,
         is_error INT NOT NULL DEFAULT 0,
         -- Relations
         assigned_to UUID REFERENCES workers (id),

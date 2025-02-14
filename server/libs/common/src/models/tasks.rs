@@ -32,8 +32,8 @@ pub struct Task {
     pub task_kind: String,
 
     // Task data
-    pub input_data: Option<serde_json::Value>,
-    pub output_data: Option<serde_json::Value>,
+    pub input_data: Option<Vec<u8>>,  // byte array
+    pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,
 
     // Relations
@@ -61,8 +61,8 @@ impl Task {
         id: Option<Uuid>,
         task_kind_name: &str,
         worker_kind_name: &str,
-        input_data: Option<serde_json::Value>,
-        output_data: Option<serde_json::Value>,
+        input_data: Option<Vec<u8>>,
+        output_data: Option<Vec<u8>>,
         is_error: Option<bool>,
         created_at: DateTime<Utc>,
         started_at: Option<DateTime<Utc>>,
