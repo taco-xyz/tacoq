@@ -52,9 +52,7 @@ impl PgTaskRepository {
                 worker_kind_name AS "worker_kind!", 
                 assigned_to, 
                 created_at, 
-                updated_at,
-                status,
-                priority
+                updated_at
             "#,
             t.id,
             t.task_kind,
@@ -68,7 +66,7 @@ impl PgTaskRepository {
             t.output_data,
             t.created_at,
             t.updated_at,
-            t.status as TaskStatus,
+            t.status.to_string(),
             t.priority,
         )
         .fetch_one(executor)

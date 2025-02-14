@@ -80,6 +80,12 @@ pub enum TaskStatus {
     Completed, // Task completed successfully or not
 }
 
+impl From<String> for TaskStatus {
+    fn from(s: String) -> Self {
+        s.parse().unwrap_or(TaskStatus::Pending)
+    }
+}
+
 // Task
 
 /// Tasks are sent to workers to be executed with a specific payload.
@@ -105,6 +111,7 @@ pub struct Task {
     pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,
 
+    // #[sqlx(try_from = "String")]
     pub status: TaskStatus,
     pub priority: i32,
 
