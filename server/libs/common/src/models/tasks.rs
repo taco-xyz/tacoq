@@ -98,8 +98,7 @@ pub struct Task {
     pub input_data: Option<Vec<u8>>, // byte array
     #[serde(
         serialize_with = "serialize_bytes",
-        deserialize_with = "deserialize_bytes",
-        rename = "result"
+        deserialize_with = "deserialize_bytes"
     )]
     pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,

@@ -5,7 +5,6 @@ from aio_pika import Message, connect_robust
 from models.task import Task
 from pydantic import BaseModel
 from logging import warning
-from base64 import b64encode
 
 from aio_pika.abc import (
     AbstractChannel,
@@ -238,9 +237,11 @@ class WorkerBrokerClient(BaseBrokerClient):
                 "Tried to publish task result, but exchange was not declared."
             )
 
-        if isinstance(task.input_data, dict):
-            task.input_data = json.dumps(task.input_data)
-        task.result = json.dumps(task.result.model_dump_json())
+        # if isinstance(task.input_data, dict):
+        #     task.input_data = json.dumps(task.input_data)
+        # task.result = json.dumps(task.result.model_dump_json())
+
+        # model =
 
         message = Message(body=task.model_dump_json().encode())
 

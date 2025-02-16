@@ -1,5 +1,4 @@
 from enum import Enum
-import json
 from typing import Optional
 from uuid import UUID
 
@@ -111,10 +110,6 @@ class ManagerClient(BaseModel):
                 resp.raise_for_status()
                 data = await resp.json()
 
-                # Convert the input_data into dict again
-                data["input_data"] = json.loads(data["input_data"])
-                data["result"] = (
-                    json.loads(data["result"]) if data.get("result") else None
-                )
+                print(data)
 
                 return Task(**data)

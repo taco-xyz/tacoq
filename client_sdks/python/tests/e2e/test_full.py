@@ -25,7 +25,7 @@ class WorkerContext:
     def __init__(self):
         async def delayed_task(input_data: TaskInput) -> TaskOutput:
             await sleep(2)
-            return {"message": "Task completed", "input": input_data}
+            return json.dumps({"message": "Task completed", "input": input_data})
 
         async def failing_task(_: TaskInput) -> TaskOutput:
             raise ValueError("Task failed intentionally")
@@ -83,7 +83,7 @@ async def test_delayed_task_e2e():
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.PENDING
-        assert task_status.result is None
+        assert task_status.output_data is None
 
         # Wait and check final status
         await sleep(10)  # Wait for task completion + buffer
@@ -91,9 +91,9 @@ async def test_delayed_task_e2e():
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
         assert task_status.is_error == 0
-        assert task_status.result is not None
-        assert task_status.result.data["message"] == "Task completed"
-        assert task_status.result.data["input"] == {"test": "data"}
+        assert task_status.output_data is not None
+        assert task_status.output_data["message"] == "Task completed"
+        assert task_status.output_data["input"] == {"test": "data"}
 
 
 @pytest.mark.e2e
@@ -127,8 +127,8 @@ async def test_error_task_e2e():
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
         assert task_status.is_error is True
-        assert task_status.result is not None
-        assert "Task failed intentionally" in str(task_status.result.data["error"])
+        assert task_status.output_data is not None
+        assert "Task failed intentionally" in str(task_status.output_data["error"])
 
 
 @pytest.mark.e2e
