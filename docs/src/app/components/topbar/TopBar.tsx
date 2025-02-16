@@ -15,7 +15,7 @@ import GitHubLink from "./components/GitHubLink";
 export function TopBar() {
   return (
     <div className="items-center backdrop-blur-md justify-center flex w-full dark:border-b-white/10 border-b-zinc-200 border-b dark:bg-zinc-950/50 bg-white/50 transition-all ease-in-out duration-150">
-      <div className="flex flex-row justify-center items-center w-full max-w-(--breakpoint-2xl) py-5 px-8 ">
+      <div className="flex flex-row justify-center items-center w-full  2xl:max-w-(--breakpoint-2xl) py-5 px-8">
         {/* Decorative Background gradient */}
         <div className="absolute overflow-hidden h-full">
           <div className="bg-radial origin-center h-36 w-[100rem] -bottom-20 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />

@@ -39,8 +39,8 @@ export default function RootLayout({
           <div className="fixed top-0 w-full z-10">
             <TopBar />
           </div>
-          <div className="flex flex-row items-start justify-between gap-x-20 w-full max-w-(--breakpoint-2xl) relative py-8 px-8 ">
-            <div className="flex h-[700px] flex-col w-64 sticky top-[108px] z-1">
+          <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative py-8 px-8 ">
+            <div className="h-[700px] flex-col xl:w-64 w-56 sticky top-[108px] z-1 md:flex hidden">
               <PageNavigationProvider>
                 <TooltipProvider>
                   <SideBar />
@@ -50,7 +50,7 @@ export default function RootLayout({
             <div className="z-0 w-full flex-1">
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
-            <div className="flex h-[500px] flex-col w-64 sticky top-[108px] z-1">
+            <div className="h-[500px] flex-col xl:w-64 w-56 sticky top-[108px] z-1 lg:flex hidden">
               <PageLinksBar />
             </div>
           </div>
