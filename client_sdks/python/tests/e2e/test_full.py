@@ -25,7 +25,9 @@ class WorkerContext:
     def __init__(self):
         async def delayed_task(input_data: TaskInput) -> TaskOutput:
             await sleep(2)
-            return json.dumps({"message": "Task completed", "input": input_data})
+            return json.dumps(
+                {"message": "Task completed", "input": json.loads(input_data)}
+            )
 
         async def failing_task(_: TaskInput) -> TaskOutput:
             raise ValueError("Task failed intentionally")
@@ -86,14 +88,17 @@ async def test_delayed_task_e2e():
         assert task_status.output_data is None
 
         # Wait and check final status
-        await sleep(10)  # Wait for task completion + buffer
+        await sleep(3)  # Wait for task completion + buffer
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
         assert task_status.is_error == 0
         assert task_status.output_data is not None
-        assert task_status.output_data["message"] == "Task completed"
-        assert task_status.output_data["input"] == {"test": "data"}
+
+        output_data = json.loads(task_status.output_data)
+
+        assert output_data["message"] == "Task completed"
+        assert output_data["input"] == {"test": "data"}
 
 
 @pytest.mark.e2e
@@ -116,19 +121,19 @@ async def test_error_task_e2e():
         task = await publisher.publish_task(
             task_kind=FAILING_TASK,
             worker_kind=WORKER_KIND,
-            input_data={},
+            input_data="",
         )
 
         # Wait a bit for task to be processed
-        await sleep(0.5)
+        await sleep(3)
 
         # Check status
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
-        assert task_status.is_error is True
+        assert task_status.is_error == 1
         assert task_status.output_data is not None
-        assert "Task failed intentionally" in str(task_status.output_data["error"])
+        assert task_status.output_data == "Task failed intentionally"
 
 
 @pytest.mark.e2e

@@ -210,7 +210,7 @@ class WorkerBrokerClient(BaseBrokerClient):
 
         async with self._queue.iterator() as queue_iter:
             async for message in queue_iter:
-                task = Task(**json.loads(message.body.decode()))
+                task = Task(**json.loads(message.body))
                 try:
                     yield task
                     await message.ack()  # After the task is processed, acknowledge it
@@ -227,7 +227,7 @@ class WorkerBrokerClient(BaseBrokerClient):
 
         # Check if the task has a result attached
 
-        if task.result is None:
+        if task.output_data is None:
             raise ValueError(
                 "Tried to publish task result, but task has no result attached. How did it get to this point?"
             )
@@ -236,12 +236,6 @@ class WorkerBrokerClient(BaseBrokerClient):
             raise ExchangeNotDeclaredError(
                 "Tried to publish task result, but exchange was not declared."
             )
-
-        # if isinstance(task.input_data, dict):
-        #     task.input_data = json.dumps(task.input_data)
-        # task.result = json.dumps(task.result.model_dump_json())
-
-        # model =
 
         message = Message(body=task.model_dump_json().encode())
 
