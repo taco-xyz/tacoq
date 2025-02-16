@@ -25,8 +25,8 @@ impl PgTaskRepository {
             r#"
             INSERT INTO tasks (
                 id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
-                is_error, output_data, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                is_error, output_data, created_at, updated_at, status, priority
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
@@ -35,12 +35,28 @@ impl PgTaskRepository {
                 assigned_to = EXCLUDED.assigned_to,
                 is_error = EXCLUDED.is_error,
                 output_data = EXCLUDED.output_data,
+                status = EXCLUDED.status,
+                priority = EXCLUDED.priority,
                 updated_at = NOW()
-            RETURNING *
+            RETURNING 
+                id, 
+                task_kind_name AS "task_kind!", 
+                input_data, 
+                output_data, 
+                is_error,
+                status,
+                priority, 
+                started_at, 
+                completed_at, 
+                ttl, 
+                worker_kind_name AS "worker_kind!", 
+                assigned_to, 
+                created_at, 
+                updated_at
             "#,
             t.id,
-            t.task_kind_name,
-            t.worker_kind_name,
+            t.task_kind,
+            t.worker_kind,
             t.input_data,
             t.started_at,
             t.completed_at,
@@ -49,26 +65,51 @@ impl PgTaskRepository {
             t.is_error,
             t.output_data,
             t.created_at,
-            t.updated_at
+            t.updated_at,
+            t.status.to_string(),
+            t.priority,
         )
         .fetch_one(executor)
         .await
     }
 
-    pub async fn find_by_id<'e, E>(&self, executor: E, id: &Uuid) -> Result<Task, sqlx::Error>
+    pub async fn find_by_id<'e, E>(
+        &self,
+        executor: E,
+        id: &Uuid,
+    ) -> Result<Option<Task>, sqlx::Error>
     where
         E: Executor<'e, Database = Postgres>,
     {
-        sqlx::query_as!(Task, "SELECT * FROM tasks WHERE id = $1", id)
-            .fetch_one(executor)
-            .await
+        sqlx::query_as!(
+            Task,
+            r#"SELECT 
+                id, 
+                task_kind_name AS "task_kind!", 
+                input_data, 
+                output_data, 
+                is_error, 
+                started_at, 
+                completed_at, 
+                ttl, 
+                worker_kind_name AS "worker_kind!", 
+                assigned_to, 
+                created_at, 
+                updated_at,
+                status,
+                priority
+                FROM tasks WHERE id = $1"#,
+            id
+        )
+        .fetch_optional(executor)
+        .await
     }
 }
 
 #[async_trait]
 impl TaskRepository for PgTaskRepository {
     #[instrument(skip(self, id), fields(id = %id))]
-    async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error> {
+    async fn get_task_by_id(&self, id: &Uuid) -> Result<Option<Task>, sqlx::Error> {
         self.find_by_id(&self.core.pool, id).await
     }
 
@@ -76,23 +117,22 @@ impl TaskRepository for PgTaskRepository {
     async fn update_task(&self, task: &Task) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
-        let existing = self.find_by_id(&mut *tx, &task.id).await.ok();
+        let existing = self.find_by_id(&mut *tx, &task.id).await?;
 
-        let task_to_save = match existing {
-            Some(existing) => {
-                match (existing.status(), task.status()) {
-                    // Don't override completed tasks
-                    (TaskStatus::Completed, _) => existing,
+        let task_to_save = if let Some(existing) = existing {
+            match (existing.status(), task.status()) {
+                // Don't override completed tasks
+                (TaskStatus::Completed, _) => existing,
 
-                    // Processing overrides pending
-                    (TaskStatus::Pending, TaskStatus::Processing) => task.clone(),
-                    (TaskStatus::Processing, TaskStatus::Pending) => existing,
+                // Processing overrides pending
+                (TaskStatus::Pending, TaskStatus::Processing) => task.clone(),
+                (TaskStatus::Processing, TaskStatus::Pending) => existing,
 
-                    // Default to the new task
-                    _ => task.clone(),
-                }
+                // Default to the new task
+                _ => task.clone(),
             }
-            None => task.clone(),
+        } else {
+            task.clone()
         };
 
         let saved = self.save(&mut *tx, &task_to_save).await?;
@@ -108,7 +148,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
-    use crate::repo::PgRepositoryCore;
+    use crate::repo::{PgRepositoryCore, PgWorkerKindRepository, WorkerKindRepository};
     use crate::testing::test::init_test_logger;
 
     // This runs before any test in this module
@@ -126,6 +166,8 @@ mod tests {
             None,
             None,
             None,
+            TaskStatus::Pending,
+            0,
             Utc::now(),
             None,
             None,
@@ -138,14 +180,19 @@ mod tests {
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn create_and_get_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
 
         let task = get_test_task();
+        worker_kind_repo
+            .get_or_create_worker_kind(&task.worker_kind)
+            .await
+            .unwrap();
 
         let saved = repo.update_task(&task).await.unwrap();
 
         assert_eq!(saved.id, task.id, "Created Task ID should match");
 
-        let retrieved = repo.get_task_by_id(&task.id).await.unwrap();
+        let retrieved = repo.get_task_by_id(&task.id).await.unwrap().unwrap();
 
         assert_eq!(retrieved.id, task.id, "Retrieved Task ID should match");
     }
@@ -153,8 +200,16 @@ mod tests {
     /// Tests task updating logic
     #[sqlx::test(migrator = "common::MIGRATOR")]
     async fn update_task_progressive_status(pool: PgPool) {
-        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
+
         let task = get_test_task();
+
+        worker_kind_repo
+            .get_or_create_worker_kind(&task.worker_kind)
+            .await
+            .unwrap();
+
         let saved = repo.update_task(&task).await.unwrap();
         assert_eq!(saved.id, task.id, "Created Task ID should match");
 
@@ -184,7 +239,7 @@ mod tests {
 
     async fn get_nonexistent_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
-        let task = repo.get_task_by_id(&Uuid::new_v4()).await;
-        assert!(task.is_err());
+        let task = repo.get_task_by_id(&Uuid::new_v4()).await.unwrap();
+        assert!(task.is_none());
     }
 }

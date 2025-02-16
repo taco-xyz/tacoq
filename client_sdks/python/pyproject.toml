@@ -34,6 +34,7 @@ markers = [
     "target: current target test. Used locally.",
     "unit: unit tests",
     "service: tests that interact with external services",
+    "e2e: end-to-end tests",
 ]
 
 [build-system]

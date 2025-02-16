@@ -4,7 +4,7 @@ from broker.config import BrokerConfig
 from aio_pika import Message, connect_robust
 from models.task import Task
 from pydantic import BaseModel
-from logging import warn
+from logging import warning
 
 from aio_pika.abc import (
     AbstractChannel,
@@ -210,13 +210,13 @@ class WorkerBrokerClient(BaseBrokerClient):
 
         async with self._queue.iterator() as queue_iter:
             async for message in queue_iter:
-                task = Task(**json.loads(message.body.decode()))
+                task = Task(**json.loads(message.body))
                 try:
                     yield task
                     await message.ack()  # After the task is processed, acknowledge it
                 except Exception as e:
                     await message.reject(requeue=True)
-                    warn(f"Failed to process task {task.id}: {e}")
+                    warning(f"Failed to process task {task.id}: {e}")
 
     async def publish_task_result(self, task: Task) -> None:
         """Publish a task result to the shared results queue.
@@ -227,7 +227,7 @@ class WorkerBrokerClient(BaseBrokerClient):
 
         # Check if the task has a result attached
 
-        if task.result is None:
+        if task.output_data is None:
             raise ValueError(
                 "Tried to publish task result, but task has no result attached. How did it get to this point?"
             )

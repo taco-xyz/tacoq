@@ -87,14 +87,29 @@ where
             let message = delivery.unwrap_or_else(|_| panic!("Error in consumer {}", self.queue));
             let payload = message.data;
 
-            let parsed_message = serde_json::from_slice(&payload)?;
-            handler(parsed_message)?;
+            match serde_json::from_slice(&payload) {
+                Ok(parsed_message) => {
+                    handler(parsed_message).await;
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to deserialize message: {}. Payload: {}",
+                        e,
+                        String::from_utf8_lossy(&payload)
+                    );
+                }
+            }
 
             self.channel
                 .basic_ack(message.delivery_tag, BasicAckOptions::default())
                 .await?;
         }
 
+        Ok(())
+    }
+
+    async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.shutdown.store(true, Ordering::SeqCst);
         Ok(())
     }
 }

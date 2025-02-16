@@ -11,7 +11,7 @@ use uuid::Uuid;
 #[async_trait]
 pub trait TaskRepository: Send + Sync + Clone + Debug {
     /// Get a task by its ID
-    async fn get_task_by_id(&self, id: &Uuid) -> Result<Task, sqlx::Error>;
+    async fn get_task_by_id(&self, id: &Uuid) -> Result<Option<Task>, sqlx::Error>;
 
     /// Update a task. If it doesn't already exist, it is created. Whether or
     /// not the task is updated is based on the status of the task, where the
@@ -32,20 +32,13 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
 #[async_trait]
 pub trait WorkerRepository: Clone {
     /// Register a new worker with its supported task types
-    async fn register_worker(
-        &self,
-        name: &str,
-        worker_kind_name: &str,
-    ) -> Result<Worker, sqlx::Error>;
+    async fn update_worker(&self, id: Uuid, worker_kind_name: &str) -> Result<Worker, sqlx::Error>;
 
     /// Get a worker by ID
-    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Worker, sqlx::Error>;
+    async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Option<Worker>, sqlx::Error>;
 
     /// Get all registered workers
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error>;
-
-    /// Record a heartbeat for a worker
-    async fn _record_heartbeat(&self, worker_id: &Uuid) -> Result<(), sqlx::Error>;
 
     /// Get the latest heartbeat for a worker
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error>;
@@ -60,7 +53,7 @@ pub trait WorkerKindRepository: Clone {
     async fn get_or_create_worker_kind(
         &self,
         name: &str,
-        exchange: &str,
-        queue: &str,
+        // exchange: &str,
+        // queue: &str,
     ) -> Result<WorkerKind, sqlx::Error>;
 }

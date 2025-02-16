@@ -4,7 +4,7 @@ from typing import Callable, Awaitable, Optional, Dict
 import asyncio
 from broker import WorkerBrokerClient
 from manager import ManagerClient
-from models.task import Task, TaskInput, TaskOutput, TaskResult, TaskStatus
+from models.task import Task, TaskInput, TaskOutput, TaskStatus
 
 from pydantic import BaseModel
 from worker.config import WorkerApplicationConfig
@@ -135,22 +135,17 @@ class WorkerApplication(BaseModel):
         try:
             result = await task_func(task.input_data)
         except Exception as e:
-            result = SerializableException(
-                type=e.__class__.__name__,
-                message=e.__str__(),
-            )
+            result = e.__str__()
             is_error = True
 
         # Stop timer
         completed_at = datetime.now()
 
         # Update task
-        task.result = TaskResult(
-            data=result,
-            is_error=is_error,
-            started_at=started_at,
-            completed_at=completed_at,
-        )
+        task.output_data = result
+        task.is_error = is_error
+        task.started_at = started_at
+        task.completed_at = completed_at
         task.status = TaskStatus.COMPLETED
 
         # Submit task result via broker

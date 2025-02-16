@@ -1,9 +1,9 @@
 mod api;
 mod config;
 mod constants;
+mod controller;
 mod repo;
 mod server;
-mod task_controller;
 mod testing;
 
 use common::brokers::setup_consumer_broker;
@@ -19,8 +19,8 @@ use constants::MANAGER_QUEUE;
 use sqlx::PgPool;
 
 use config::Config;
+use controller::task;
 use repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
-use task_controller::task;
 
 /// Represents the shared application state that can be accessed by all routes
 ///
@@ -41,18 +41,31 @@ async fn setup_db_pools(config: &Config) -> PgPool {
     PgPool::connect(&config.db_reader_url).await.unwrap()
 }
 
+/// Creates all repositories needed for the application
+///
+/// # Arguments
+///
+/// * `pool` - The database connection pool
+fn create_repositories(
+    pool: &PgPool,
+) -> (PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository) {
+    let core = PgRepositoryCore::new(pool.clone());
+    let task_repository = PgTaskRepository::new(core.clone());
+    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+    let worker_repository = PgWorkerRepository::new(core.clone());
+
+    (task_repository, worker_kind_repository, worker_repository)
+}
+
 /// Initializes the application state based on the given configuration
 ///
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
+/// * `broker` - The broker
 async fn setup_app_state(db_pools: &PgPool) -> AppState {
-    // Setup the repositories
-    let core = PgRepositoryCore::new(db_pools.clone());
-    let task_repository = PgTaskRepository::new(core.clone());
-
-    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
-    let worker_repository = PgWorkerRepository::new(core.clone());
+    let (task_repository, worker_kind_repository, worker_repository) =
+        create_repositories(db_pools);
 
     AppState {
         task_repository,
@@ -99,11 +112,12 @@ async fn initialize_system(
 
     let (app, app_state) = setup_app(&db_pools).await;
 
-    let core = PgRepositoryCore::new(db_pools);
-    let task_repo = Arc::new(PgTaskRepository::new(core));
+    let (task_repo, worker_kind_repo, worker_repo) = create_repositories(&db_pools);
 
-    let task_controller =
-        Arc::new(task::TaskController::new(new_task_consumer, task_repo.clone()).await?);
+    let task_controller = Arc::new(
+        task::TaskController::new(new_task_consumer, worker_repo, worker_kind_repo, task_repo)
+            .await?,
+    );
 
     let server = Server::new(app, 3000);
 
@@ -132,14 +146,14 @@ async fn main() {
         }
     });
 
-    let input_handle = tokio::spawn({
+    // Needed for static lifetime
+    let task_controller_shutdown = task_controller.clone();
+    let task_handle = tokio::spawn(async move {
         let controller = task_controller.clone();
-        async move {
-            controller
-                .run()
-                .await
-                .expect("Task input controller failed");
-        }
+        controller
+            .run()
+            .await
+            .expect("Task input controller failed");
     });
 
     let server_handle = tokio::spawn(async move {
@@ -150,12 +164,16 @@ async fn main() {
 
     // Wait for shutdown
     tokio::select! {
-        _ = input_handle => {
-            warn!("Task input controller shutdown");
+        _ = task_handle => {
+            warn!("Task controller shutdown");
         },
         _ = server_handle => {
             warn!("Server shutdown");
         },
+    }
+
+    if let Err(e) = task_controller_shutdown.shutdown().await {
+        info!("Failed to shutdown task input controller: {:?}", e);
     }
 
     info!("Cleanup complete");

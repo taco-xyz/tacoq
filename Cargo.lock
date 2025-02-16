@@ -697,6 +697,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64",
  "chrono",
  "futures",
  "lapin",
@@ -1817,11 +1818,14 @@ dependencies = [
  "axum 0.8.1",
  "axum-test",
  "axum-tracing-opentelemetry",
+ "base64",
+ "chrono",
  "common",
  "ctor",
  "dotenv",
  "futures",
  "init-tracing-opentelemetry",
+ "mockall",
  "serde",
  "serde_json",
  "sqlx",

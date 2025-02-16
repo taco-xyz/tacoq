@@ -42,36 +42,58 @@ async fn get_task_by_id(
 ) -> Result<Json<Task>, (StatusCode, String)> {
     info!("Getting task by ID: {:?}", id);
 
-    let task = state.task_repository.get_task_by_id(&id).await;
-
-    task.map(Json).map_err(|e| match e {
-        sqlx::Error::RowNotFound => {
-            info!("Task with ID {:?} not found", id);
-            (
-                StatusCode::NOT_FOUND,
-                format!("Task with ID {} not found", id),
-            )
-        }
-        _ => {
+    state
+        .task_repository
+        .get_task_by_id(&id)
+        .await
+        .map_err(|e| {
             error!("Error getting task by id: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to get task: {}", e),
             )
-        }
-    })
+        })
+        .and_then(|task_opt| {
+            task_opt.map(Json).ok_or_else(|| {
+                info!("Task with ID {:?} not found", id);
+                (
+                    StatusCode::NOT_FOUND,
+                    format!("Task with ID {} not found", id),
+                )
+            })
+        })
+}
+
+#[utoipa::path(
+    post,
+    description = "Posts a new task to the consumers",
+    path = "/tasks",
+    request_body = Task,
+    responses(
+        (status = 201, description = "Task created", body = Task, content_type = "application/json"),
+        (status = 500, description = "Internal server error", content_type = "text/plain")
+    ),
+    tag = "tasks"
+)]
+async fn publish_task(
+    State(_state): State<AppState>,
+    Json(task): Json<Task>,
+) -> Result<Json<Task>, (StatusCode, String)> {
+    Ok(Json(task))
 }
 
 #[cfg(test)]
 mod test {
     use axum::http::StatusCode;
-    use common::models::Task;
+    use common::models::{Task, TaskStatus};
     use sqlx::{types::chrono::Utc, PgPool};
-    use tracing::info;
     use uuid::Uuid;
 
     use crate::{
-        repo::{PgRepositoryCore, PgTaskRepository, TaskRepository},
+        repo::{
+            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
+            WorkerKindRepository,
+        },
         testing::test::{get_test_server, init_test_logger},
     };
 
@@ -89,6 +111,8 @@ mod test {
             None,
             None,
             None,
+            TaskStatus::Pending,
+            0,
             Utc::now(),
             None,
             None,
@@ -111,13 +135,19 @@ mod test {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
         let task_instance_repository = PgTaskRepository::new(core.clone());
+        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
 
-        let task = task_instance_repository
-            .update_task(&get_test_task())
+        let test_task = get_test_task();
+
+        worker_kind_repository
+            .get_or_create_worker_kind(&test_task.worker_kind)
             .await
             .unwrap();
 
-        info!("Task Created: {:?}", task);
+        let task = task_instance_repository
+            .update_task(&test_task)
+            .await
+            .unwrap();
 
         let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
         assert_eq!(response.status_code(), StatusCode::OK);
