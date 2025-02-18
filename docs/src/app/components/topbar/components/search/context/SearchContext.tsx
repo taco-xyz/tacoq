@@ -46,8 +46,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Function to open the search
+   * Clears the input value and opens the search
    */
-  const openSearch = useCallback(() => setIsSearchOpen(true), []);
+  const openSearch = useCallback(() => {
+    if (inputRef.current) inputRef.current.value = "";
+    setIsSearchOpen(true);
+  }, []);
 
   /**
    * Function to close the search
