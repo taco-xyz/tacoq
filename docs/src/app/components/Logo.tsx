@@ -25,7 +25,7 @@ export default function Logo() {
           />
         </svg>
       </div>
-      <p className="dark:text-white text-zinc-700 font-black font-mono text-3xl transition-all ease-in-out duration-150">
+      <p className="dark:text-white text-zinc-700 font-black font-mono text-3xl transition-all ease-in-out duration-150 leading-none">
         .doc
       </p>
     </Link>
