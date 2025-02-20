@@ -10,9 +10,9 @@ import dynamic from "next/dynamic";
 import clsx from "clsx";
 
 // Context Imports
-import { useSearch } from "../context/SearchContext";
+import { useSearchModal } from "../context/SearchModalContext";
 
-// Components Imports
+// Dynamic Components Imports
 const SearchPortal = dynamic<{ children: React.ReactNode }>(
   () =>
     Promise.resolve(({ children }: { children: React.ReactNode }) =>
@@ -30,9 +30,9 @@ const SearchPortal = dynamic<{ children: React.ReactNode }>(
  * - Search results
  * - Search suggestions
  */
-export function SearchDialog() {
+export default function SearchDialog() {
   // Extract the Search Context
-  const { isSearchOpen, closeSearch, dialogRef, inputRef } = useSearch();
+  const { isSearchOpen, closeSearch, dialogRef, inputRef } = useSearchModal();
 
   return (
     <SearchPortal>

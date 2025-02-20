@@ -12,14 +12,14 @@ import {
 } from "react";
 
 /**
- * Interface for the SearchContextType
+ * Interface for the SearchModalContextType
  * @property {boolean} isSearchOpen - Indicates if the search is currently open
  * @property {() => void} openSearch - Function to open the search
  * @property {() => void} closeSearch - Function to close the search
  * @property {RefObject<HTMLDivElement | null>} dialogRef - Ref for the dialog element (handles click events outside of the search modal)
  * @property {RefObject<HTMLInputElement | null>} inputRef - Ref for the input element (focuses the input when the search modal is opened)
  */
-interface SearchContextType {
+interface SearchModalContextType {
   isSearchOpen: boolean;
   openSearch: () => void;
   closeSearch: () => void;
@@ -30,13 +30,19 @@ interface SearchContextType {
 /**
  * Creates a context for managing the search state
  */
-const SearchContext = createContext<SearchContextType | undefined>(undefined);
+const SearchModalContext = createContext<SearchModalContextType | undefined>(
+  undefined
+);
 
 /**
- * Provider component for the SearchContext
+ * Provider component for the SearchModalContext
  * @param {React.ReactNode} children - The children components to be wrapped by the provider
  */
-export function SearchProvider({ children }: { children: React.ReactNode }) {
+export function SearchModalProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Ref for the dialog element, used to listen for click events outside of it
@@ -131,21 +137,22 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   }, [isSearchOpen]);
 
   return (
-    <SearchContext.Provider
+    <SearchModalContext.Provider
       value={{ isSearchOpen, openSearch, closeSearch, dialogRef, inputRef }}
     >
       {children}
-    </SearchContext.Provider>
+    </SearchModalContext.Provider>
   );
 }
 
 /**
- * Hook to use the SearchContext
- * Throws an error if used outside of SearchProvider
- * @returns {SearchContextType} The context value
+ * Hook to use the SearchModalContext
+ * Throws an error if used outside of SearchModalProvider
+ * @returns {SearchModalContextType} The context value
  */
-export function useSearch() {
-  const context = useContext(SearchContext);
-  if (!context) throw new Error("useSearch must be used within SearchProvider");
+export function useSearchModal() {
+  const context = useContext(SearchModalContext);
+  if (!context)
+    throw new Error("useSearchModal must be used within SearchModalProvider");
   return context;
 }

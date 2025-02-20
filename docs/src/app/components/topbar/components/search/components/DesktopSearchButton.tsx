@@ -4,11 +4,11 @@
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 // Context Imports
-import { useSearch } from "../context/SearchContext";
+import { useSearchModal } from "../context/SearchModalContext";
 
-export function DesktopSearchButton() {
+export default function DesktopSearchButton() {
   // Extract the Search Context
-  const { openSearch } = useSearch();
+  const { openSearch } = useSearchModal();
 
   return (
     <button
