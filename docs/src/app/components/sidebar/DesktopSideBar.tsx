@@ -5,27 +5,12 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigationContext";
 import { useTooltip } from "@/app/components/sidebar/context/TooltipContext";
 
-// Types Imports
-import type { Anchor } from "@/types/Anchor";
-import type { Page } from "@/types/page/Page";
-
 // Components Imports
 import Tooltip from "@/app/components/sidebar/components/Tooltip";
-import PageComponent from "@/app/components/sidebar/components/page/Page";
+import PageComponent from "@/app/components/sidebar/components/page/DesktopPage";
 import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
-
-/**
- * Props for the SideBar component
- */
-export interface SideBarProps {
-  /** Array of anchor links to display at the top of the sidebar */
-  anchors: Anchor[];
-  /** Array of page items that can contain nested children */
-  pages: Page[];
-}
-
-export default function SideBar() {
+export default function DesktopSideBar() {
   // Extract the page tree context
   const { pages, anchors } = usePageTree();
 

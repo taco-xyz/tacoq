@@ -14,20 +14,19 @@ import clsx from "clsx";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
-import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigationContext";
-import { useTooltip } from "@/app/components/sidebar/context/TooltipContext";
+import { useMobileSidebarModal } from "../../context/MobileSidebarModalContext";
 
 // Types Imports
 import type { Page } from "@/types/page/Page";
 
 // Components Imports
-import Highlight from "./Highlight";
+import Highlight from "./components/Highlight";
 
 export interface PageComponentProps extends Page {
   childOf: string;
 }
 
-export default function PageComponent({
+export default function MobilePageComponent({
   childOf,
   url,
   children,
@@ -37,12 +36,8 @@ export default function PageComponent({
   const { currentPageTitle, isPageExpanded, expandPage, collapsePage } =
     usePageTree();
 
-  // Extract the page navigation context
-  const { focusedPageTitle, startHoverFocus, endHoverFocus } =
-    usePageNavigation();
-
-  // Extract the tooltip context
-  const { tooltipTargetRef } = useTooltip();
+  // Extract the MobileSidebarContext
+  const { closeSidebar } = useMobileSidebarModal();
 
   // Ref for the current item
   const elementRef = useRef<HTMLDivElement>(null);
@@ -55,30 +50,18 @@ export default function PageComponent({
     >
       {/* If the item has a url, it's a link */}
       {url ? (
-        <div ref={focusedPageTitle === title ? tooltipTargetRef : undefined}>
+        <div>
           <Link
-            onMouseEnter={() => startHoverFocus(title)}
-            onMouseLeave={() => endHoverFocus()}
             href={url}
             className={clsx(
-              focusedPageTitle === title &&
-                currentPageTitle === title &&
+              currentPageTitle === title &&
                 "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-700 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
-              focusedPageTitle === title &&
-                currentPageTitle !== title &&
-                "dark:bg-white/5 bg-zinc-800/5 text-zinc-700 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
-              focusedPageTitle !== title &&
-                currentPageTitle === title &&
-                "text-zinc-700 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
-              focusedPageTitle !== title &&
-                currentPageTitle !== title &&
+              currentPageTitle !== title &&
                 "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
               "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
             )}
             onClick={() => {
-              if (children && !isPageExpanded(title)) {
-                expandPage(title);
-              }
+              closeSidebar();
             }}
             tabIndex={-1}
           >
@@ -96,7 +79,7 @@ export default function PageComponent({
             {children && (
               <ChevronRightIcon
                 onClick={(e) => {
-                  // Prevent this form triggering the main elem
+                  // Prevent this form triggering the navigation to a new page
                   e.preventDefault();
                   e.stopPropagation();
                   if (isPageExpanded(title)) {
@@ -116,9 +99,6 @@ export default function PageComponent({
       ) : (
         // If the item doesn't have a url, it doesn't contain a page
         <div
-          ref={focusedPageTitle === title ? tooltipTargetRef : undefined}
-          onMouseEnter={() => startHoverFocus(title)}
-          onMouseLeave={() => endHoverFocus()}
           onClick={() => {
             if (children) {
               if (!isPageExpanded(title)) {
@@ -129,17 +109,9 @@ export default function PageComponent({
             }
           }}
           className={clsx(
-            focusedPageTitle === title &&
-              currentPageTitle === title &&
+            currentPageTitle === title &&
               "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-700 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
-            focusedPageTitle === title &&
-              currentPageTitle !== title &&
-              "dark:bg-white/5 bg-zinc-800/5 text-zinc-700 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
-            focusedPageTitle !== title &&
-              currentPageTitle === title &&
-              "text-zinc-700 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
-            focusedPageTitle !== title &&
-              currentPageTitle !== title &&
+            currentPageTitle !== title &&
               "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
             "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
           )}
@@ -193,7 +165,7 @@ export default function PageComponent({
           {/* Child items */}
           <div className="flex flex-col gap-y-2 overflow-hidden">
             {children.map((child) => (
-              <PageComponent
+              <MobilePageComponent
                 key={child.metadata.title}
                 {...child}
                 childOf={title}
