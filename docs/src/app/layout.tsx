@@ -4,7 +4,7 @@ import "./globals.css";
 // Components Imports
 import { TopBar } from "./components/topbar/TopBar";
 import { Footer } from "./components/Footer";
-import SideBar from "./components/sidebar/SideBar";
+import DesktopSideBar from "./components/sidebar/DesktopSideBar";
 import DocsPageLayout from "./components/DocsPageLayout";
 import PageLinksBar from "./components/PageLinksBar";
 
@@ -43,7 +43,7 @@ export default function RootLayout({
             <div className="h-full flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
               <PageNavigationProvider>
                 <TooltipProvider>
-                  <SideBar />
+                  <DesktopSideBar />
                 </TooltipProvider>
               </PageNavigationProvider>
             </div>

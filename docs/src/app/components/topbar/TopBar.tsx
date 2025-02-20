@@ -2,13 +2,15 @@
 import Logo from "../Logo";
 import ThemeToggle from "./components/ThemeToggle";
 import GitHubLink from "./components/GitHubLink";
-import { DesktopSearchButton } from "./components/search/components/DesktopSearchButton";
-import { SearchDialog } from "./components/search/components/SearchPortal";
-import { SearchProvider } from "./components/search/context/SearchContext";
-import { MobileSearchButton } from "./components/search/components/MobileSearchButton";
+import DesktopSearchButton from "./components/search/components/DesktopSearchButton";
+import SearchDialog from "./components/search/components/SearchPortal";
+import MobileSearchButton from "./components/search/components/MobileSearchButton";
+import MobileSidebarPortal from "../sidebar/MobileSidebarPortal";
+import MobileSidebarButton from "../sidebar/MobileSidebarButton";
 
-// Heroicons Imports
-import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
+// Context Imports
+import { MobileSidebarModalProvider } from "../sidebar/context/MobileSidebarModalContext";
+import { SearchModalProvider } from "./components/search/context/SearchModalContext";
 
 /**
  * TopBar component that serves as the common header for the application
@@ -27,26 +29,26 @@ export function TopBar() {
 
           <div className="h-fit w-[500px] my-auto mx-auto inset-0 hidden lg:flex relative justify-center">
             {/* Decorative Background gradient */}
-            <div className="absolute overflow-hidden h-full -bottom-5">
-              <div className="bg-radial origin-center h-36 w-[100rem] opacity-25 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+            <div className="absolute overflow-hidden h-full -bottom-5 z-[-1]">
+              <div className="bg-radial origin-center h-36 w-[100rem] opacity-25   dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
             </div>
 
             {/* Desktop Search */}
-            <SearchProvider>
+            <SearchModalProvider>
               <DesktopSearchButton />
               <SearchDialog />
-            </SearchProvider>
+            </SearchModalProvider>
           </div>
 
           <div className="flex flex-row items-center sm:gap-x-8 gap-x-6">
             <div className="h-fit sm:w-[300px] md:w-[400px] w-fit my-auto mx-auto inset-0 lg:hidden flex relative justify-center">
               {/* Decorative Background gradient */}
-              <div className="absolute overflow-hidden h-full -bottom-5 hidden sm:block">
+              <div className="absolute overflow-hidden h-full -bottom-5 hidden sm:block z-[-1]">
                 <div className="bg-radial origin-center h-36 md:w-[55rem] w-[50rem] sm:opacity-20 opacity-100 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
               </div>
 
               {/* Tablet and Mobile Search */}
-              <SearchProvider>
+              <SearchModalProvider>
                 <div className="hidden sm:block w-full">
                   <DesktopSearchButton />
                 </div>
@@ -54,18 +56,21 @@ export function TopBar() {
                   <MobileSearchButton />
                 </div>
                 <SearchDialog />
-              </SearchProvider>
+              </SearchModalProvider>
             </div>
 
             {/* Theme Toggle and GitHub Link */}
-            <div className="lg:flex hidden flex-row items-center gap-x-8 ">
+            <div className="lg:flex hidden flex-row items-center gap-x-8">
               <ThemeToggle />
               <GitHubLink />
             </div>
 
-            <button className="md:hidden dark:hover:text-white/80 w-fit h-fit text-zinc-500 hover:text-zinc-400 dark:text-white/70 transition-all ease-in-out duration-150 rounded-xs custom-tab-outline-offset-4">
-              <Bars3CenterLeftIcon className="size-5" />
-            </button>
+            <div className="md:hidden flex justify-center items-center">
+              <MobileSidebarModalProvider>
+                <MobileSidebarButton />
+                <MobileSidebarPortal />
+              </MobileSidebarModalProvider>
+            </div>
           </div>
         </div>
         {/* Decorative Background gradient */}
