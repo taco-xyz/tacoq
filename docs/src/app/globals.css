@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
+/* Control dark mode manually */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Custom animations */
 @theme {
   --animate-slide-in-down: slide-in-down 0.25s ease-in-out forwards;
   --animate-slide-in-up: slide-in-up 0.25s ease-in-out forwards;
@@ -49,6 +51,8 @@
     }
   }
 }
+
+/* Custom tab outline */
 .custom-tab-outline-offset-2 {
   @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
 }
@@ -59,4 +63,13 @@
 
 .custom-tab-outline-offset-6 {
   @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-6 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
+}
+
+/* Hide scrollbar utility */
+@utility scrollbar-hidden {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
