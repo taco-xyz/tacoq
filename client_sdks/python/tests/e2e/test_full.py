@@ -73,10 +73,12 @@ async def test_delayed_task_e2e():
 
     # Start worker in background
     with WorkerContext():
+        input_data = {"test": "data"}
+
         task = await publisher.publish_task(
             task_kind=DELAYED_TASK,
             worker_kind=WORKER_KIND,
-            input_data=json.dumps({"test": "data"}),
+            input_data=json.dumps(input_data),
         )
 
         await sleep(1)
@@ -98,11 +100,12 @@ async def test_delayed_task_e2e():
         output_data = json.loads(task_status.output_data)
 
         assert output_data["message"] == "Task completed"
-        assert output_data["input"] == {"test": "data"}
+        assert output_data["input"] == input_data
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.one
 async def test_error_task_e2e():
     """Test a task that fails immediately.
     This test verifies error handling:
@@ -125,7 +128,7 @@ async def test_error_task_e2e():
         )
 
         # Wait a bit for task to be processed
-        await sleep(3)
+        await sleep(1)
 
         # Check status
         task_status = await publisher.get_task(task.id)

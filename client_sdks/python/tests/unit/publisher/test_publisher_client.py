@@ -5,6 +5,7 @@ from broker.client import PublisherBrokerClient
 from manager.client import ManagerClient
 import pytest
 from uuid import uuid4
+import json
 
 from broker.config import BrokerConfig
 from manager.config import ManagerConfig
@@ -50,7 +51,7 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     task = await publisher_client.publish_task(
         task_kind=task_kind,
         worker_kind=worker_kind,
-        input_data=input_data,
+        input_data=json.dumps(input_data),
         priority=priority,
         task_id=id,
     )
@@ -58,7 +59,7 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     # Verify task properties
     assert task.task_kind == task_kind
     assert task.worker_kind == worker_kind
-    assert task.input_data == input_data
+    assert json.loads(task.input_data) == input_data
     assert task.priority == priority
     assert task.id == id
 
@@ -86,10 +87,9 @@ async def test_get_task_success(
         id=task_id,
         task_kind="test_task",
         worker_kind="test_kind",
-        input_data={"test": "data"},
+        input_data=json.dumps({"test": "data"}),
         priority=0,
         status=TaskStatus.PENDING,
-        result=None,
     )
 
     publisher_client._manager_client = mock.create_autospec(

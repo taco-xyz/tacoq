@@ -64,7 +64,7 @@ class Task(BaseModel):
     completed_at: Optional[datetime] = Field(default=None)
     """ The time the task was completed. """
 
-    input_data: TaskInput = Field(default=None)
+    input_data: TaskInput = Field(default="")
     """ The input data of the task. """
 
     output_data: Optional[TaskOutput] = Field(default=None)
