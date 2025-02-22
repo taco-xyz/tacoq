@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --animate-slide-in-down: slide-in-down 0.25s ease-in-out forwards;
+  --animate-slide-in-up: slide-in-up 0.25s ease-in-out forwards;
+  --animate-slide-out-down: slide-out-down 0.25s ease-in-out;
+  --animate-slide-out-up: slide-out-up 0.25s ease-in-out;
+
+  @keyframes slide-in-down {
+    from {
+      opacity: 0;
+      transform: translateY(-50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0px);
+    }
+  }
+  @keyframes slide-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0px);
+    }
+  }
+  @keyframes slide-out-down {
+    from {
+      opacity: 1;
+      transform: translateY(0px);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(50px);
+    }
+  }
+  @keyframes slide-out-up {
+    from {
+      opacity: 1;
+      transform: translateY(0px);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-50px);
+    }
+  }
+}
+.custom-tab-outline-offset-2 {
+  @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
+}
+
+.custom-tab-outline-offset-4 {
+  @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
+}
+
+.custom-tab-outline-offset-6 {
+  @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-6 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
+}
