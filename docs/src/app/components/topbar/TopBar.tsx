@@ -30,7 +30,7 @@ export function TopBar() {
           <div className="h-fit w-[500px] my-auto mx-auto inset-0 hidden lg:flex relative justify-center">
             {/* Decorative Background gradient */}
             <div className="absolute overflow-hidden h-full -bottom-5 z-[-1]">
-              <div className="bg-radial origin-center h-36 w-[100rem] opacity-25   dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+              <div className="bg-radial origin-center h-36 w-[100rem] opacity-25 dark:opacity-15 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
             </div>
 
             {/* Desktop Search */}
@@ -44,7 +44,7 @@ export function TopBar() {
             <div className="h-fit sm:w-[300px] md:w-[400px] w-fit my-auto mx-auto inset-0 lg:hidden flex relative justify-center">
               {/* Decorative Background gradient */}
               <div className="absolute overflow-hidden h-full -bottom-5 hidden sm:block z-[-1]">
-                <div className="bg-radial origin-center h-36 md:w-[55rem] w-[50rem] sm:opacity-20 opacity-100 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+                <div className="bg-radial origin-center h-36 md:w-[55rem] w-[50rem] dark:opacity-20 opacity-30 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
               </div>
 
               {/* Tablet and Mobile Search */}
@@ -75,7 +75,7 @@ export function TopBar() {
         </div>
         {/* Decorative Background gradient */}
         <div className="absolute overflow-hidden h-full -bottom-9 sm:hidden">
-          <div className="bg-radial origin-center h-20 w-[40rem] opacity-5 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+          <div className="bg-radial origin-center h-20 w-[40rem] dark:opacity-5 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
         </div>
       </div>
     </div>
