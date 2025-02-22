@@ -36,24 +36,29 @@ export default function RootLayout({
       </head>
       <body className="flex items-center text-zinc-700 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
         <PageTreeProvider>
+          {/* Topbar */}
           <div className="sticky top-0 w-full z-10">
             <TopBar />
           </div>
           <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative py-8 px-8 ">
-            <div className="h-full flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
+            {/* Sidebar - height is calculated to account for the topbar and bottom padding */}
+            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden overflow-y-scroll scrollbar-hidden">
               <PageNavigationProvider>
                 <TooltipProvider>
                   <DesktopSideBar />
                 </TooltipProvider>
               </PageNavigationProvider>
             </div>
+            {/* Page */}
             <div className="z-0 w-full flex-1">
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
-            <div className="h-full flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden">
+            {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}
+            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden overflow-y-scroll scrollbar-hidden">
               <PageLinksBar />
             </div>
           </div>
+          {/* Footer */}
           <div className="absolute top-full w-full">
             <Footer />
           </div>
