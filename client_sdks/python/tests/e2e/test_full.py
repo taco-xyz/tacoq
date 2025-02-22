@@ -4,6 +4,7 @@ import uuid
 import pytest
 from uuid import uuid4
 import datetime
+import json
 
 from models.task import Task, TaskInput, TaskOutput, TaskStatus
 from publisher import PublisherClient
@@ -33,13 +34,15 @@ class WorkerContext:
             """Non-blocking task."""
             await sleep(2)
 
-            return {"message": "Task completed", "input": input_data}
+            return json.dumps({"message": "Task completed", "input": input_data})
 
         async def delayed_task_blocking(input_data: TaskInput) -> TaskOutput:
             """Blocking task to test multiple processes."""
             time.sleep(2)
 
-            return {"message": "Task completed", "input": input_data}
+            return json.dumps(
+                {"message": "Task completed", "input": json.loads(input_data)}
+            )
 
         async def failing_task(_: TaskInput) -> TaskOutput:
             raise ValueError("Task failed intentionally")
@@ -89,11 +92,11 @@ async def test_delayed_task_e2e():
 
     # Start worker in background
     with WorkerContext() as worker:
+        input_data = {"test": "data"}
         task = await publisher.publish_task(
             task_kind=DELAYED_TASK,
             worker_kind=worker.config.kind,
-            input_data={"test": "data"},
-        )
+            input_data=json.dumps(input_data),
 
         await sleep(1)
 
@@ -101,17 +104,20 @@ async def test_delayed_task_e2e():
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.PENDING
-        assert task_status.result is None
+        assert task_status.output_data is None
 
         # Wait and check final status
         await sleep(3)  # Wait for task completion + buffer
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
-        assert task_status.is_error is False
-        assert task_status.result is not None
-        assert task_status.result.data["message"] == "Task completed"
-        assert task_status.result.data["input"] == {"test": "data"}
+        assert task_status.is_error == 0
+        assert task_status.output_data is not None
+
+        output_data = json.loads(task_status.output_data)
+
+        assert output_data["message"] == "Task completed"
+        assert output_data["input"] == input_data
 
 
 @pytest.mark.e2e
@@ -178,20 +184,20 @@ async def test_error_task_e2e():
         # Submit task
         task = await publisher.publish_task(
             task_kind=FAILING_TASK,
-            worker_kind=worker.config.kind,
-            input_data={},
+            worker_kind=WORKER_KIND,
+            input_data="",
         )
 
         # Wait a bit for task to be processed
-        await sleep(0.5)
+        await sleep(1)
 
         # Check status
         task_status = await publisher.get_task(task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED
-        assert task_status.is_error is True
-        assert task_status.result is not None
-        assert "Task failed intentionally" in str(task_status.result.data["error"])
+        assert task_status.is_error == 1
+        assert task_status.output_data is not None
+        assert task_status.output_data == "Task failed intentionally"
 
 
 @pytest.mark.e2e

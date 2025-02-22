@@ -1,5 +1,4 @@
 from typing import Optional
-
 from uuid import UUID, uuid4
 from aiohttp_retry import RetryOptionsBase
 
@@ -30,7 +29,7 @@ class PublisherClient(BaseModel):
         self,
         task_kind: str,
         worker_kind: str,
-        input_data: Optional[TaskInput] = None,
+        input_data: TaskInput = "",
         task_id: Optional[UUID] = None,
         priority: int = 0,
     ) -> Task:

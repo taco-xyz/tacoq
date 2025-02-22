@@ -4,6 +4,7 @@ import asyncio
 import datetime
 from typing import AsyncGenerator
 from unittest import mock
+import json
 from uuid import uuid4
 
 import pytest
@@ -46,11 +47,11 @@ def sample_task():
         id=uuid4(),
         task_kind="test_task",
         worker_kind="test_kind",
-        input_data={"value": 5},
+        input_data=json.dumps({"value": 5}),
         priority=0,
         created_at=datetime.datetime.now(),
         status=TaskStatus.PENDING,
-        result=None,
+        output_data=None,
     )
 
 
@@ -65,7 +66,7 @@ async def test_register_single_task(worker_app: WorkerApplication):
     """Test registering a single task handler."""
 
     async def task_handler(input_data: TaskInput) -> TaskOutput:
-        return {"result": input_data["value"] * 2}
+        return json.dumps({"result": json.loads(input_data)["value"] * 2})
 
     worker_app.register_task("test_task", task_handler)
     assert "test_task" in worker_app._registered_tasks
@@ -78,10 +79,10 @@ async def test_register_multiple_tasks(worker_app: WorkerApplication):
     """Test registering multiple task handlers."""
 
     async def task1(input_data: TaskInput) -> TaskOutput:
-        return {"result": input_data["value"] * 2}
+        return json.dumps({"result": json.loads(input_data)["value"] * 2})
 
     async def task2(input_data: TaskInput) -> TaskOutput:
-        return {"result": input_data["value"] + 1}
+        return json.dumps({"result": json.loads(input_data)["value"] + 1})
 
     worker_app.register_task("task1", task1)
     worker_app.register_task("task2", task2)
@@ -99,7 +100,7 @@ async def test_task_decorator_registration(worker_app: WorkerApplication):
 
     @worker_app.task("decorated_task")
     async def task_handler(input_data: TaskInput) -> TaskOutput:
-        return {"result": input_data["value"] * 2}
+        return json.dumps({"result": json.loads(input_data)["value"] * 2})
 
     assert "decorated_task" in worker_app._registered_tasks
     assert worker_app._registered_tasks["decorated_task"] == task_handler
@@ -111,10 +112,10 @@ async def test_reregister_task(worker_app: WorkerApplication):
     """Test re-registering a task (should overwrite)."""
 
     async def task1(input_data: TaskInput) -> TaskOutput:
-        return {"result": 1}
+        return json.dumps({"result": 1})
 
     async def task2(input_data: TaskInput) -> TaskOutput:
-        return {"result": 2}
+        return json.dumps({"result": 2})
 
     worker_app.register_task("same_kind", task1)
     worker_app.register_task("same_kind", task2)
@@ -140,7 +141,7 @@ async def test_execute_registered_task(
         nonlocal executed
         executed = True
         assert input_data == sample_task.input_data
-        return {"result": input_data["value"] * 2}
+        return json.dumps({"result": json.loads(input_data)["value"] * 2})
 
     worker_app.register_task(sample_task.task_kind, task_handler)
     await worker_app._execute_task(

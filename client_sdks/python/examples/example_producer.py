@@ -1,5 +1,5 @@
 import asyncio
-
+import json
 from broker.config import BrokerConfig
 from manager.config import ManagerConfig
 from publisher.client import PublisherClient
@@ -32,12 +32,12 @@ async def main():
     task1 = await worker_application.publish_task(
         TASK_1_NAME,
         WORKER_KIND_NAME,
-        {"data": "task_1_data"},
+        json.dumps({"data": "task_1_data"}),
     )
     task2 = await worker_application.publish_task(
         TASK_2_NAME,
         WORKER_KIND_NAME,
-        {"data": "task_2_data"},
+        json.dumps({"data": "task_2_data"}),
     )
 
     print(f"Task 1: {task1}")

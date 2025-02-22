@@ -5,19 +5,78 @@ use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+// Custom serializer function
+fn serialize_bytes<S>(bytes: &Option<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match bytes {
+        Some(data) => serializer.serialize_str(&String::from_utf8_lossy(data)),
+        None => serializer.serialize_none(),
+    }
+}
+
+// Custom deserializer function
+fn deserialize_bytes<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let input: Option<String> = Option::deserialize(deserializer)?;
+    match input {
+        Some(bytes) => Ok(Some(bytes.into_bytes())),
+        None => Ok(None),
+    }
+}
+
+fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+
+    // Try parsing with different formats
+    if let Ok(dt) = DateTime::parse_from_rfc3339(&s) {
+        return Ok(dt.with_timezone(&Utc));
+    }
+
+    // Try parsing microseconds format like "2025-02-14T13:35:07.365122"
+    if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%.f%:z") {
+        return Ok(dt.with_timezone(&Utc));
+    }
+
+    // Try parsing without fractional seconds
+    if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%:z") {
+        return Ok(dt.with_timezone(&Utc));
+    }
+
+    Err(serde::de::Error::custom(format!(
+        "Unable to parse datetime: {}",
+        s
+    )))
+}
+
 // Task status enum
 /// # Possible Status:
 /// * `Pending`: Task is created but not yet assigned
 /// * `Processing`: Task has been assigned to a worker and sent to a queue
-/// * `Completed`: Task completed sucessfully or not
-#[derive(Display, EnumString, Debug, Serialize, Deserialize, PartialEq, ToSchema)]
+/// * `Completed`: Task completed successfully or not
+#[derive(Display, EnumString, Debug, Serialize, Deserialize, PartialEq, ToSchema, Clone)]
 pub enum TaskStatus {
     #[strum(serialize = "pending")]
+    #[serde(rename = "pending")]
     Pending, // Task is created but not yet assigned
     #[strum(serialize = "processing")]
+    #[serde(rename = "processing")]
     Processing, // Task has been assigned to a worker and sent to a queue
     #[strum(serialize = "completed")]
-    Completed, // Task completed sucessfully or not
+    #[serde(rename = "completed")]
+    Completed, // Task completed successfully or not
+}
+
+impl From<String> for TaskStatus {
+    fn from(s: String) -> Self {
+        s.parse().unwrap_or(TaskStatus::Pending)
+    }
 }
 
 // Task
@@ -25,29 +84,45 @@ pub enum TaskStatus {
 /// Tasks are sent to workers to be executed with a specific payload.
 /// Workers are eligble for receiving certain tasks depending on their
 /// list of capabilities.
-#[derive(Default, Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
-#[sqlx(default)]
+#[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
     pub id: Uuid,
-    pub task_kind_name: String,
+    #[sqlx(rename = "task_kind_name")]
+    pub task_kind: String,
 
     // Task data
-    pub input_data: Option<serde_json::Value>,
-    pub output_data: Option<serde_json::Value>,
+    #[serde(
+        serialize_with = "serialize_bytes",
+        deserialize_with = "deserialize_bytes"
+    )]
+    pub input_data: Option<Vec<u8>>, // byte array
+    #[serde(
+        serialize_with = "serialize_bytes",
+        deserialize_with = "deserialize_bytes"
+    )]
+    pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,
 
-    // Task status
-    pub created_at: DateTime<Utc>,
-    pub started_at: Option<DateTime<Utc>>,
-    pub completed_at: Option<DateTime<Utc>>,
-
-    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
+    pub status: TaskStatus,
+    pub priority: i32,
 
     // Relations
-    pub worker_kind_name: String,
+    #[sqlx(rename = "worker_kind_name")]
+    pub worker_kind: String,
     pub assigned_to: Option<Uuid>, // worker that it is assigned to
 
+    // Task status
+    #[serde(skip)]
+    pub started_at: Option<DateTime<Utc>>,
+    #[serde(skip)]
+    pub completed_at: Option<DateTime<Utc>>,
+    #[serde(skip)]
+    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
+
     // Metadata
+    #[serde(deserialize_with = "deserialize_timestamp")]
+    pub created_at: DateTime<Utc>,
+    #[serde(skip)]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -56,9 +131,11 @@ impl Task {
         id: Option<Uuid>,
         task_kind_name: &str,
         worker_kind_name: &str,
-        input_data: Option<serde_json::Value>,
-        output_data: Option<serde_json::Value>,
+        input_data: Option<Vec<u8>>,
+        output_data: Option<Vec<u8>>,
         is_error: Option<bool>,
+        status: TaskStatus,
+        priority: i32,
         created_at: DateTime<Utc>,
         started_at: Option<DateTime<Utc>>,
         completed_at: Option<DateTime<Utc>>,
@@ -66,26 +143,20 @@ impl Task {
         ttl: Option<DateTime<Utc>>,
     ) -> Self {
         Task {
-            id: id.unwrap_or(Uuid::new_v4()),
-            task_kind_name: task_kind_name.to_string(),
-            worker_kind_name: worker_kind_name.to_string(),
+            id: id.unwrap_or_else(Uuid::new_v4),
+            task_kind: task_kind_name.to_string(),
             input_data,
             output_data,
-            is_error: if is_error.is_some() {
-                if is_error.unwrap() {
-                    1
-                } else {
-                    0
-                }
-            } else {
-                0
-            },
+            is_error: is_error.map_or(0, |e| if e { 1 } else { 0 }),
+            status,
+            priority,
+            worker_kind: worker_kind_name.to_string(),
+            assigned_to,
             started_at,
             completed_at,
-            assigned_to,
+            ttl,
             created_at,
             updated_at: Utc::now(),
-            ttl,
         }
     }
 
@@ -108,6 +179,7 @@ impl Task {
             }
         }
         self.updated_at = Utc::now();
+        self.status = status;
     }
 
     pub fn status(&self) -> TaskStatus {

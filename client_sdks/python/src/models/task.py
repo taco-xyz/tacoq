@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from uuid import UUID
 from enum import Enum
 from datetime import datetime
@@ -6,11 +6,11 @@ import uuid
 from pydantic import BaseModel, Field
 
 
-TaskInput = Any
+TaskInput = str
 """ Task input data defined by the user - they can use whatever format they want, but
 they must handle the serialization and deserialization of the data themselves. """
 
-TaskOutput = Any
+TaskOutput = str
 """ Task output data defined by the user - they can use whatever format they want, but
 they must handle the serialization and deserialization of the data themselves. """
 
@@ -33,9 +33,6 @@ class TaskResult(BaseModel):
 
     data: TaskOutput
     """ The data of the task's result. """
-
-    is_error: bool
-    """ Whether the task failed. """
 
     started_at: datetime
     """ The time the task was started. """
@@ -61,8 +58,17 @@ class Task(BaseModel):
     worker_kind: str
     """ The kind of worker that will execute the task. """
 
-    input_data: TaskInput = Field(default=None)
+    started_at: Optional[datetime] = Field(default=None)
+    """ The time the task was started. """
+
+    completed_at: Optional[datetime] = Field(default=None)
+    """ The time the task was completed. """
+
+    input_data: TaskInput = Field(default="")
     """ The input data of the task. """
+
+    output_data: Optional[TaskOutput] = Field(default=None)
+    """ The result of the task. """
 
     status: TaskStatus = Field(default=TaskStatus.PENDING)
     """ The current status of the task at the time of retrieval."""
@@ -70,13 +76,10 @@ class Task(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     """ The time the task was created. """
 
-    result: Optional[TaskResult] = Field(default=None)
-    """ The result of the task. """
-
     priority: int = Field(default=0)
     """ The priority of the task. """
 
-    is_error: bool = Field(default=False)
+    is_error: int = Field(default=0)
     """ Whether the task failed. """
 
     @property

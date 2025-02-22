@@ -7,16 +7,14 @@ use uuid::Uuid;
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema, FromRow)]
 pub struct Worker {
     pub id: Uuid,
-    pub name: String,
     pub worker_kind_name: String,
     pub registered_at: DateTime<Utc>,
 }
 
 impl Worker {
-    pub fn new(name: &str, worker_kind_name: &str) -> Self {
+    pub fn new(id: Uuid, worker_kind_name: &str) -> Self {
         Worker {
-            id: Uuid::new_v4(),
-            name: name.to_string(),
+            id,
             worker_kind_name: worker_kind_name.to_string(),
             registered_at: Utc::now(),
         }

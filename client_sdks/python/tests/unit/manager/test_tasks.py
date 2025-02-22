@@ -2,6 +2,7 @@ import pytest
 from uuid import UUID
 from aiohttp import ClientResponseError
 from aioresponses import aioresponses
+import json
 
 from manager.client import ManagerClient
 from models.task import Task, TaskStatus
@@ -15,7 +16,7 @@ async def test_get_task_success(mock_manager_client: ManagerClient):
         "task_kind": "test_kind",
         "worker_kind": "test_worker_kind",
         "created_at": "2024-01-01T00:00:00Z",
-        "input_data": {"foo": "bar"},
+        "input_data": json.dumps({"foo": "bar"}),
         "status": TaskStatus.PENDING.value,  # Use enum value for serialization
         "priority": 5,
         "result": None,

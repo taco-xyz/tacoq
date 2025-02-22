@@ -16,15 +16,11 @@ CREATE TABLE
 CREATE TABLE
     workers (
         id UUID PRIMARY KEY,
-        name TEXT NOT NULL,
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         registered_at TIMESTAMP
         WITH
-            TIME ZONE NOT NULL DEFAULT NOW (),
-            UNIQUE (name, worker_kind_name)
+            TIME ZONE NOT NULL DEFAULT NOW ()
     );
-
-CREATE INDEX workers_name_idx ON workers (name);
 
 -- Heartbeats are regularly sent by the workers to indicate that they are still alive and kicking
 CREATE TABLE
@@ -54,12 +50,14 @@ CREATE TABLE
         id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
         -- Task data
         task_kind_name TEXT NOT NULL,
-        input_data JSONB,
-        output_data JSONB,
+        input_data BYTEA,
+        output_data BYTEA,
         is_error INT NOT NULL DEFAULT 0,
+        status VARCHAR(255) NOT NULL,
+        priority INT NOT NULL DEFAULT 0,
         -- Relations
         assigned_to UUID REFERENCES workers (id),
-        worker_kind_name TEXT NOT NULL,
+        worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         -- Task status
         started_at TIMESTAMP
         WITH

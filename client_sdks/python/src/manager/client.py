@@ -109,4 +109,7 @@ class ManagerClient(BaseModel):
                     return None
                 resp.raise_for_status()
                 data = await resp.json()
+
+                print(data)
+
                 return Task(**data)
