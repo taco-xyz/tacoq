@@ -3,7 +3,6 @@
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigationContext";
-import { useTooltip } from "@/app/components/sidebar/context/TooltipContext";
 
 // Components Imports
 import Tooltip from "@/app/components/sidebar/components/Tooltip";
@@ -22,9 +21,6 @@ export default function DesktopSideBar() {
     pageContainerRef,
   } = usePageNavigation();
 
-  // Extract the tooltip context
-  const { tooltipParentRef } = useTooltip();
-
   return (
     <div className="w-full h-fit gap-y-12 flex flex-col">
       <nav className="flex flex-col gap-y-3.5">
@@ -38,7 +34,7 @@ export default function DesktopSideBar() {
           <button
             onClick={startKeyboardFocus}
             tabIndex={-1}
-            className={`absolute left-0 dark:text-white/70 dark:hover:text-white/90 cursor-pointer text-zinc-500 hover:text-zinc-700 font-semibold text-xs bg-zinc-100/80 hover:bg-zinc-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-900 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all duration-100 ease-in-out px-2 py-1 rounded-md whitespace-nowrap ${
+            className={`absolute left-0 ring-inset dark:text-white/70 dark:hover:text-white/90 cursor-pointer text-zinc-500 hover:text-zinc-700 font-semibold text-xs bg-zinc-100/80 hover:bg-zinc-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-900 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all duration-100 ease-in-out px-2 py-1 rounded-md whitespace-nowrap ${
               focusedPageTitle
                 ? "opacity-0 pointer-events-none"
                 : "opacity-100 pointer-events-auto"
@@ -50,7 +46,7 @@ export default function DesktopSideBar() {
           <button
             onClick={endKeyboardFocus}
             tabIndex={-1}
-            className={`absolute left-0 dark:text-white/70 dark:hover:text-white/90 cursor-pointer text-zinc-500 hover:text-zinc-700 font-semibold text-xs bg-zinc-100/80 hover:bg-zinc-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-900 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all duration-100 ease-in-out px-2 py-1 rounded-md whitespace-nowrap ${
+            className={`absolute left-0 ring-inset dark:text-white/70 dark:hover:text-white/90 cursor-pointer text-zinc-500 hover:text-zinc-700 font-semibold text-xs bg-zinc-100/80 hover:bg-zinc-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-900 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all duration-100 ease-in-out px-2 py-1 rounded-md whitespace-nowrap ${
               !focusedPageTitle
                 ? "opacity-0 pointer-events-none"
                 : "opacity-100 pointer-events-auto"
@@ -61,7 +57,6 @@ export default function DesktopSideBar() {
         </div>
 
         <nav
-          ref={tooltipParentRef}
           className="flex flex-col gap-y-1.5 relative outline-hidden"
           // The sidebar is focusable and navigable through default tab navigation
           tabIndex={0}

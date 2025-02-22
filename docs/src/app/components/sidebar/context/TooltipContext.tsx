@@ -26,7 +26,9 @@ export interface TooltipContent {
 
 export interface TooltipAppearance {
   /** Vertical position relative to parent container */
-  topPosition: number;
+  topPosition: number | null;
+  /** Horizontal position relative to parent container */
+  leftPosition: number | null;
   /** Whether the tooltip should be visible */
   visible: boolean;
   /** Direction of the tooltip animation */
@@ -52,8 +54,6 @@ export interface TooltipProps {
 export interface TooltipContextType {
   /** Current tooltip appearance properties */
   tooltipProps: TooltipProps;
-  /** Reference to the parent element for tooltip positioning */
-  tooltipParentRef: React.RefObject<HTMLDivElement | null>;
   /** Reference to the target element for tooltip positioning */
   tooltipTargetRef: React.RefObject<HTMLDivElement | null>;
   /** Reference to the content container element for dynamic height transition*/
@@ -91,15 +91,12 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
       isFolder: false,
     },
     appearance: {
-      topPosition: 0,
+      leftPosition: null,
+      topPosition: null,
       visible: false,
       animationDirection: null,
     },
-
   });
-
-  // Ref for managing tooltip parent
-  const tooltipParentRef = useRef<HTMLDivElement | null>(null);
 
   // Ref for managing tooltip target element
   const tooltipTargetRef = useRef<HTMLDivElement | null>(null);
@@ -121,21 +118,23 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Calculate and update tooltip position
-      if (tooltipParentRef.current && tooltipTargetRef.current) {
-        const parentRect = tooltipParentRef.current.getBoundingClientRect();
+      if (tooltipTargetRef.current) {
+        // Get the bounding rectangle of the tooltip target
         const targetRect = tooltipTargetRef.current.getBoundingClientRect();
-        const newRelativeTop = targetRect.top - parentRect.top;
 
         setTooltipProps((prev) => ({
           previousContent: prev.content,
           content: newContent,
           appearance: {
-            topPosition: newRelativeTop,
+            topPosition: targetRect.top,
+            leftPosition: targetRect.right,
             visible: true,
             animationDirection:
-              newRelativeTop === prev.appearance.topPosition
+              !targetRect.top ||
+              !prev.appearance.topPosition ||
+              targetRect.top === prev.appearance.topPosition
                 ? null
-                : newRelativeTop > prev.appearance.topPosition
+                : targetRect.top > prev.appearance.topPosition
                 ? "down"
                 : "up",
           },
@@ -184,7 +183,6 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
         isUrl: focusedPage.url !== undefined,
         isFolder: focusedPage.children !== undefined,
       },
-
     });
   }, [focusedPageTitle, showTooltip, hideTooltip, getPageByTitle]);
 
@@ -209,7 +207,6 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     <TooltipContext.Provider
       value={{
         tooltipProps,
-        tooltipParentRef,
         tooltipTargetRef,
         contentContainerRef,
         currentContentContainerRef,
