@@ -55,7 +55,7 @@ export default function MobileSidebarPortal() {
         <div
           ref={dialogRef}
           className={clsx(
-            "dark:bg-zinc-900 bg-white fixed inset-0 left-0 w-full max-w-[300px] transition-all duration-300 ease-in-out max-h-full h-full overflow-y-auto shadow-xl dark:shadow-zinc-950/30 shadow-zinc-500/10 ring-1 ring-zinc-200 dark:ring-white/15",
+            "dark:bg-zinc-900 bg-white fixed inset-0 left-0 w-full max-w-[300px] transition-all duration-300 ease-in-out max-h-full h-full overflow-y-auto shadow-xl dark:shadow-zinc-950/30 shadow-zinc-500/10 border-r border-zinc-200 dark:border-white/15",
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -76,7 +76,7 @@ export default function MobileSidebarPortal() {
               </button>
               {/* Decorative Background gradient */}
               <div className="absolute overflow-hidden h-full mx-auto left-1/2 -translate-x-1/2 -bottom-6 z-[-1]">
-                <div className="bg-radial origin-center h-20 w-[20rem] opacity-5 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+                <div className="bg-radial origin-center h-20 w-[20rem] dark:opacity-3 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
               </div>
             </div>
           </div>
