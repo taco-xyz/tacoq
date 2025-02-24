@@ -4,7 +4,6 @@ from broker.config import BrokerConfig
 from aio_pika import Message, connect_robust
 from models.task import Task
 from pydantic import BaseModel
-from logging import warning
 
 from aio_pika.abc import (
     AbstractChannel,
@@ -218,8 +217,8 @@ class WorkerBrokerClient(BaseBrokerClient):
                 "Tried to declare worker queue, but exchange was not declared."
             )
 
-        # Set prefetch to 1 for fair dispatch
-        await self._channel.set_qos(prefetch_count=1)
+        # Set prefetch to 10 for fair dispatch
+        await self._channel.set_qos(prefetch_count=self.config.prefetch_count)
 
         # Worker's queue - named after its kind
         routing_key = WORKER_ROUTING_KEY.format(worker_kind=self.worker_kind)
@@ -236,12 +235,7 @@ class WorkerBrokerClient(BaseBrokerClient):
         async with self._queue.iterator() as queue_iter:
             async for message in queue_iter:
                 task = Task(**json.loads(message.body))
-                try:
-                    yield task
-                    await message.ack()  # After the task is processed, acknowledge it
-                except Exception as e:
-                    await message.reject(requeue=True)
-                    warning(f"Failed to process task {task.id}: {e}")
+                yield (task, message)
 
     async def publish_task_result(self, task: Task) -> None:
         """Publish a task result to the shared results queue.

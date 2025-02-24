@@ -24,7 +24,9 @@ def publisher_client():
 
     client = PublisherClient(
         manager_config=ManagerConfig(url="http://localhost:8080"),
-        broker_config=BrokerConfig(url="http://localhost:5672"),
+        broker_config=BrokerConfig(
+            url="amqp://user:password@localhost:5672", prefetch_count=10
+        ),
     )
     return client
 

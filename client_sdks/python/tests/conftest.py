@@ -45,7 +45,7 @@ def mock_manager_client() -> ManagerClient:
 @pytest.fixture
 async def broker_config() -> BrokerConfig:
     """Fixture that provides a configured BrokerConfig instance."""
-    return BrokerConfig(url=BROKER_TEST_URL)
+    return BrokerConfig(url=BROKER_TEST_URL, prefetch_count=10)
 
 
 ## ==============================
