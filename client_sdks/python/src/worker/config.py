@@ -21,6 +21,3 @@ class WorkerApplicationConfig:
 
     manager_config: ManagerConfig
     """ Configuration for the manager. """
-
-    workers: int = 1
-    """ The number of worker processes to spawn. This is used to scale the worker horizontally."""
