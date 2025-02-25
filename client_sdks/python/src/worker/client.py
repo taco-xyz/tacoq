@@ -9,6 +9,9 @@ from models.task import Task, TaskInput, TaskOutput, TaskStatus
 from pydantic import BaseModel
 from worker.config import WorkerApplicationConfig
 
+from aio_pika.abc import (
+    AbstractIncomingMessage,
+)
 
 # =========================================
 # Errors
@@ -57,11 +60,14 @@ class WorkerApplication(BaseModel):
     _broker_client: Optional[WorkerBrokerClient] = None
     """ The broker client that this worker application uses. """
 
-    _queue_name: Optional[str] = None
-    """ The queue name that this worker application listens to. """
+    _shutdown_event: asyncio.Event = asyncio.Event()
+    """ Event that is set when the worker application is shutting down. """
 
-    _shutdown: bool = False
-    """ Whether the worker application is shutting down. """
+    _shutdown_complete_event: asyncio.Event = asyncio.Event()
+    """ Event that is set when the worker application has completed shutting down. """
+
+    _active_tasks: set[asyncio.Task[None]] = set()
+    """ The set of active tasks that this worker application is processing. """
 
     def model_post_init(self, _) -> None:
         self._registered_tasks = {}
@@ -105,7 +111,7 @@ class WorkerApplication(BaseModel):
 
         return decorator
 
-    async def _execute_task(self, task: Task):
+    async def _execute_task(self, task: Task, message: AbstractIncomingMessage):
         """Execute a task and update its status in the manager.
 
         ### Parameters
@@ -153,6 +159,9 @@ class WorkerApplication(BaseModel):
             task=task,
         )
 
+        # Acknowledge the message
+        await message.ack()
+
     # ================================
     # Worker Lifecycle
     # ================================
@@ -174,16 +183,13 @@ class WorkerApplication(BaseModel):
         await self._broker_client.connect()
 
     async def entrypoint(self):
-        """Start the worker application.
+        """Start the worker application."""
+        return await self._entrypoint()
 
-        This method registers the worker kind with the manager,
-        starts listening for tasks, and handles graceful shutdown.
-        """
+    async def _entrypoint(self):
+        """Initialize and start listening for tasks."""
         await self._init_broker_client()
-
         print("Worker application initialized!")
-
-        # Begin loop
         try:
             await self._listen()
         except asyncio.CancelledError:
@@ -202,23 +208,44 @@ class WorkerApplication(BaseModel):
             raise RuntimeError("Broker client not initialized")
 
         try:
-            async for task in self._broker_client.listen():
-                if self._shutdown:
-                    break
-                await self._execute_task(task)
+            start = datetime.now()
+            while not self._shutdown_event.is_set():
+                try:
+                    task, message = await asyncio.wait_for(
+                        self._broker_client.listen().__anext__(),
+                        timeout=1.0,  # Check shutdown signal every second
+                    )
+                    print("Received task", task.id, "at", datetime.now() - start)
+                    # Task is created and added to the tracker pool
+                    async_task = asyncio.create_task(self._execute_task(task, message))
+                    self._active_tasks.add(async_task)
+                    async_task.add_done_callback(self._active_tasks.discard)
+                except asyncio.TimeoutError:
+                    continue
+            print(f"Waiting for {len(self._active_tasks)} active tasks to complete...")
+            await asyncio.gather(
+                *self._active_tasks
+            )  # Wait for all active tasks to complete
         except asyncio.CancelledError:
             pass
-        finally:
-            await self._cleanup()
 
-    def shutdown(self):
+    def issue_shutdown(self):
         """Shutdown the worker application."""
-        self._shutdown = True
+        print("Shutdown signal received!")
+        self._shutdown_event.set()
+
+    async def wait_for_shutdown(self):
+        """Wait for the worker application to shut down."""
+        print("Waiting for shutdown to complete...")
+        await self._shutdown_complete_event.wait()
 
     async def _cleanup(self):
         """Cleanup the worker application.
 
         This method is called when the worker is shutting down. Used for cleaning internal state.
         """
+        print("CLEANING UP...")
         if self._broker_client is not None:
             await self._broker_client.disconnect()
+        print("CLEANUP COMPLETE")
+        self._shutdown_complete_event.set()

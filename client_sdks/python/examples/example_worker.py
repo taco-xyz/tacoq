@@ -1,16 +1,18 @@
 import asyncio
-from typing import Any
 
 from broker import BrokerConfig
 from manager.config import ManagerConfig
 from worker import WorkerApplication, WorkerApplicationConfig
+from src.models import TaskInput, TaskOutput
 
 # GENERAL CONFIGURATION _______________________________________________________
 # These configs should be shared across both the publisher and the worker.
 
 # The worker needs to know about the manager and the broker.
 manager_config = ManagerConfig(url="http://localhost:3000")
-broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+broker_config = BrokerConfig(
+    url="amqp://user:password@localhost:5672", prefetch_count=5
+)
 
 # Both the publisher and the worker need to know about the task kinds and
 # should have unified names for them.
@@ -33,13 +35,13 @@ worker_application = WorkerApplication(
 
 # 2. Create tasks and register them with the worker application
 @worker_application.task(TASK_1_NAME)
-async def task_1(input_data: dict[Any, Any]) -> dict[Any, Any]:
+async def task_1(input_data: TaskInput) -> TaskOutput:
     await asyncio.sleep(1)
     return input_data
 
 
 @worker_application.task(TASK_2_NAME)
-async def task_2(_: dict[Any, Any]) -> dict[Any, Any]:
+async def task_2(_: TaskInput) -> TaskOutput:
     raise Exception("This is a test exception")
 
 

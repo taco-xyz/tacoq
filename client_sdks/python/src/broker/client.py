@@ -4,14 +4,15 @@ from broker.config import BrokerConfig
 from aio_pika import Message, connect_robust
 from models.task import Task
 from pydantic import BaseModel
-from logging import warning
 
 from aio_pika.abc import (
     AbstractChannel,
     AbstractQueue,
     AbstractRobustConnection,
     AbstractExchange,
+    AbstractIncomingMessage,
 )
+
 
 # =========================================
 # Constants
@@ -151,6 +152,27 @@ class PublisherBrokerClient(BaseBrokerClient):
         )
         self._binded_worker_queues.add(worker_kind)
 
+    async def purge_worker_queue(self, worker_kind: str) -> None:
+        """Purges the queue for a worker kind. Only works in test mode."""
+        if not self.config.test_mode:
+            raise RuntimeError(
+                "Flushing queue is only allowed in test mode. Are you sure you want to call this function? Set broker_config.test_mode=True in your broker config."
+            )
+
+        if not self._channel:
+            raise RuntimeError("Channel not initialized")
+
+        if not self._task_exchange:
+            raise ExchangeNotDeclaredError(
+                "Tried to flush worker queue, but exchange was not declared."
+            )
+
+        # Get the queue
+        queue = await self._channel.declare_queue(worker_kind, durable=True)
+
+        # Purge the queue
+        await queue.purge()
+
     async def publish_task(self, task: Task) -> None:
         """Publish a task. The manager will receive it and workers of the correct kind will too."""
 
@@ -195,15 +217,17 @@ class WorkerBrokerClient(BaseBrokerClient):
                 "Tried to declare worker queue, but exchange was not declared."
             )
 
-        # Set prefetch to 1 for fair dispatch
-        await self._channel.set_qos(prefetch_count=1)
+        # Set prefetch to 10 for fair dispatch
+        await self._channel.set_qos(prefetch_count=self.config.prefetch_count)
 
         # Worker's queue - named after its kind
         routing_key = WORKER_ROUTING_KEY.format(worker_kind=self.worker_kind)
         self._queue = await self._channel.declare_queue(self.worker_kind, durable=True)
         await self._queue.bind(self._task_exchange, routing_key=routing_key)
 
-    async def listen(self) -> AsyncGenerator[Task, None]:
+    async def listen(
+        self,
+    ) -> AsyncGenerator[tuple[Task, AbstractIncomingMessage], None]:
         """Listen for tasks for this worker's kind. Only acknowledges tasks after they are processed."""
         if not self._queue:
             raise RuntimeError("Queue not initialized")
@@ -211,12 +235,7 @@ class WorkerBrokerClient(BaseBrokerClient):
         async with self._queue.iterator() as queue_iter:
             async for message in queue_iter:
                 task = Task(**json.loads(message.body))
-                try:
-                    yield task
-                    await message.ack()  # After the task is processed, acknowledge it
-                except Exception as e:
-                    await message.reject(requeue=True)
-                    warning(f"Failed to process task {task.id}: {e}")
+                yield (task, message)
 
     async def publish_task_result(self, task: Task) -> None:
         """Publish a task result to the shared results queue.

@@ -15,6 +15,9 @@ from models.task import Task, TaskInput, TaskOutput, TaskStatus
 from worker import TaskNotRegisteredError, WorkerApplication
 from worker.config import WorkerApplicationConfig
 
+from aio_pika.abc import AbstractIncomingMessage
+
+
 # =========================================
 # Fixtures
 # =========================================
@@ -31,7 +34,8 @@ def worker_app():
             url="http://localhost:8080",
         ),
         broker_config=BrokerConfig(
-            url="http://localhost:5672",
+            url="amqp://user:password@localhost:5672",
+            prefetch_count=10,
         ),
     )
     return WorkerApplication(config=config)
@@ -141,7 +145,9 @@ async def test_execute_registered_task(
         return json.dumps({"result": json.loads(input_data)["value"] * 2})
 
     worker_app.register_task(sample_task.task_kind, task_handler)
-    await worker_app._execute_task(sample_task)
+    await worker_app._execute_task(
+        sample_task, mock.create_autospec(AbstractIncomingMessage, instance=True)
+    )
     assert executed
 
 
@@ -153,7 +159,9 @@ async def test_execute_unregistered_task(
     """Test executing an unregistered task."""
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
     with pytest.raises(TaskNotRegisteredError) as exc_info:
-        await worker_app._execute_task(sample_task)
+        await worker_app._execute_task(
+            sample_task, mock.create_autospec(AbstractIncomingMessage, instance=True)
+        )
     assert sample_task.task_kind in str(exc_info.value)
 
 
@@ -169,7 +177,9 @@ async def test_execute_task_with_error(
         raise ValueError("Task failed")
 
     worker_app.register_task(sample_task.task_kind, failing_task)
-    await worker_app._execute_task(sample_task)
+    await worker_app._execute_task(
+        sample_task, mock.create_autospec(AbstractIncomingMessage, instance=True)
+    )
     # TODO: Add assertions for error handling once implemented
 
 
@@ -187,7 +197,9 @@ async def test_worker_startup(worker_app: WorkerApplication):
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
     if worker_app._broker_client:
 
-        async def mock_listen() -> AsyncGenerator[Task, None]:
+        async def mock_listen() -> AsyncGenerator[
+            tuple[Task, AbstractIncomingMessage], None
+        ]:
             raise asyncio.CancelledError()
             yield None
 
