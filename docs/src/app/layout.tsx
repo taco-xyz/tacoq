@@ -42,7 +42,7 @@ export default function RootLayout({
           </div>
           <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative py-8 px-8 ">
             {/* Sidebar - height is calculated to account for the topbar and bottom padding */}
-            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden overflow-y-scroll scrollbar-hidden">
+            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
               <PageNavigationProvider>
                 <TooltipProvider>
                   <DesktopSideBar />
@@ -54,7 +54,7 @@ export default function RootLayout({
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
             {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}
-            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden overflow-y-scroll scrollbar-hidden">
+            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden">
               <PageLinksBar />
             </div>
           </div>

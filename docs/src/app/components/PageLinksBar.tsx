@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 // React Imports
 import { useMemo, useState, useEffect, useCallback } from "react";
@@ -119,7 +119,7 @@ export default function PageLinksBar() {
   if (!currentPage?.content) return null;
 
   return (
-    <nav className="flex flex-col gap-y-2 text-sm w-full">
+    <nav className="flex flex-col gap-y-2 text-sm w-full overflow-y-scroll scrollbar-hidden h-full">
       {/* Title */}
       <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2">
         <Bars3CenterLeftIcon className="w-4 h-4" />

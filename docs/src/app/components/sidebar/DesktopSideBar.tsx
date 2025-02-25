@@ -19,10 +19,14 @@ export default function DesktopSideBar() {
     startKeyboardFocus,
     endKeyboardFocus,
     pageContainerRef,
+    sidebarContainerRef,
   } = usePageNavigation();
 
   return (
-    <div className="w-full h-fit gap-y-12 flex flex-col">
+    <div
+      ref={sidebarContainerRef}
+      className="w-full h-full gap-y-12 flex flex-col overflow-y-scroll scrollbar-hidden"
+    >
       <nav className="flex flex-col gap-y-3.5">
         {anchors.map((anchor) => (
           <AnchorComponent key={anchor.title} {...anchor} />
