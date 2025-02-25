@@ -82,7 +82,7 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  */
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
   // Extract the page tree context
-  const { getPageByTitle } = usePageTree();
+  const { getPageByTitle, visiblePagesTitles } = usePageTree();
 
   // Extract the page navigation context
   const { focusedPageTitle, sidebarContainerRef, currentFocusedPageRef } =
@@ -226,7 +226,8 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
         contentContainerRef.current.style.height = `${height}px`;
 
         // Get the position of the target page element and the sidebar container element
-        const targetRect = currentFocusedPageRef.current.getBoundingClientRect();
+        const targetRect =
+          currentFocusedPageRef.current.getBoundingClientRect();
         const sidebarRect = sidebarContainerRef.current.getBoundingClientRect();
 
         // Calculate the whole height of the tooltip including the fixed height content (Hot-keys)
@@ -237,26 +238,42 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
         const wouldOverflow =
           targetRect.top + tooltipHeight >= sidebarRect.bottom;
 
+        // Calculate the new top position of the tooltip
+        const newTopPosition = wouldOverflow
+          ? targetRect.bottom - tooltipHeight + 1
+          : targetRect.top + 1;
+
+        const getAnimationDirection = (
+          currentTitle: string,
+          previousTitle?: string
+        ) => {
+          //If there's no previous top position we're focusing for the first time on the tooltip
+          if (!previousTitle || currentTitle === previousTitle) return null;
+
+          // Fetch the index of the current and previous focused page
+          const currentIndex = visiblePagesTitles.indexOf(currentTitle);
+          const previousIndex = visiblePagesTitles.indexOf(previousTitle);
+
+          // If the current index is greater than the previous index, the tooltip should animate down
+          if (currentIndex > previousIndex) return "down";
+          //If the new top position is above the previous top position, the tooltip should animate up
+          return "up";
+        };
+
         // Update positioning in state
         setAppearanceState((prev) => ({
           ...prev,
           // If the tooltip would overflow, position it at the bottom of the target element, otherwise position it at the top
-          topPosition: wouldOverflow
-            ? targetRect.bottom - tooltipHeight + 1
-            : targetRect.top + 1,
+          topPosition: newTopPosition,
           // If the tooltip would overflow, position the arrow at the bottom of the tooltip, otherwise position it at the top
           arrowPosition: wouldOverflow ? "bottom" : "top",
           // Position the tooltip to the right of the target element with a small offset
           leftPosition: targetRect.right + 16,
           // Set the direction of the tooltip animation
-          animationDirection:
-            !targetRect.top ||
-            !prev.topPosition ||
-            targetRect.top === prev.topPosition
-              ? null
-              : targetRect.top > prev.topPosition
-              ? "down"
-              : "up",
+          animationDirection: getAnimationDirection(
+            contentState.current.title,
+            contentState.previous?.title
+          ),
         }));
       }
     });
@@ -268,6 +285,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     appearanceState.visible,
     currentFocusedPageRef,
     sidebarContainerRef,
+    visiblePagesTitles,
   ]);
 
   return (
