@@ -15,7 +15,6 @@ import clsx from "clsx";
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigationContext";
-import { useTooltip } from "@/app/components/sidebar/context/TooltipContext";
 
 // Types Imports
 import type { Page } from "@/types/page/Page";
@@ -38,11 +37,12 @@ export default function DesktopPageComponent({
     usePageTree();
 
   // Extract the page navigation context
-  const { focusedPageTitle, startHoverFocus, endHoverFocus } =
-    usePageNavigation();
-
-  // Extract the tooltip context
-  const { tooltipTargetRef } = useTooltip();
+  const {
+    focusedPageTitle,
+    startHoverFocus,
+    endHoverFocus,
+    currentFocusedPageRef,
+  } = usePageNavigation();
 
   // Ref for the current item
   const elementRef = useRef<HTMLDivElement>(null);
@@ -55,7 +55,9 @@ export default function DesktopPageComponent({
     >
       {/* If the item has a url, it's a link */}
       {url ? (
-        <div ref={focusedPageTitle === title ? tooltipTargetRef : undefined}>
+        <div
+          ref={focusedPageTitle === title ? currentFocusedPageRef : undefined}
+        >
           <Link
             onMouseEnter={() => startHoverFocus(title)}
             onMouseLeave={() => endHoverFocus()}
@@ -73,7 +75,7 @@ export default function DesktopPageComponent({
               focusedPageTitle !== title &&
                 currentPageTitle !== title &&
                 "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-              "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
+              "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
             )}
             onClick={() => {
               if (children && !isPageExpanded(title)) {
@@ -85,7 +87,7 @@ export default function DesktopPageComponent({
             {sidebar?.Icon && (
               <sidebar.Icon
                 className={clsx(
-                  "size-3.5 mr-1  transition-all duration-50 ease-in-out",
+                  "size-3.5 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
                   currentPageTitle === title
                     ? "text-zinc-950 dark:text-white/100"
                     : "text-zinc-500 dark:text-white/50"
@@ -116,7 +118,7 @@ export default function DesktopPageComponent({
       ) : (
         // If the item doesn't have a url, it doesn't contain a page
         <div
-          ref={focusedPageTitle === title ? tooltipTargetRef : undefined}
+          ref={focusedPageTitle === title ? currentFocusedPageRef : undefined}
           onMouseEnter={() => startHoverFocus(title)}
           onMouseLeave={() => endHoverFocus()}
           onClick={() => {
@@ -141,13 +143,13 @@ export default function DesktopPageComponent({
             focusedPageTitle !== title &&
               currentPageTitle !== title &&
               "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-            "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
+            "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
           )}
         >
           {sidebar?.Icon && (
             <sidebar.Icon
               className={clsx(
-                "size-3.5 mr-1  transition-all duration-50 ease-in-out",
+                "size-3.5 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
                 currentPageTitle === title
                   ? "text-zinc-950 dark:text-white/100"
                   : "text-zinc-500 dark:text-white/50"

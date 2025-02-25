@@ -18,7 +18,13 @@ export default function Tooltip() {
   // Extract the tooltip context
   const {
     tooltipProps: {
-      appearance: { topPosition, leftPosition, visible, animationDirection },
+      appearance: {
+        topPosition,
+        arrowPosition,
+        leftPosition,
+        visible,
+        animationDirection,
+      },
       content,
       previousContent,
     },
@@ -36,12 +42,18 @@ export default function Tooltip() {
           : "opacity-0 pointer-events-none"
       )}
       style={{
-        top: topPosition ? topPosition + 2 : undefined, // Small adjustment to account for tailwind's ring
-        left: leftPosition ? leftPosition + 16 : undefined, // Small adjustment to account for the tooltip arrow
+        top: topPosition ?? undefined,
+        left: leftPosition ?? undefined,
       }}
     >
       {/* Tooltip arrow */}
-      <div className="absolute -left-[5.5px] top-[8px] dark:bg-zinc-900 bg-white rounded-[1.5px] rounded-r-none rounded-t-none size-2.5 rotate-45 origin-center border-l-[1.5px] border-b-[1.5px] border-zinc-200 dark:border-white/5" />
+      <div
+        className="absolute -left-[5.5px] dark:bg-zinc-900 bg-white rounded-[1.5px] rounded-r-none rounded-t-none size-2.5 rotate-45 origin-center border-l-[1.5px] border-b-[1.5px] border-zinc-200 dark:border-white/5"
+        style={{
+          top: arrowPosition === "top" ? "8px" : undefined,
+          bottom: arrowPosition === "bottom" ? "8px" : undefined,
+        }}
+      />
 
       {/* Tooltip content */}
       <div className="flex flex-col w-full">
