@@ -45,17 +45,17 @@ export default function RootLayout({
             <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
               <PageNavigationProvider>
                 <TooltipProvider>
-                  <DesktopSideBar />
+                  <DesktopSideBar className="py-6" />
                 </TooltipProvider>
               </PageNavigationProvider>
             </div>
             {/* Page */}
-            <div className="z-0 w-full flex-1">
+            <div className="z-0 w-full flex-1 py-6">
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
             {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}
             <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden">
-              <PageLinksBar />
+              <PageLinksBar className="py-6" />
             </div>
           </div>
           {/* Footer */}

@@ -18,13 +18,17 @@ import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
 // Next Imports
 import { useRouter } from "next/navigation";
 
+interface PageLinksBarProps {
+  className?: string;
+}
+
 /**
 
  * Renders a nested table of contents for the current page
  * Scrolls to the corresponding heading when clicked
  * Highlights the current section based on scroll position
  */
-export default function PageLinksBar() {
+export default function PageLinksBar({ className }: PageLinksBarProps) {
   const router = useRouter();
 
   // Extract the page tree context
@@ -119,38 +123,49 @@ export default function PageLinksBar() {
   if (!currentPage?.content) return null;
 
   return (
-    <nav className="flex flex-col gap-y-2 text-sm w-full overflow-y-scroll scrollbar-hidden h-full">
-      {/* Title */}
-      <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2">
-        <Bars3CenterLeftIcon className="w-4 h-4" />
-        On this page
-      </span>
+    <div className="w-full h-full relative">
+      {/* Top gradient overlay */}
+      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none" />
+      <nav
+        className={clsx(
+          "flex flex-col gap-y-2 text-sm w-full overflow-y-scroll scrollbar-hidden h-full",
+          className
+        )}
+      >
+        {/* Title */}
+        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2">
+          <Bars3CenterLeftIcon className="w-4 h-4" />
+          On this page
+        </span>
 
-      {/* Links */}
-      <div className="flex flex-col gap-y-2">
-        {currentPage.content.map((heading, index) => {
-          const headingId = getHeaderId(heading);
-          const isActive = headingId === activeHeadingId;
-          return (
-            <button
-              key={index}
-              onClick={() => handleClick(headingId)}
-              className={clsx(
-                "text-left hover:text-zinc-700 dark:hover:text-white transition-all rounded-sm duration-150 ease-in-out whitespace-nowrap cursor-pointer custom-tab-outline-offset-2",
+        {/* Links */}
+        <div className="flex flex-col gap-y-2">
+          {currentPage.content.map((heading, index) => {
+            const headingId = getHeaderId(heading);
+            const isActive = headingId === activeHeadingId;
+            return (
+              <button
+                key={index}
+                onClick={() => handleClick(headingId)}
+                className={clsx(
+                  "text-left hover:text-zinc-700 dark:hover:text-white transition-all rounded-sm duration-150 ease-in-out whitespace-nowrap cursor-pointer custom-tab-outline-offset-2",
 
-                heading.type === HeadingTypes.H1 && "pl-0",
-                heading.type === HeadingTypes.H2 && "pl-4",
-                heading.type === HeadingTypes.H3 && "pl-8",
-                isActive
-                  ? "font-medium text-zinc-700 dark:text-white"
-                  : "font-normal text-zinc-500 dark:text-zinc-300"
-              )}
-            >
-              {heading.name}
-            </button>
-          );
-        })}
-      </div>
-    </nav>
+                  heading.type === HeadingTypes.H1 && "pl-0",
+                  heading.type === HeadingTypes.H2 && "pl-4",
+                  heading.type === HeadingTypes.H3 && "pl-8",
+                  isActive
+                    ? "font-medium text-zinc-700 dark:text-white"
+                    : "font-normal text-zinc-500 dark:text-zinc-300"
+                )}
+              >
+                {heading.name}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+      {/* Bottom gradient overlay */}
+      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none" />
+    </div>
   );
 }
