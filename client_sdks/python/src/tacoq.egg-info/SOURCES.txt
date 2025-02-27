@@ -28,4 +28,3 @@ src/tacoq.egg-info/top_level.txt
 src/worker/__init__.py
 src/worker/client.py
 src/worker/config.py
-tests/test_tracing.py

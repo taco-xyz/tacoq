@@ -158,11 +158,13 @@ async def test_execute_unregistered_task(
 ):
     """Test executing an unregistered task."""
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
-    with pytest.raises(TaskNotRegisteredError) as exc_info:
-        await worker_app._execute_task(
-            sample_task, mock.create_autospec(AbstractIncomingMessage, instance=True)
-        )
-    assert sample_task.task_kind in str(exc_info.value)
+    message_mock = mock.create_autospec(AbstractIncomingMessage, instance=True)
+
+    await worker_app._execute_task(sample_task, message_mock)
+
+    message_mock.nack.assert_called_once()
+    # Verify that the task wasn't published
+    worker_app._broker_client.publish_task_result.assert_not_called()
 
 
 @pytest.mark.unit
