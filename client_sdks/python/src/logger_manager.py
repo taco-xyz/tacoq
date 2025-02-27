@@ -1,4 +1,4 @@
-from logging import DEBUG, Filter, Handler, Logger, LogRecord, getLogger
+from logging import Filter, Handler, Logger, LogRecord, getLogger
 from threading import Lock
 from typing import Optional, Type
 
@@ -108,7 +108,6 @@ class LoggerManager:
         """
 
         logger = getLogger("tacoq")
-        logger.setLevel(DEBUG)
 
         # Add a trace handler to emit spans
         logger.addHandler(TraceHandler())
