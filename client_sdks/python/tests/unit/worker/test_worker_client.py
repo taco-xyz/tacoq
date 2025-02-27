@@ -12,7 +12,7 @@ from broker import WorkerBrokerClient
 from broker.config import BrokerConfig
 from manager.config import ManagerConfig
 from models.task import Task, TaskInput, TaskOutput, TaskStatus
-from worker import TaskNotRegisteredError, WorkerApplication
+from worker import WorkerApplication
 from worker.config import WorkerApplicationConfig
 
 from aio_pika.abc import AbstractIncomingMessage
