@@ -1,17 +1,20 @@
-from datetime import datetime
-from typing import Callable, Awaitable, Optional, Dict
-
 import asyncio
-from broker import WorkerBrokerClient
-from manager import ManagerClient
-from models.task import Task, TaskInput, TaskOutput, TaskStatus
-
-from pydantic import BaseModel
-from worker.config import WorkerApplicationConfig
+from datetime import datetime
+from typing import Awaitable, Callable, Dict, Optional
 
 from aio_pika.abc import (
     AbstractIncomingMessage,
 )
+from broker import WorkerBrokerClient
+from logger_manager import LoggerManager
+from logger_manager import StructuredMessage as _
+from manager import ManagerClient
+from models.task import Task, TaskInput, TaskOutput, TaskStatus
+from opentelemetry.propagate import extract
+from opentelemetry.trace import Status, StatusCode
+from pydantic import BaseModel
+from tracer_manager import TracerManager
+from worker.config import WorkerApplicationConfig
 
 # =========================================
 # Errors
@@ -86,6 +89,18 @@ class WorkerApplication(BaseModel):
         - `kind`: Unique identifier for the task type
         - `task`: Async function that processes tasks of this kind
         """
+
+        logger = LoggerManager.get_logger()
+        logger.info(
+            _(
+                message=f"Registering task of kind {kind} with handler {task.__name__}",
+                attributes={
+                    "kind": kind,
+                    "handler": task.__name__,
+                },
+            )
+        )
+
         self._registered_tasks[kind] = task
 
     def task(
@@ -96,11 +111,11 @@ class WorkerApplication(BaseModel):
     ]:
         """Decorator for registering task handler functions.
 
-        ### Parameters
-        - `kind`: Unique identifier for the task type
+        ### Arguments
+        - kind: Unique identifier for the task type
 
         ### Returns
-        - `Callable`: Decorator function that registers the task handler
+        - Callable: Decorator function that registers the task handler
         """
 
         def decorator(
@@ -114,57 +129,121 @@ class WorkerApplication(BaseModel):
     async def _execute_task(self, task: Task, message: AbstractIncomingMessage):
         """Execute a task and update its status in the manager.
 
-        ### Parameters
-        - `task`: Task to execute
-
-        ### Raises
-        - `ValueError`: If task kind is not registered
+        ### Arguments
+        - task: Task to execute
+        - message: Message to acknowledge
         """
 
         # Check if broker client is initialized
         if self._broker_client is None:
             raise RuntimeError("Broker client not initialized")
 
-        # Find task handler
-        task_func = self._registered_tasks.get(task.task_kind)
-        if task_func is None:
-            raise TaskNotRegisteredError(task.task_kind, self._registered_tasks)
+        # Extract OTEL context from the task and init loggers and tracers
 
-        # Compute task result
-        result: Optional[TaskOutput | Exception] = None
-        is_error: bool = False
+        if task.otel_ctx_carrier is not None:
+            otel_ctx_carrier = extract(task.otel_ctx_carrier)
+        else:
+            otel_ctx_carrier = None
 
-        # Start timer
-        started_at = datetime.now()
+        tracer = TracerManager.get_tracer()
+        logger = LoggerManager.get_logger()
 
-        # Execute task
-        try:
-            result = await task_func(task.input_data)
-        except Exception as e:
-            result = e.__str__()
-            is_error = True
+        with tracer.start_as_current_span(
+            "task_worker_lifecycle",
+            context=otel_ctx_carrier,
+            attributes={
+                "task.id": str(task.id),
+                "task.kind": task.task_kind,
+                "worker.kind": self.config.kind,
+            },
+        ) as parent_span:
+            # Find task handler. If it doesn't exist, we nack the message and return
+            # If this task is not registered anywhere, it will loop infinitely through
+            # the workers. That's the user's problem.
 
-        # Stop timer
-        completed_at = datetime.now()
+            task_func = self._registered_tasks.get(task.task_kind)
+            if task_func is None:
+                error = TaskNotRegisteredError(task.task_kind, self._registered_tasks)
+                parent_span.set_status(Status(StatusCode.ERROR))
+                parent_span.record_exception(error)
+                logger.error(
+                    _(
+                        message=f"Task of kind {task.task_kind} not registered. Available tasks: {self._registered_tasks.keys()}",
+                        attributes={
+                            "task.kind": task.task_kind,
+                            "available_tasks": list(self._registered_tasks.keys()),
+                        },
+                    )
+                )
+                await message.nack()
+                return
 
-        # Update task
-        task.output_data = result
-        task.is_error = is_error
-        task.started_at = started_at
-        task.completed_at = completed_at
-        task.status = TaskStatus.COMPLETED
+            # Task Execution ================================
+            # TODO - Improve exception serialization
 
-        # Submit task result via broker
-        await self._broker_client.publish_task_result(
-            task=task,
-        )
+            result: Optional[TaskOutput | Exception] = None
+            is_error: bool = False
 
-        # Acknowledge the message
-        await message.ack()
+            # Start timer
+            started_at = datetime.now()
+            parent_span.set_attribute("task.started_at", started_at.isoformat())
+
+            with tracer.start_as_current_span(
+                "task_execution",
+                attributes={
+                    "task.handler": task_func.__name__,
+                    "task.input_size": len(str(task.input_data)),
+                },
+            ) as execution_span:
+                try:
+                    result = await task_func(task.input_data)
+                    execution_span.set_attribute("task.output_size", len(str(result)))
+                except Exception as e:
+                    result = e.__str__()
+                    is_error = True
+                    logger.error(
+                        _(
+                            message=f"Error executing task of kind {task.task_kind} with ID {task.id}",
+                            attributes={
+                                "task.id": str(task.id),
+                                "task.kind": task.task_kind,
+                            },
+                        )
+                    )
+                    execution_span.set_status(Status(StatusCode.ERROR))
+                    execution_span.record_exception(e)
+
+            # Stop timer
+            completed_at = datetime.now()
+
+            # Update task
+            task.output_data = result
+            task.is_error = is_error
+            task.started_at = started_at
+            task.completed_at = completed_at
+            task.status = TaskStatus.COMPLETED
+
+            # Submission =========================================
+
+            # Submit task output via broker
+            with tracer.start_as_current_span(
+                "publish_task_result", attributes={"task.result_size": len(str(result))}
+            ):
+                await self._broker_client.publish_task_result(task=task)
+
+            # Acknowledge the message
+            with tracer.start_as_current_span("acknowledge_message"):
+                await message.ack()
+
+            # Set span status based on whether the task was successful or not
+            status = Status(StatusCode.OK) if not is_error else Status(StatusCode.ERROR)
+            parent_span.set_status(status)
 
     # ================================
     # Worker Lifecycle
     # ================================
+
+    # Entrypoint
 
     async def _init_broker_client(self):
         """Initialize the broker client for this worker.
@@ -189,13 +268,22 @@ class WorkerApplication(BaseModel):
     async def _entrypoint(self):
         """Initialize and start listening for tasks."""
         await self._init_broker_client()
-        print("Worker application initialized!")
+
+        logger = LoggerManager.get_logger()
+        logger.info(
+            _(
+                message="Worker application initialized!",
+                attributes={"worker.kind": self.config.kind},
+            )
+        )
         try:
             await self._listen()
         except asyncio.CancelledError:
             pass
         finally:
             await self._cleanup()
+
+    # Loop
 
     async def _listen(self):
         """Listen for tasks of a specific kind from the broker.
@@ -207,36 +295,68 @@ class WorkerApplication(BaseModel):
         if self._broker_client is None:
             raise RuntimeError("Broker client not initialized")
 
+        logger = LoggerManager.get_logger()
+        logger.info(
+            _(
+                message="Listening for tasks",
+            )
+        )
+
         try:
-            start = datetime.now()
             while not self._shutdown_event.is_set():
                 try:
                     task, message = await asyncio.wait_for(
                         self._broker_client.listen().__anext__(),
                         timeout=1.0,  # Check shutdown signal every second
                     )
-                    print("Received task", task.id, "at", datetime.now() - start)
                     # Task is created and added to the tracker pool
+                    logger.info(
+                        _(
+                            message=f"Received task of kind {task.task_kind} with ID {task.id}",
+                            attributes={
+                                "task.id": str(task.id),
+                                "task.kind": task.task_kind,
+                            },
+                        )
+                    )
                     async_task = asyncio.create_task(self._execute_task(task, message))
                     self._active_tasks.add(async_task)
                     async_task.add_done_callback(self._active_tasks.discard)
                 except asyncio.TimeoutError:
                     continue
-            print(f"Waiting for {len(self._active_tasks)} active tasks to complete...")
+            logger = LoggerManager.get_logger()
+            logger.info(
+                _(
+                    message=f"Waiting for {len(self._active_tasks)} active tasks to complete before shutting down",
+                    attributes={"active_tasks": len(self._active_tasks)},
+                )
+            )
             await asyncio.gather(
                 *self._active_tasks
             )  # Wait for all active tasks to complete
         except asyncio.CancelledError:
             pass
 
+    # Graceful Shutdown
+
     def issue_shutdown(self):
         """Shutdown the worker application."""
-        print("Shutdown signal received!")
+        logger = LoggerManager.get_logger()
+        logger.info(
+            _(
+                message="Shutdown signal received!",
+            )
+        )
         self._shutdown_event.set()
 
     async def wait_for_shutdown(self):
         """Wait for the worker application to shut down."""
-        print("Waiting for shutdown to complete...")
+        logger = LoggerManager.get_logger()
+        logger.info(
+            _(
+                message="Waiting for shutdown to complete...",
+            )
+        )
         await self._shutdown_complete_event.wait()
 
     async def _cleanup(self):
@@ -244,8 +364,19 @@ class WorkerApplication(BaseModel):
 
         This method is called when the worker is shutting down. Used for cleaning internal state.
         """
-        print("CLEANING UP...")
+        logger = LoggerManager.get_logger()
+        logger.info(
+            _(
+                message="Cleaning up",
+            )
+        )
         if self._broker_client is not None:
             await self._broker_client.disconnect()
-        print("CLEANUP COMPLETE")
+
+        logger.info(
+            _(
+                message="Cleanup complete",
+            )
+        )
+
         self._shutdown_complete_event.set()

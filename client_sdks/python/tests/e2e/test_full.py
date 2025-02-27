@@ -10,7 +10,8 @@ from publisher import PublisherClient
 from worker import WorkerApplication
 from worker.config import WorkerApplicationConfig
 from broker.config import BrokerConfig
-
+from logger_manager import LoggerManager, StructuredMessage as _
+from tracer_manager import TracerManager
 from manager.config import ManagerConfig
 
 DELAYED_TASK = "delayed_task"
@@ -20,7 +21,44 @@ DELAYED_TASK_BLOCKING = "delayed_task_blocking"
 
 async def delayed_task(input_data: TaskInput) -> TaskOutput:
     """Non-blocking task."""
-    await sleep(2)
+
+    await sleep(0.4)
+
+    # We will emit a span an two logs so we can see in Grafana if these are being properly chained together
+    logger = LoggerManager.get_logger()
+    tracer = TracerManager.get_tracer()
+
+    logger.info(
+        _(
+            message="Delayed task is at 20%",
+            attributes={"percent": 20},
+        )
+    )
+
+    with tracer.start_as_current_span("delayed_task_section"):
+        await sleep(0.4)
+        logger.info(
+            _(
+                message="Delayed task is at 40%",
+                attributes={"percent": 40},
+            )
+        )
+        await sleep(0.4)
+        logger.info(
+            _(
+                message="Delayed task is at 60%",
+                attributes={"percent": 60},
+            )
+        )
+        await sleep(0.4)
+        logger.info(
+            _(
+                message="Delayed task is at 80%",
+                attributes={"percent": 80},
+            )
+        )
+
+    await sleep(0.4)
 
     return json.dumps({"message": "Task completed", "input": input_data})
 
@@ -79,6 +117,7 @@ class WorkerContext:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.one
 async def test_delayed_task_e2e():
     """Test a task that takes 2 seconds to complete.
     This test verifies the full lifecycle of a task:
@@ -103,6 +142,7 @@ async def test_delayed_task_e2e():
             input_data=json.dumps(input_data),
         )
 
+        print(f"Published task {task}")
         await sleep(1)
 
         # Check immediate status

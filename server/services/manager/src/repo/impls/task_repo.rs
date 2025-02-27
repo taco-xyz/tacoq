@@ -25,8 +25,8 @@ impl PgTaskRepository {
             r#"
             INSERT INTO tasks (
                 id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
-                is_error, output_data, created_at, updated_at, status, priority
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
@@ -37,7 +37,8 @@ impl PgTaskRepository {
                 output_data = EXCLUDED.output_data,
                 status = EXCLUDED.status,
                 priority = EXCLUDED.priority,
-                updated_at = NOW()
+                updated_at = NOW(),
+                otel_ctx_carrier = EXCLUDED.otel_ctx_carrier
             RETURNING 
                 id, 
                 task_kind_name AS "task_kind!", 
@@ -52,7 +53,8 @@ impl PgTaskRepository {
                 worker_kind_name AS "worker_kind!", 
                 assigned_to, 
                 created_at, 
-                updated_at
+                updated_at,
+                otel_ctx_carrier
             "#,
             t.id,
             t.task_kind,
@@ -68,6 +70,7 @@ impl PgTaskRepository {
             t.updated_at,
             t.status.to_string(),
             t.priority,
+            t.otel_ctx_carrier,
         )
         .fetch_one(executor)
         .await
@@ -97,8 +100,9 @@ impl PgTaskRepository {
                 created_at, 
                 updated_at,
                 status,
-                priority
-                FROM tasks WHERE id = $1"#,
+                priority,
+                otel_ctx_carrier
+            FROM tasks WHERE id = $1"#,
             id
         )
         .fetch_optional(executor)
@@ -113,7 +117,7 @@ impl TaskRepository for PgTaskRepository {
         self.find_by_id(&self.core.pool, id).await
     }
 
-    #[instrument(skip(self, task))]
+    #[instrument(skip(self, task), parent_context = %task.otel_ctx_carrier)]
     async fn update_task(&self, task: &Task) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 
@@ -169,6 +173,7 @@ mod tests {
             TaskStatus::Pending,
             0,
             Utc::now(),
+            None,
             None,
             None,
             None,

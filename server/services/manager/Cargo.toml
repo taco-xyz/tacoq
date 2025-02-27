@@ -26,14 +26,17 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 utoipa = { version = "5.2.0", features = ["axum_extras", "uuid"]}
 utoipa-axum = "0.1.2"
 time = { version = "0.3.36", features = ["serde"] }
-axum-tracing-opentelemetry = "0.25.0"
-init-tracing-opentelemetry = { version = "0.25.0", features = [
+axum-tracing-opentelemetry = "0.26.1"
+init-tracing-opentelemetry = { version = "0.27.1", features = [
   "otlp",
   "tracing_subscriber_ext",
 ] }
 mockall = "0.13.1"
 chrono = { version = "0.4.39", features = ["serde"] }
 base64 = "0.22.1"
+opentelemetry = "0.28.0"
+opentelemetry_sdk = "0.28.0"
+tracing-opentelemetry = "0.29.0"
 
 
 [dev-dependencies]

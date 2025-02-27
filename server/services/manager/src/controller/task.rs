@@ -4,7 +4,8 @@ use crate::repo::{
 };
 use common::brokers::core::BrokerConsumer;
 use common::models::Task;
-use tracing::{error, info, warn};
+use tracing::{error, info, info_span, warn, Instrument};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use std::sync::Arc;
 
@@ -34,40 +35,47 @@ impl TaskController {
     async fn consume_task(&self, task: Task) {
         info!("Starting to process task: {:?}", task);
 
-        let kind = match self
-            .worker_kind_repository
-            .get_or_create_worker_kind(&task.worker_kind)
-            .await
-        {
-            Ok(kind) => kind,
-            Err(e) => {
-                error!("Failed to process worker kind: {}", e);
-                return;
-            }
-        };
-        info!("Worker kind processed successfully: {:?}", kind);
-
-        let task = match self.task_repository.update_task(&task).await {
-            Ok(task) => task,
-            Err(e) => {
-                error!("Failed to update task: {}", e);
-                return;
-            }
-        };
-        info!("Task updated successfully: {:?}", task);
-
-        if let Some(assigned_to) = task.assigned_to {
-            match self
-                .worker_repository
-                .update_worker(assigned_to, &kind.name)
+        let span = info_span!("consume_task", task_id = %task.id);
+        let context = task.context();
+        span.set_parent(context.clone());
+        async {
+            let kind = match self
+                .worker_kind_repository
+                .get_or_create_worker_kind(&task.worker_kind)
                 .await
             {
-                Ok(_) => info!("Worker updated successfully: {}", assigned_to),
-                Err(e) => warn!("Failed to update worker {}: {}", assigned_to, e),
-            }
-        }
+                Ok(kind) => kind,
+                Err(e) => {
+                    error!("Failed to process worker kind: {}", e);
+                    return;
+                }
+            };
+            info!("Worker kind processed successfully: {:?}", kind);
 
-        info!("Task processing completed successfully");
+            let task = match self.task_repository.update_task(&task).await {
+                Ok(task) => task,
+                Err(e) => {
+                    error!("Failed to update task: {}", e);
+                    return;
+                }
+            };
+            info!("Task updated successfully: {:?}", task);
+
+            if let Some(assigned_to) = task.assigned_to {
+                match self
+                    .worker_repository
+                    .update_worker(assigned_to, &kind.name)
+                    .await
+                {
+                    Ok(_) => info!("Worker updated successfully: {}", assigned_to),
+                    Err(e) => warn!("Failed to update worker {}: {}", assigned_to, e),
+                }
+            }
+
+            info!("Task processing completed successfully");
+        }
+        .instrument(span)
+        .await;
     }
 
     pub async fn run(self: Arc<Self>) -> Result<(), Box<dyn std::error::Error>> {

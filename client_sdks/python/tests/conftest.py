@@ -1,9 +1,19 @@
+import os
+import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+)
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
+
+
 from src.manager import ManagerClient, ManagerConfig
 from src.worker import WorkerApplication, WorkerApplicationConfig
 from src.broker import BrokerConfig
-import pytest
 
-import os
 
 MANAGER_TEST_URL = os.environ.get("MANAGER_TEST_URL", "http://localhost:3000")
 BROKER_TEST_URL = os.environ.get(
@@ -14,6 +24,33 @@ WORKER_KIND_NAME = "test_worker_kind"
 WORKER_NAME = "test_worker"
 
 pytest_plugins = ["pytest_asyncio"]
+
+
+@pytest.fixture(autouse=True)
+def init_tracer():
+    """Initialize a test tracer that prints to console."""
+    provider = TracerProvider(
+        resource=Resource.create(
+            {"service.name": "test_python_client", "environment": "test"}
+        ),
+        id_generator=RandomIdGenerator(),
+    )
+
+    # Use Console exporter for immediate visibility in tests
+    batch_processor = BatchSpanProcessor(
+        OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
+    )
+    provider.add_span_processor(batch_processor)
+    # provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+
+    # Set as global provider
+    trace.set_tracer_provider(provider)
+
+    yield provider
+
+    # Shutdown the provider after test
+    batch_processor.force_flush()
+    provider.shutdown()
 
 
 ## ==============================

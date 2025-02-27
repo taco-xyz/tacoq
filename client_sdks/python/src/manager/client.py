@@ -88,12 +88,12 @@ class ManagerClient(BaseModel):
     ) -> Optional[Task]:
         """Get a task by its UUID.
 
-        ### Args
-        - `task_id`: UUID of the task to retrieve
-        - `override_retry_options`: Retry options to override the default ones
+        ### Args:
+        - task_id: UUID of the task to retrieve
+        - override_retry_options: Retry options to override the default ones
 
         ### Returns
-        - `Task`: The task details
+        - Task: The task details
         """
 
         async with ClientSession() as session:
@@ -109,7 +109,5 @@ class ManagerClient(BaseModel):
                     return None
                 resp.raise_for_status()
                 data = await resp.json()
-
-                print(data)
 
                 return Task(**data)
