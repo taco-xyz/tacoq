@@ -130,7 +130,7 @@ async fn main() {
     let config = Config::new();
     let _guard = init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers().unwrap();
 
-    let span = info_span!("manager_startup_real").entered();
+    let span = info_span!("manager_startup").entered();
 
     let (_, server, task_controller) = initialize_system(&config)
         .await
