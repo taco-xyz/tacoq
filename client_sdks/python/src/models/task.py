@@ -1,10 +1,9 @@
 from typing import Optional
 from uuid import UUID
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 from pydantic import BaseModel, Field
-
 
 TaskInput = str
 """ Task input data defined by the user - they can use whatever format they want, but
@@ -82,8 +81,21 @@ class Task(BaseModel):
     is_error: int = Field(default=0)
     """ Whether the task failed. """
 
+    otel_ctx_carrier: Optional[dict[str, str]] = Field(default=None)
+    """ The OpenTelemetry context carrier for the task. """
+
     @property
     def has_finished(self) -> bool:
         """Whether the task has finished."""
 
         return self.status == TaskStatus.COMPLETED
+
+    @property
+    def completion_time(self) -> Optional[timedelta]:
+        """The time it took for the task to complete. If the task has not completed,
+        this will return `None`.
+        """
+
+        if self.completed_at is None or self.started_at is None:
+            return None
+        return self.completed_at - self.started_at
