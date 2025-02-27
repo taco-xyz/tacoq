@@ -1,5 +1,12 @@
+use std::collections::HashMap;
+use std::fmt::Error;
+
 use chrono::{DateTime, Duration, Utc};
+use opentelemetry::propagation::{Extractor, TextMapPropagator};
+use opentelemetry::Context;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
@@ -124,6 +131,9 @@ pub struct Task {
     pub created_at: DateTime<Utc>,
     #[serde(skip)]
     pub updated_at: DateTime<Utc>,
+
+    // OpenTelemetry context carrier
+    pub otel_ctx_carrier: Option<JsonValue>,
 }
 
 impl Task {
@@ -141,6 +151,7 @@ impl Task {
         completed_at: Option<DateTime<Utc>>,
         assigned_to: Option<Uuid>,
         ttl: Option<DateTime<Utc>>,
+        otel_ctx_carrier: Option<JsonValue>,
     ) -> Self {
         Task {
             id: id.unwrap_or_else(Uuid::new_v4),
@@ -155,6 +166,7 @@ impl Task {
             started_at,
             completed_at,
             ttl,
+            otel_ctx_carrier,
             created_at,
             updated_at: Utc::now(),
         }
@@ -190,5 +202,48 @@ impl Task {
         } else {
             TaskStatus::Pending
         }
+    }
+
+    pub fn context(&self) -> Context {
+        let carrier_value = self.otel_ctx_carrier.clone();
+        match carrier_value {
+            Some(carrier) => extract_context(&carrier).unwrap(),
+            None => Context::new(),
+        }
+    }
+}
+
+// Context Extraction (this was a motherfucker)
+
+struct HashMapExtractor<'a>(&'a std::collections::HashMap<String, String>);
+
+impl<'a> Extractor for HashMapExtractor<'a> {
+    fn get(&self, key: &str) -> Option<&str> {
+        self.0.get(key).map(|v| v.as_str())
+    }
+
+    fn keys(&self) -> Vec<&str> {
+        self.0.keys().map(|k| k.as_str()).collect()
+    }
+}
+
+/// Removes all non-string values from the map. Basically ensures that
+/// the map is a valid OpenTelemetry context carrier.
+fn strip_map(map: &serde_json::Map<String, JsonValue>) -> HashMap<String, String> {
+    let hashmap: HashMap<String, String> = map
+        .iter()
+        .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+        .collect();
+    hashmap
+}
+
+fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
+    match carrier {
+        JsonValue::Object(map) => {
+            let propagator = TraceContextPropagator::new();
+            let otel_cx = propagator.extract(&HashMapExtractor(&strip_map(map)));
+            Ok(otel_cx)
+        }
+        _ => Err(Error),
     }
 }
