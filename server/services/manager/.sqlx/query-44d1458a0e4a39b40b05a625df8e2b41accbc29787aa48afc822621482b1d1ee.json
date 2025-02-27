@@ -10,16 +10,11 @@
       },
       {
         "ordinal": 1,
-        "name": "name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 2,
         "name": "worker_kind_name",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 2,
         "name": "registered_at",
         "type_info": "Timestamptz"
       }
@@ -28,7 +23,6 @@
       "Left": []
     },
     "nullable": [
-      false,
       false,
       false,
       false

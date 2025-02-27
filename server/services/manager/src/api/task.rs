@@ -64,23 +64,23 @@ async fn get_task_by_id(
         })
 }
 
-#[utoipa::path(
-    post,
-    description = "Posts a new task to the consumers",
-    path = "/tasks",
-    request_body = Task,
-    responses(
-        (status = 201, description = "Task created", body = Task, content_type = "application/json"),
-        (status = 500, description = "Internal server error", content_type = "text/plain")
-    ),
-    tag = "tasks"
-)]
-async fn publish_task(
-    State(_state): State<AppState>,
-    Json(task): Json<Task>,
-) -> Result<Json<Task>, (StatusCode, String)> {
-    Ok(Json(task))
-}
+// #[utoipa::path(
+//     post,
+//     description = "Posts a new task to the consumers",
+//     path = "/tasks",
+//     request_body = Task,
+//     responses(
+//         (status = 201, description = "Task created", body = Task, content_type = "application/json"),
+//         (status = 500, description = "Internal server error", content_type = "text/plain")
+//     ),
+//     tag = "tasks"
+// )]
+// async fn publish_task(
+//     State(_state): State<AppState>,
+//     Json(task): Json<Task>,
+// ) -> Result<Json<Task>, (StatusCode, String)> {
+//     Ok(Json(task))
+// }
 
 #[cfg(test)]
 mod test {
