@@ -1,7 +1,9 @@
-from asyncio import sleep, create_task
+from asyncio import sleep, create_task, gather
+from typing import Coroutine, Any
 import time
 import uuid
 import pytest
+from datetime import datetime
 from uuid import uuid4
 import json
 
@@ -17,6 +19,7 @@ from manager.config import ManagerConfig
 DELAYED_TASK = "delayed_task"
 FAILING_TASK = "failing_task"
 DELAYED_TASK_BLOCKING = "delayed_task_blocking"
+QUICK_TASK = "quick_task"
 
 
 async def delayed_task(input_data: TaskInput) -> TaskOutput:
@@ -63,6 +66,12 @@ async def delayed_task(input_data: TaskInput) -> TaskOutput:
     return json.dumps({"message": "Task completed", "input": input_data})
 
 
+async def quick_task(input_data: TaskInput) -> TaskOutput:
+    """Quick task."""
+    await sleep(0.1)
+    return json.dumps({"message": "Task completed", "input": input_data})
+
+
 async def delayed_task_blocking(input_data: TaskInput) -> TaskOutput:
     """Blocking task to test multiple processes."""
     time.sleep(2)
@@ -83,7 +92,7 @@ class WorkerContext:
     """ The kind of worker to use for this context. We generate it on the fly 
     so that we can run multiple workers in parallel and avoid queue collisions."""
 
-    def __init__(self):
+    def __init__(self, broker_prefetch_count: int):
         self.worker_kind = str(uuid.uuid4())
 
         # Create and configure worker
@@ -92,9 +101,9 @@ class WorkerContext:
                 name=self.worker_kind,
                 kind=self.worker_kind,
                 manager_config=ManagerConfig(url="http://localhost:3000"),
+                broker_prefetch_count=broker_prefetch_count,
                 broker_config=BrokerConfig(
                     url="amqp://user:password@localhost:5672",
-                    prefetch_count=10,
                     test_mode=True,
                 ),
             )
@@ -104,6 +113,7 @@ class WorkerContext:
         self._worker_app.register_task(DELAYED_TASK, delayed_task)
         self._worker_app.register_task(FAILING_TASK, failing_task)
         self._worker_app.register_task(DELAYED_TASK_BLOCKING, delayed_task_blocking)
+        self._worker_app.register_task(QUICK_TASK, quick_task)
 
     async def __aenter__(self):
         # Run worker in background
@@ -128,13 +138,11 @@ async def test_delayed_task_e2e():
     """
     publisher = PublisherClient(
         manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(
-            url="amqp://user:password@localhost:5672", prefetch_count=10
-        ),
+        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
     )
 
     # Start worker in background
-    async with WorkerContext() as worker:
+    async with WorkerContext(broker_prefetch_count=10) as worker:
         input_data = {"test": "data"}
         task = await publisher.publish_task(
             task_kind=DELAYED_TASK,
@@ -174,12 +182,10 @@ async def test_parallel_delayed_tasks():
     """
     publisher = PublisherClient(
         manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(
-            url="amqp://user:password@localhost:5672", prefetch_count=5
-        ),
+        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
     )
 
-    async with WorkerContext() as worker:
+    async with WorkerContext(broker_prefetch_count=5) as worker:
         # Submit 5 delayed tasks
         tasks: list[Task] = []
         for i in range(5):
@@ -217,13 +223,11 @@ async def test_error_task_e2e():
     """
     publisher = PublisherClient(
         manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(
-            url="amqp://user:password@localhost:5672", prefetch_count=10
-        ),
+        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
     )
 
     # Start worker in background
-    async with WorkerContext() as worker:
+    async with WorkerContext(broker_prefetch_count=10) as worker:
         # Submit task
         task = await publisher.publish_task(
             task_kind=FAILING_TASK,
@@ -249,9 +253,7 @@ async def test_task_not_found():
     """Test that requesting a non-existent task returns None"""
     publisher = PublisherClient(
         manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(
-            url="amqp://user:password@localhost:5672", prefetch_count=10
-        ),
+        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
     )
 
     task_status = await publisher.get_task(uuid4())
@@ -265,13 +267,11 @@ async def test_parallel_blocking_tasks():
     """Test that tasks run in parallel with multiple workers"""
     publisher = PublisherClient(
         manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(
-            url="amqp://user:password@localhost:5672", prefetch_count=10
-        ),
+        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
     )
 
     # Start worker with 2 processes
-    async with WorkerContext() as worker:
+    async with WorkerContext(broker_prefetch_count=10) as worker:
         print("Started worker")
         # Submit two blocking tasks
         task1 = await publisher.publish_task(
@@ -303,3 +303,72 @@ async def test_parallel_blocking_tasks():
         assert task2_status.status == TaskStatus.COMPLETED, (
             "Task 2 wasn't completed after 2.5s. Likely not running in parallel."
         )
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+@pytest.mark.priority
+async def test_priority_task():
+    """Test that tasks run in parallel with multiple workers"""
+    publisher = PublisherClient(
+        manager_config=ManagerConfig(url="http://localhost:3000"),
+        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
+    )
+
+    async with WorkerContext(broker_prefetch_count=1) as worker:
+        # Publish an initial task to for the rest of them to get stuck in
+        print("Publishing initial task to enqueue the rest..")
+        await publisher.publish_task(
+            task_kind=DELAYED_TASK,
+            worker_kind=worker.config.kind,
+            input_data="",
+            priority=1,
+        )
+        print("Published initial task!")
+        coroutines: list[Coroutine[Any, Any, Task]] = []
+
+        # We distribute a bunch of priorities at random and check if they're completed in the correct order
+        TOTAL_TASKS = 13
+        print(f"Publishing {TOTAL_TASKS} tasks at random priorities..")
+        for priority in sorted(range(TOTAL_TASKS), key=lambda _: uuid4()):
+            coroutines.append(
+                publisher.publish_task(
+                    task_kind=QUICK_TASK,
+                    worker_kind=worker.config.kind,
+                    input_data="",
+                    priority=priority,
+                )
+            )
+        print("Waiting for tasks to complete..")
+        incomplete_tasks = await gather(*coroutines)
+        # Wait for all tasks to complete and then gather the results so we can check when they were completed
+        completed_tasks: list[Task] = []
+        await sleep(TOTAL_TASKS * 0.1 + 3)
+        print("Gathering results..")
+        for task in incomplete_tasks:
+            task = await publisher.get_task(task.id)
+            assert task is not None, f"Task {task} was not found"
+            completed_tasks.append(task)
+
+        priority_completed_at: dict[int, datetime] = {}
+        for task in completed_tasks:
+            assert task.completed_at is not None, "Task was not completed"
+            priority_completed_at[task.priority] = task.completed_at
+
+        previous_completed_at = None
+        previous_priority = -1
+        ordered_priority_completed_at = sorted(
+            priority_completed_at.items(), key=lambda x: x[1]
+        )
+
+        print("\nPriority order completion times:")
+        for priority, completed_at in ordered_priority_completed_at:
+            print(f"Priority {priority}: {completed_at}")
+
+        for priority, completed_at in ordered_priority_completed_at:
+            if previous_completed_at is not None:
+                assert completed_at > previous_completed_at, (
+                    f"Task of priority {priority} was completed before task of priority {previous_priority}"
+                )
+            previous_completed_at = completed_at
+            previous_priority = priority
