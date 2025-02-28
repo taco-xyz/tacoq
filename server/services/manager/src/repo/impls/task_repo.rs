@@ -163,22 +163,11 @@ mod tests {
 
     /// Creates a test task
     fn get_test_task() -> Task {
-        Task::new(
-            Some(Uuid::new_v4()),
-            "TaskKindName",
-            "WorkerKindName",
-            None,
-            None,
-            None,
-            TaskStatus::Pending,
-            0,
-            Utc::now(),
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        Task::new("TaskKindName", "WorkerKindName", 0)
+            .with_input_data(vec![1, 2, 3])
+            .with_output_data(vec![4, 5, 6])
+            .with_error(false)
+            .with_status(TaskStatus::Pending)
     }
 
     /// Creates a task and then retrieves it by id

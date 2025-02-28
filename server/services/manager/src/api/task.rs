@@ -86,7 +86,7 @@ async fn get_task_by_id(
 mod test {
     use axum::http::StatusCode;
     use common::models::{Task, TaskStatus};
-    use sqlx::{types::chrono::Utc, PgPool};
+    use sqlx::PgPool;
     use uuid::Uuid;
 
     use crate::{
@@ -104,22 +104,11 @@ mod test {
     }
 
     fn get_test_task() -> Task {
-        Task::new(
-            Some(Uuid::new_v4()),
-            "TaskKindName",
-            "WorkerKindName",
-            None,
-            None,
-            None,
-            TaskStatus::Pending,
-            0,
-            Utc::now(),
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        Task::new("TaskKindName", "WorkerKindName", 0)
+            .with_input_data(vec![1, 2, 3])
+            .with_output_data(vec![4, 5, 6])
+            .with_error(false)
+            .with_status(TaskStatus::Pending)
     }
 
     #[sqlx::test(migrator = "common::MIGRATOR")]

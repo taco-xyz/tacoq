@@ -137,39 +137,67 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(
-        id: Option<Uuid>,
-        task_kind_name: &str,
-        worker_kind_name: &str,
-        input_data: Option<Vec<u8>>,
-        output_data: Option<Vec<u8>>,
-        is_error: Option<bool>,
-        status: TaskStatus,
-        priority: i32,
-        created_at: DateTime<Utc>,
-        started_at: Option<DateTime<Utc>>,
-        completed_at: Option<DateTime<Utc>>,
-        assigned_to: Option<Uuid>,
-        ttl: Option<DateTime<Utc>>,
-        otel_ctx_carrier: Option<JsonValue>,
-    ) -> Self {
+    /// Creates a new task with minimal required parameters
+    pub fn new(task_kind_name: &str, worker_kind_name: &str, priority: i32) -> Self {
         Task {
-            id: id.unwrap_or_else(Uuid::new_v4),
+            id: Uuid::new_v4(),
             task_kind: task_kind_name.to_string(),
-            input_data,
-            output_data,
-            is_error: is_error.map_or(0, |e| if e { 1 } else { 0 }),
-            status,
+            input_data: None,
+            output_data: None,
+            is_error: 0,
+            status: TaskStatus::Pending,
             priority,
             worker_kind: worker_kind_name.to_string(),
-            assigned_to,
-            started_at,
-            completed_at,
-            ttl,
-            otel_ctx_carrier,
-            created_at,
+            assigned_to: None,
+            started_at: None,
+            completed_at: None,
+            ttl: None,
+            otel_ctx_carrier: None,
+            created_at: Utc::now(),
             updated_at: Utc::now(),
         }
+    }
+
+    /// Creates a new task with specific ID
+    pub fn with_id(mut self, id: Uuid) -> Self {
+        self.id = id;
+        self
+    }
+
+    /// Sets the input data
+    pub fn with_input_data(mut self, input_data: Vec<u8>) -> Self {
+        self.input_data = Some(input_data);
+        self
+    }
+
+    /// Sets the output data
+    pub fn with_output_data(mut self, output_data: Vec<u8>) -> Self {
+        self.output_data = Some(output_data);
+        self
+    }
+
+    /// Sets the error status
+    pub fn with_error(mut self, is_error: bool) -> Self {
+        self.is_error = if is_error { 1 } else { 0 };
+        self
+    }
+
+    /// Sets the task status
+    pub fn with_status(mut self, status: TaskStatus) -> Self {
+        self.status = status;
+        self
+    }
+
+    /// Sets the assigned worker
+    pub fn assigned_to(mut self, worker_id: Uuid) -> Self {
+        self.assigned_to = Some(worker_id);
+        self
+    }
+
+    /// Sets the OpenTelemetry context
+    pub fn with_otel_context(mut self, ctx: JsonValue) -> Self {
+        self.otel_ctx_carrier = Some(ctx);
+        self
     }
 
     pub fn set_status(&mut self, status: TaskStatus) {

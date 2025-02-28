@@ -12,7 +12,7 @@ pub mod test {
         ]
     }
 
-    pub fn get_workers(worker_kinds: &Vec<WorkerKind>) -> Vec<Worker> {
+    pub fn get_workers(worker_kinds: &[WorkerKind]) -> Vec<Worker> {
         vec![
             Worker::new(Uuid::new_v4(), &worker_kinds[0].name),
             Worker::new(Uuid::new_v4(), &worker_kinds[1].name),
