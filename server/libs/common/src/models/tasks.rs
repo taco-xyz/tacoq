@@ -62,6 +62,15 @@ where
     )))
 }
 
+fn deserialize_timestamp_optional<'de, D>(
+    deserializer: D,
+) -> Result<Option<DateTime<Utc>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_timestamp(deserializer).map(Some).or(Ok(None))
+}
+
 // Task status enum
 /// # Possible Status:
 /// * `Pending`: Task is created but not yet assigned
@@ -119,9 +128,9 @@ pub struct Task {
     pub assigned_to: Option<Uuid>, // worker that it is assigned to
 
     // Task status
-    #[serde(skip)]
+    #[serde(deserialize_with = "deserialize_timestamp_optional")]
     pub started_at: Option<DateTime<Utc>>,
-    #[serde(skip)]
+    #[serde(deserialize_with = "deserialize_timestamp_optional")]
     pub completed_at: Option<DateTime<Utc>>,
     #[serde(skip)]
     pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
