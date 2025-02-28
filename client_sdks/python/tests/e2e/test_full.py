@@ -81,7 +81,7 @@ async def delayed_task_blocking(input_data: TaskInput) -> TaskOutput:
 
 async def failing_task(input_data: TaskInput) -> TaskOutput:
     """Failing task."""
-    raise ValueError("Task failed intentionally")
+    raise ValueError("Task failed successfully")
 
 
 class WorkerContext:
@@ -244,7 +244,10 @@ async def test_error_task_e2e():
         assert task_status.status == TaskStatus.COMPLETED
         assert task_status.is_error == 1
         assert task_status.output_data is not None
-        assert task_status.output_data == "Task failed intentionally"
+        assert (
+            "Task failed successfully" in task_status.output_data
+            and "ValueError" in task_status.output_data
+        )
 
 
 @pytest.mark.e2e
