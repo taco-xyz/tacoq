@@ -245,7 +245,7 @@ impl Task {
 
 struct HashMapExtractor<'a>(&'a std::collections::HashMap<String, String>);
 
-impl<'a> Extractor for HashMapExtractor<'a> {
+impl Extractor for HashMapExtractor<'_> {
     fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).map(|v| v.as_str())
     }
