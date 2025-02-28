@@ -1,8 +1,8 @@
 [package]
 name = "manager"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Galactus is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
+description = "The manager is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
 
 [dependencies]
 common = { path = "../../libs/common" }
