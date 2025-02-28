@@ -227,7 +227,11 @@ class WorkerApplication(BaseModel):
 
             # Submit task output via broker
             with tracer.start_as_current_span(
-                "publish_task_result", attributes={"task.result_size": len(str(result))}
+                "publish_task_result",
+                attributes={
+                    "task.result_size": len(str(result)),
+                    "task": str(task.model_dump()),
+                },
             ):
                 await self._broker_client.publish_task_result(task=task)
 
@@ -258,6 +262,7 @@ class WorkerApplication(BaseModel):
         self._broker_client = WorkerBrokerClient(
             config=self.config.broker_config,
             worker_kind=self.config.kind,
+            prefetch_count=self.config.broker_prefetch_count,
         )
         await self._broker_client.connect()
 
@@ -301,7 +306,6 @@ class WorkerApplication(BaseModel):
                 message="Listening for tasks",
             )
         )
-
         try:
             while not self._shutdown_event.is_set():
                 try:

@@ -82,7 +82,7 @@ def mock_manager_client() -> ManagerClient:
 @pytest.fixture
 async def broker_config() -> BrokerConfig:
     """Fixture that provides a configured BrokerConfig instance."""
-    return BrokerConfig(url=BROKER_TEST_URL, prefetch_count=10)
+    return BrokerConfig(url=BROKER_TEST_URL)
 
 
 ## ==============================
@@ -100,6 +100,7 @@ async def worker_config(
         name=WORKER_NAME,
         manager_config=manager_config,
         broker_config=broker_config,
+        broker_prefetch_count=10,
     )
 
 
