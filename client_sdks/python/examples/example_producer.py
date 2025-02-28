@@ -11,9 +11,7 @@ from publisher.client import PublisherClient
 manager_config = ManagerConfig(url="http://localhost:3000")
 
 # Setup the broker configuration
-broker_config = BrokerConfig(
-    url="amqp://user:password@localhost:5672", prefetch_count=5
-)
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 
 # Both the publisher and the worker need to know about the task kinds and
 # should have unified names for them.

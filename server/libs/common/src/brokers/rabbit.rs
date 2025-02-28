@@ -14,7 +14,7 @@ use std::{
         Arc,
     },
 };
-use tracing::warn;
+use tracing::{info, warn};
 
 #[derive(Clone, Debug)]
 pub struct RabbitMQConsumer<T>
@@ -39,6 +39,9 @@ where
         let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
         let channel = connection.create_channel().await?;
 
+        let mut arguments = FieldTable::default();
+        arguments.insert("x-max-priority".into(), 255.into());
+
         channel
             .queue_declare(
                 queue,
@@ -46,7 +49,7 @@ where
                     durable: true,
                     ..QueueDeclareOptions::default()
                 },
-                FieldTable::default(),
+                arguments,
             )
             .await?;
 
@@ -89,6 +92,11 @@ where
 
             match serde_json::from_slice(&payload) {
                 Ok(parsed_message) => {
+                    info!(
+                        "Parsed message {:?} from payload {:?}",
+                        parsed_message,
+                        String::from_utf8_lossy(&payload)
+                    );
                     handler(parsed_message).await;
                 }
                 Err(e) => {

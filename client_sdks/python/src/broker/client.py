@@ -98,7 +98,11 @@ class BaseBrokerClient(BaseModel):
         )
 
         # Declare manager queue - all clients ensure it exists
-        manager_queue = await self._channel.declare_queue(MANAGER_QUEUE, durable=True)
+        manager_queue = await self._channel.declare_queue(
+            MANAGER_QUEUE,
+            durable=True,
+            arguments={"x-max-priority": 255},
+        )
         await manager_queue.bind(self._task_exchange, routing_key=MANAGER_ROUTING_KEY)
 
     async def disconnect(self) -> None:
@@ -145,6 +149,7 @@ class PublisherBrokerClient(BaseBrokerClient):
         worker_queue = await self._channel.declare_queue(
             worker_kind,
             durable=True,  # Survive broker restarts
+            arguments={"x-max-priority": 255},
         )
         await worker_queue.bind(
             self._task_exchange,
@@ -168,7 +173,11 @@ class PublisherBrokerClient(BaseBrokerClient):
             )
 
         # Get the queue
-        queue = await self._channel.declare_queue(worker_kind, durable=True)
+        queue = await self._channel.declare_queue(
+            worker_kind,
+            durable=True,
+            arguments={"x-max-priority": 255},
+        )
 
         # Purge the queue
         await queue.purge()
@@ -186,7 +195,7 @@ class PublisherBrokerClient(BaseBrokerClient):
         # Ensure worker queue exists
         await self._declare_worker_queue(task.worker_kind)
 
-        message = Message(body=task.model_dump_json().encode())
+        message = Message(body=task.model_dump_json().encode(), priority=task.priority)
         routing_key = WORKER_ROUTING_KEY.format(worker_kind=task.worker_kind)
 
         await self._task_exchange.publish(message, routing_key=routing_key)
@@ -205,6 +214,9 @@ class WorkerBrokerClient(BaseBrokerClient):
     worker_kind: str
     """ The name of the worker kind. """
 
+    prefetch_count: int
+    """ The number of tasks to prefetch from the broker. """
+
     _queue: Optional[AbstractQueue] = None
     """ Queue for task assignments. """
 
@@ -217,12 +229,15 @@ class WorkerBrokerClient(BaseBrokerClient):
                 "Tried to declare worker queue, but exchange was not declared."
             )
 
-        # Set prefetch to 10 for fair dispatch
-        await self._channel.set_qos(prefetch_count=self.config.prefetch_count)
+        await self._channel.set_qos(prefetch_count=self.prefetch_count, global_=True)
 
         # Worker's queue - named after its kind
         routing_key = WORKER_ROUTING_KEY.format(worker_kind=self.worker_kind)
-        self._queue = await self._channel.declare_queue(self.worker_kind, durable=True)
+        self._queue = await self._channel.declare_queue(
+            self.worker_kind,
+            durable=True,
+            arguments={"x-max-priority": 255},
+        )
         await self._queue.bind(self._task_exchange, routing_key=routing_key)
 
     async def listen(
@@ -232,7 +247,7 @@ class WorkerBrokerClient(BaseBrokerClient):
         if not self._queue:
             raise RuntimeError("Queue not initialized")
 
-        async with self._queue.iterator() as queue_iter:
+        async with self._queue.iterator(no_ack=False) as queue_iter:
             async for message in queue_iter:
                 task = Task(**json.loads(message.body))
                 yield (task, message)

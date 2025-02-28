@@ -19,5 +19,9 @@ class WorkerApplicationConfig:
     broker_config: BrokerConfig
     """ Configuration for the broker. """
 
+    broker_prefetch_count: int
+    """ The number of tasks to prefetch from the broker. This also dictates how many asynchronous tasks
+     can be executed at once. """
+
     manager_config: ManagerConfig
     """ Configuration for the manager. """

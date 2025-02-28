@@ -35,8 +35,8 @@ def worker_app():
         ),
         broker_config=BrokerConfig(
             url="amqp://user:password@localhost:5672",
-            prefetch_count=10,
         ),
+        broker_prefetch_count=10,
     )
     return WorkerApplication(config=config)
 

@@ -117,7 +117,7 @@ impl TaskRepository for PgTaskRepository {
         self.find_by_id(&self.core.pool, id).await
     }
 
-    #[instrument(skip(self, task), parent_context = %task.otel_ctx_carrier)]
+    #[instrument(skip(self))]
     async fn update_task(&self, task: &Task) -> Result<Task, sqlx::Error> {
         let mut tx = self.core.pool.begin().await?;
 

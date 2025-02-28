@@ -10,9 +10,7 @@ from src.models import TaskInput, TaskOutput
 
 # The worker needs to know about the manager and the broker.
 manager_config = ManagerConfig(url="http://localhost:3000")
-broker_config = BrokerConfig(
-    url="amqp://user:password@localhost:5672", prefetch_count=5
-)
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 
 # Both the publisher and the worker need to know about the task kinds and
 # should have unified names for them.
@@ -29,6 +27,7 @@ worker_application = WorkerApplication(
         manager_config=manager_config,
         broker_config=broker_config,
         kind=WORKER_KIND_NAME,
+        broker_prefetch_count=5,
     ),
 )
 
