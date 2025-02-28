@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO workers (id, worker_kind_name, registered_at)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (id) DO UPDATE \n            SET worker_kind_name = $2\n            RETURNING *\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "worker_kind_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "registered_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d1467fb2a644ecebccabd7dd7349cb78e29776076c8d0abd6b34e09b88f6c259"
+}

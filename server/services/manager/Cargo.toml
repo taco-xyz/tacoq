@@ -1,12 +1,11 @@
 [package]
 name = "manager"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Galactus is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
+description = "The manager is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
 
 [dependencies]
 common = { path = "../../libs/common" }
-db_common = { path = "../../libs/db-common" }
 async-trait = "0.1.83"
 dotenv = "0.15.0"
 futures = "0.3.31"
@@ -19,7 +18,7 @@ sqlx = { version = "0.8.2", features = [
     "postgres",
     "uuid",
     "json",
-    "time",
+    "chrono",
 ] }
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
@@ -27,11 +26,17 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 utoipa = { version = "5.2.0", features = ["axum_extras", "uuid"]}
 utoipa-axum = "0.1.2"
 time = { version = "0.3.36", features = ["serde"] }
-axum-tracing-opentelemetry = "0.25.0"
-init-tracing-opentelemetry = { version = "0.25.0", features = [
+axum-tracing-opentelemetry = "0.26.1"
+init-tracing-opentelemetry = { version = "0.27.1", features = [
   "otlp",
   "tracing_subscriber_ext",
 ] }
+mockall = "0.13.1"
+chrono = { version = "0.4.39", features = ["serde"] }
+base64 = "0.22.1"
+opentelemetry = "0.28.0"
+opentelemetry_sdk = "0.28.0"
+tracing-opentelemetry = "0.29.0"
 
 
 [dev-dependencies]

@@ -3,8 +3,6 @@ pub mod test {
     use axum_test::TestServer;
     use sqlx::PgPool;
 
-    use common::brokers::Broker;
-
     use crate::setup_app;
 
     /// Initializes a test logger with debug level output that writes to the test writer.
@@ -18,8 +16,8 @@ pub mod test {
 
     /// Creates and returns a test server instance with the application router.
     /// This provides a way to make test HTTP requests against the API endpoints.
-    pub async fn get_test_server(db_pools: PgPool, broker: Broker) -> TestServer {
-        let router = setup_app(db_pools, broker).await;
+    pub async fn get_test_server(db_pools: PgPool) -> TestServer {
+        let (router, _) = setup_app(&db_pools).await;
         TestServer::new(router).unwrap()
     }
 }
