@@ -2,6 +2,7 @@ mod api;
 mod config;
 mod constants;
 mod controller;
+mod jobs;
 mod repo;
 mod server;
 mod testing;
@@ -20,6 +21,7 @@ use sqlx::PgPool;
 
 use config::Config;
 use controller::task;
+use jobs::TaskCleanupJob;
 use repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
 
 /// Represents the shared application state that can be accessed by all routes
@@ -98,7 +100,15 @@ async fn setup_app(db_pools: &PgPool) -> (Router, AppState) {
 
 async fn initialize_system(
     config: &Config,
-) -> Result<(AppState, Server, Arc<task::TaskController>), Box<dyn std::error::Error>> {
+) -> Result<
+    (
+        AppState,
+        Server,
+        Arc<task::TaskController>,
+        Arc<TaskCleanupJob>,
+    ),
+    Box<dyn std::error::Error>,
+> {
     let shutdown = Arc::new(AtomicBool::new(false));
 
     let db_pools = setup_db_pools(config).await;
@@ -119,9 +129,14 @@ async fn initialize_system(
             .await?,
     );
 
+    let task_cleanup_job = Arc::new(TaskCleanupJob::new(
+        PgTaskRepository::new(PgRepositoryCore::new(db_pools.clone())),
+        300, // Every 5 minutes
+    ));
+
     let server = Server::new(app, 3000);
 
-    Ok((app_state, server, task_controller))
+    Ok((app_state, server, task_controller, task_cleanup_job))
 }
 
 #[tokio::main]
@@ -132,7 +147,7 @@ async fn main() {
 
     let span = info_span!("manager_startup").entered();
 
-    let (_, server, task_controller) = initialize_system(&config)
+    let (_, server, task_controller, task_cleanup_job) = initialize_system(&config)
         .await
         .expect("Failed to initialize system");
 
@@ -146,7 +161,13 @@ async fn main() {
         }
     });
 
-    // Needed for static lifetime
+    // Start task cleanup job
+    let task_cleanup_handle = tokio::spawn(async move {
+        let job = task_cleanup_job.clone();
+        job.run().await.expect("Task cleanup job failed");
+    });
+
+    // Start task controller
     let task_controller_shutdown = task_controller.clone();
     let task_handle = tokio::spawn(async move {
         let controller = task_controller.clone();
@@ -164,6 +185,9 @@ async fn main() {
 
     // Wait for shutdown
     tokio::select! {
+        _ = task_cleanup_handle => {
+            info!("Task cleanup job shutdown");
+        },
         _ = task_handle => {
             warn!("Task controller shutdown");
         },

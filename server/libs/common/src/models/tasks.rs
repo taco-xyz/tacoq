@@ -248,6 +248,13 @@ impl Task {
             None => Context::new(),
         }
     }
+
+    pub fn is_expired(&self) -> bool {
+        match self.ttl {
+            Some(ttl) => ttl < Utc::now(),
+            None => false,
+        }
+    }
 }
 
 // Context Extraction (this was a motherfucker)

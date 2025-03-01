@@ -108,6 +108,16 @@ impl PgTaskRepository {
         .fetch_optional(executor)
         .await
     }
+
+    pub async fn delete<'e, E>(&self, executor: E, id: &Uuid) -> Result<(), sqlx::Error>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query!("DELETE FROM tasks WHERE id = $1", id)
+            .execute(executor)
+            .await?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -142,6 +152,27 @@ impl TaskRepository for PgTaskRepository {
         let saved = self.save(&mut *tx, &task_to_save).await?;
         tx.commit().await?;
         Ok(saved)
+    }
+
+    #[instrument(skip(self, id))]
+    async fn delete_task(&self, id: &Uuid) -> Result<(), sqlx::Error> {
+        self.delete(&self.core.pool, id).await
+    }
+
+    #[instrument(skip(self))]
+    async fn delete_expired_tasks(&self) -> Result<u64, Box<dyn std::error::Error>> {
+        let now = chrono::Utc::now();
+
+        let result = sqlx::query!(
+            r#"DELETE FROM tasks
+                WHERE ttl IS NOT NULL AND ttl < $1
+            "#,
+            now,
+        )
+        .execute(&self.core.pool)
+        .await?;
+
+        Ok(result.rows_affected())
     }
 }
 
@@ -235,5 +266,26 @@ mod tests {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
         let task = repo.get_task_by_id(&Uuid::new_v4()).await.unwrap();
         assert!(task.is_none());
+    }
+
+    // Tests task deletion
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn delete_task(pool: PgPool) {
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
+
+        let task = get_test_task();
+        worker_kind_repo
+            .get_or_create_worker_kind(&task.worker_kind)
+            .await
+            .unwrap();
+
+        let saved = repo.update_task(&task).await.unwrap();
+        assert_eq!(saved.id, task.id, "Created Task ID should match");
+
+        repo.delete_task(&task.id).await.unwrap();
+
+        let retrieved = repo.get_task_by_id(&task.id).await.unwrap();
+        assert!(retrieved.is_none(), "Task should be deleted");
     }
 }
