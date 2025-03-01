@@ -288,4 +288,27 @@ mod tests {
         let retrieved = repo.get_task_by_id(&task.id).await.unwrap();
         assert!(retrieved.is_none(), "Task should be deleted");
     }
+
+    // Tests task cleanup on expired ttl
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn cleanup_expired_tasks(pool: PgPool) {
+        let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
+        let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
+
+        let mut task = get_test_task();
+        task.ttl = Some(Utc::now() - chrono::Duration::days(1));
+        worker_kind_repo
+            .get_or_create_worker_kind(&task.worker_kind)
+            .await
+            .unwrap();
+
+        let saved = repo.update_task(&task).await.unwrap();
+        assert_eq!(saved.id, task.id, "Created Task ID should match");
+
+        let count = repo.delete_expired_tasks().await.unwrap();
+        assert_eq!(count, 1, "One task should be deleted");
+
+        let count = repo.delete_expired_tasks().await.unwrap();
+        assert_eq!(count, 0, "No more tasks should be deleted");
+    }
 }
