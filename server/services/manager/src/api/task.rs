@@ -42,7 +42,7 @@ async fn get_task_by_id(
 ) -> Result<Json<Task>, (StatusCode, String)> {
     info!("Getting task by ID: {:?}", id);
 
-    state
+    let result = state
         .task_repository
         .get_task_by_id(&id)
         .await
@@ -52,16 +52,37 @@ async fn get_task_by_id(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to get task: {}", e),
             )
-        })
-        .and_then(|task_opt| {
-            task_opt.map(Json).ok_or_else(|| {
-                info!("Task with ID {:?} not found", id);
-                (
-                    StatusCode::NOT_FOUND,
-                    format!("Task with ID {} not found", id),
-                )
-            })
-        })
+        });
+
+    if let Ok(Some(task)) = &result {
+        if task.is_expired() {
+            // Delete the task
+            if let Err(e) = state.task_repository.delete_task(&task.id).await {
+                error!("Error deleting expired task: {:?}", e);
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to delete expired task: {}", e),
+                ));
+            }
+
+            return Err((
+                StatusCode::NOT_FOUND,
+                format!("Task with ID {} not found", id),
+            ));
+        }
+    }
+
+    match result {
+        Ok(Some(task)) => Ok(Json(task)),
+        Ok(None) => {
+            info!("Task with ID {:?} not found", id);
+            Err((
+                StatusCode::NOT_FOUND,
+                format!("Task with ID {} not found", id),
+            ))
+        }
+        Err((status, message)) => Err((status, message)),
+    }
 }
 
 // #[utoipa::path(
@@ -141,5 +162,30 @@ mod test {
 
         let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
         assert_eq!(response.status_code(), StatusCode::OK);
+    }
+
+    #[sqlx::test(migrator = "common::MIGRATOR")]
+    async fn test_delete_task_with_expired_status(db_pools: PgPool) {
+        let server = get_test_server(db_pools.clone()).await;
+        let core = PgRepositoryCore::new(db_pools.clone());
+        let task_instance_repository = PgTaskRepository::new(core.clone());
+        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+
+        let mut test_task = get_test_task();
+        test_task.status = TaskStatus::Completed;
+        test_task.ttl = Some(chrono::Utc::now() - chrono::Duration::days(1));
+
+        worker_kind_repository
+            .get_or_create_worker_kind(&test_task.worker_kind)
+            .await
+            .unwrap();
+
+        let task = task_instance_repository
+            .update_task(&test_task)
+            .await
+            .unwrap();
+
+        let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
+        assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
 }
