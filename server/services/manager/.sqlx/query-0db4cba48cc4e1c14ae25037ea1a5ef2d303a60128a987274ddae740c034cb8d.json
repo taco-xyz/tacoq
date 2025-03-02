@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM tasks\n                WHERE ttl IS NOT NULL AND ttl < $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0db4cba48cc4e1c14ae25037ea1a5ef2d303a60128a987274ddae740c034cb8d"
+}
