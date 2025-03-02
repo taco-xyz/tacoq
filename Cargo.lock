@@ -1801,39 +1801,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
-name = "manager"
-version = "0.2.0"
-dependencies = [
- "async-trait",
- "axum 0.8.1",
- "axum-test",
- "axum-tracing-opentelemetry",
- "base64",
- "chrono",
- "ctor",
- "dotenv",
- "futures",
- "init-tracing-opentelemetry",
- "lapin",
- "mockall",
- "opentelemetry",
- "opentelemetry_sdk",
- "serde",
- "serde_json",
- "sqlx",
- "strum",
- "strum_macros",
- "time",
- "tokio",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "utoipa",
- "utoipa-axum",
- "uuid",
-]
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2646,6 +2613,39 @@ name = "regex-syntax"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
+
+[[package]]
+name = "relay"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "axum 0.8.1",
+ "axum-test",
+ "axum-tracing-opentelemetry",
+ "base64",
+ "chrono",
+ "ctor",
+ "dotenv",
+ "futures",
+ "init-tracing-opentelemetry",
+ "lapin",
+ "mockall",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "strum",
+ "strum_macros",
+ "time",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "utoipa",
+ "utoipa-axum",
+ "uuid",
+]
 
 [[package]]
 name = "reqwest"

@@ -1,5 +1,5 @@
 [package]
-name = "manager"
+name = "relay"
 version = "0.2.0"
 edition = "2021"
 description = "The relay is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
