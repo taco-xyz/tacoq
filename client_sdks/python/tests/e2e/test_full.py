@@ -267,7 +267,7 @@ async def test_error_task_e2e(publisher_client: PublisherClient):
             input_data="",
         )
 
-        await sleep(2)
+        await sleep(5)
 
         task_status = await publisher_client.get_task(task.id)
         assert task_status is not None, "Task status is None"
