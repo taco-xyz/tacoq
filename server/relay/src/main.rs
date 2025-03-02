@@ -1,13 +1,15 @@
 mod api;
+mod brokers;
 mod config;
 mod constants;
 mod controller;
 mod jobs;
+mod models;
 mod repo;
 mod server;
 mod testing;
 
-use common::brokers::setup_consumer_broker;
+use brokers::setup_consumer_broker;
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
@@ -15,8 +17,8 @@ use tracing::{info, info_span, warn};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use common::models::Task;
 use constants::MANAGER_QUEUE;
+use models::Task;
 use sqlx::PgPool;
 
 use config::Config;

@@ -33,5 +33,5 @@ runs:
         docker compose -f docker-compose.test.yml exec tacoq /bin/bash -c "
           cargo install sqlx-cli --no-default-features --features postgres &&
           cargo sqlx database create &&
-          cargo sqlx migrate run --source ./server/libs/common/migrations
+          cargo sqlx migrate run --source ./server/relay/migrations
         "

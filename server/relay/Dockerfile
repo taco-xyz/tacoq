@@ -9,8 +9,7 @@ WORKDIR /app
 
 # Copy workspace files first
 COPY Cargo.toml Cargo.lock ./
-COPY server/libs ./server/libs
-COPY server/services/manager ./server/services/manager
+COPY server/relay ./server/relay
 
 # Create recipe
 RUN cargo chef prepare --recipe-path recipe.json
@@ -30,23 +29,22 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # Copy the whole workspace structure
 COPY Cargo.toml Cargo.lock ./
-COPY server/libs ./server/libs
-COPY server/services/manager ./server/services/manager
+COPY server/relay ./server/relay
 
 # Build the specific service
 ENV SQLX_OFFLINE=true
-RUN cargo build --release --bin manager
+RUN cargo build --release --bin relay
 
 # Strip the binary
-RUN strip target/release/manager
+RUN strip target/release/relay
 
 # Final stage
 FROM gcr.io/distroless/cc-debian12:nonroot AS release
 WORKDIR /app
 
 # Copy the binary from the correct location
-COPY --from=builder /app/target/release/manager .
+COPY --from=builder /app/target/release/relay .
 
 EXPOSE 3000
 
-CMD ["./manager"]
+CMD ["./relay"]
