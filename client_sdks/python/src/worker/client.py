@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime
 from typing import Awaitable, Callable, Dict, Optional
 
@@ -9,6 +10,7 @@ from broker import WorkerBrokerClient
 from logger_manager import LoggerManager
 from logger_manager import StructuredMessage as _
 from manager import ManagerClient
+from models.exception import SerializedException
 from models.task import Task, TaskInput, TaskOutput, TaskStatus
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Status, StatusCode
@@ -36,16 +38,6 @@ class TaskNotRegisteredError(Exception):
 # =========================================
 # Worker Application
 # =========================================
-
-
-class SerializableException(BaseModel):
-    """A serializable exception."""
-
-    type: str
-    """ The type of the exception. `RuntimeError` evaluates to `"RuntimeError"`."""
-
-    message: str
-    """ The message of the exception. """
 
 
 class WorkerApplication(BaseModel):
@@ -181,7 +173,7 @@ class WorkerApplication(BaseModel):
             # Task Execution ================================
             # TODO - Improve exception serialization
 
-            result: Optional[TaskOutput | Exception] = None
+            result: Optional[TaskOutput] = None
             is_error: bool = False
 
             # Start timer
@@ -199,7 +191,9 @@ class WorkerApplication(BaseModel):
                     result = await task_func(task.input_data)
                     execution_span.set_attribute("task.output_size", len(str(result)))
                 except Exception as e:
-                    result = e.__str__()
+                    result = json.dumps(
+                        SerializedException.from_exception(e).model_dump()
+                    )
                     is_error = True
                     logger.error(
                         _(
