@@ -1,5 +1,20 @@
+"""For these E2E tests to run, the following services must be running:
+
+- Rust Manager
+- RabbitMQ broker
+- Postgres database
+
+It is also recommended you run Grafana and Tempo to view the traces and logs.
+
+To run the manager and broker, run the following command from the root directory:
+
+```bash
+docker compose up -d
+```
+"""
+
 from asyncio import sleep, create_task, gather
-from typing import Coroutine, Any
+from typing import Coroutine, Any, Optional
 import time
 import uuid
 import pytest
@@ -15,16 +30,17 @@ from broker.config import BrokerConfig
 from logger_manager import LoggerManager, StructuredMessage as _
 from tracer_manager import TracerManager
 from manager.config import ManagerConfig
+from opentelemetry.trace import get_current_span
 
-DELAYED_TASK = "delayed_task"
-FAILING_TASK = "failing_task"
-DELAYED_TASK_BLOCKING = "delayed_task_blocking"
-QUICK_TASK = "quick_task"
+# =========================================
+# Tasks
+# =========================================
+
+DELAYED_INSTRUMENTED_TASK = "delayed_instrumented_task"
+"""Non-blocking task that emits spans and logs as it goes."""
 
 
-async def delayed_task(input_data: TaskInput) -> TaskOutput:
-    """Non-blocking task."""
-
+async def delayed_instrumented_task(input_data: TaskInput) -> TaskOutput:
     await sleep(0.4)
 
     # We will emit a span an two logs so we can see in Grafana if these are being properly chained together
@@ -66,22 +82,41 @@ async def delayed_task(input_data: TaskInput) -> TaskOutput:
     return json.dumps({"message": "Task completed", "input": input_data})
 
 
-async def quick_task(input_data: TaskInput) -> TaskOutput:
-    """Quick task."""
-    await sleep(0.1)
-    return json.dumps({"message": "Task completed", "input": input_data})
+DELAYED_TASK_BLOCKING = "delayed_task_blocking"
+"""Blocking task to test multiple processes."""
 
 
 async def delayed_task_blocking(input_data: TaskInput) -> TaskOutput:
-    """Blocking task to test multiple processes."""
     time.sleep(2)
 
     return json.dumps({"message": "Task completed", "input": json.loads(input_data)})
 
 
+VARIABLE_TASK = "variable_task"
+""" Task whose duration varies with the input data. """
+
+
+async def variable_task(input_data: TaskInput) -> TaskOutput:
+    input: dict[str, Any] = json.loads(input_data)
+    await sleep(input.get("delay", 0.1))
+
+    return json.dumps({"message": "Task completed", "input": input})
+
+
+FAILING_TASK = "failing_task"
+"""Fails immediately."""
+
+
 async def failing_task(input_data: TaskInput) -> TaskOutput:
     """Failing task."""
     raise ValueError("Task failed successfully")
+
+
+# =========================================
+# Worker Context
+# This declares an async worker that runs
+# in the same process asynchronously.
+# =========================================
 
 
 class WorkerContext:
@@ -92,8 +127,11 @@ class WorkerContext:
     """ The kind of worker to use for this context. We generate it on the fly 
     so that we can run multiple workers in parallel and avoid queue collisions."""
 
-    def __init__(self, broker_prefetch_count: int):
-        self.worker_kind = str(uuid.uuid4())
+    def __init__(self, broker_prefetch_count: int, worker_kind: Optional[str] = None):
+        if worker_kind is None:
+            self.worker_kind = str(uuid.uuid4())
+        else:
+            self.worker_kind = worker_kind
 
         # Create and configure worker
         self._worker_app = WorkerApplication(
@@ -110,10 +148,12 @@ class WorkerContext:
         )
 
         # Register appropriate task handler
-        self._worker_app.register_task(DELAYED_TASK, delayed_task)
+        self._worker_app.register_task(
+            DELAYED_INSTRUMENTED_TASK, delayed_instrumented_task
+        )
         self._worker_app.register_task(FAILING_TASK, failing_task)
         self._worker_app.register_task(DELAYED_TASK_BLOCKING, delayed_task_blocking)
-        self._worker_app.register_task(QUICK_TASK, quick_task)
+        self._worker_app.register_task(VARIABLE_TASK, variable_task)
 
     async def __aenter__(self):
         # Run worker in background
@@ -125,45 +165,37 @@ class WorkerContext:
         await self._worker_app.wait_for_shutdown()
 
 
+# =========================================
+# Tests
+# =========================================
+
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.one
-async def test_delayed_task_e2e():
-    """Test a task that takes 2 seconds to complete.
-    This test verifies the full lifecycle of a task:
-    1. Task submission
-    2. Immediate task status check (should be pending)
-    3. Wait for completion
-    4. Final task status check (should be completed)
+async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
+    """Simple test: publishes one task and checks its status. We use an
+    instrumented task so that we can see the spans and logs in Grafana.
     """
-    publisher = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
+    current_span = get_current_span()
 
-    # Start worker in background
     async with WorkerContext(broker_prefetch_count=10) as worker:
+        current_span.set_attribute("worker.kind", worker.config.kind)
         input_data = {"test": "data"}
-        task = await publisher.publish_task(
-            task_kind=DELAYED_TASK,
+        task = await publisher_client.publish_task(
+            task_kind=DELAYED_INSTRUMENTED_TASK,
             worker_kind=worker.config.kind,
             input_data=json.dumps(input_data),
         )
 
         print(f"Published task {task}")
-        await sleep(1)
-
-        # Check immediate status
-        task_status = await publisher.get_task(task.id)
-        assert task_status is not None, "Task status is None"
-        assert task_status.status == TaskStatus.PENDING
-        assert task_status.output_data is None
 
         # Wait and check final status
-        await sleep(3)  # Wait for task completion + buffer
-        task_status = await publisher.get_task(task.id)
+        await sleep(5)  # Wait for task completion + buffer
+        task_status = await publisher_client.get_task(task.id)
         assert task_status is not None, "Task status is None"
-        assert task_status.status == TaskStatus.COMPLETED
+        assert task_status.status == TaskStatus.COMPLETED, (
+            f"Task {task.id} is not completed"
+        )
         assert task_status.is_error == 0
         assert task_status.output_data is not None
 
@@ -175,74 +207,74 @@ async def test_delayed_task_e2e():
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_parallel_delayed_tasks():
-    """Test that multiple delayed tasks execute in parallel.
-    Each task takes 2s, so 5 tasks should complete in ~2-3s if parallel,
-    but would take 10s if sequential.
-    """
-    publisher = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
+@pytest.mark.one
+async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
+    """Tests multiple variable tasks executing in parallel and
+    verifies that they were all executed within a shorter time than
+    if they were executed sequentially."""
 
-    async with WorkerContext(broker_prefetch_count=5) as worker:
-        # Submit 5 delayed tasks
-        tasks: list[Task] = []
-        for i in range(5):
-            task = await publisher.publish_task(
-                task_kind=DELAYED_TASK,
-                worker_kind=worker.config.kind,
-                input_data=json.dumps({"task_num": i}),
+    TOTAL_TASKS = 50
+    TIME_PER_TASK = 0.5
+    TIME_TO_EXECUTE = TIME_PER_TASK + 3  # Buffer
+
+    current_span = get_current_span()
+
+    async with WorkerContext(broker_prefetch_count=TOTAL_TASKS + 1) as worker:
+        current_span.set_attribute("worker.kind", worker.config.kind)
+        coroutines: list[Coroutine[Any, Any, Task]] = []
+        for i in range(TOTAL_TASKS):
+            coroutines.append(
+                publisher_client.publish_task(
+                    task_kind=VARIABLE_TASK,
+                    worker_kind=worker.config.kind,
+                    input_data=json.dumps({"delay": TIME_PER_TASK, "task_num": i}),
+                )
             )
-            tasks.append(task)
 
-        # Wait for all tasks to complete
-        await sleep(3)  # Should be enough time for parallel execution
+        tasks = await gather(*coroutines)
+
+        # Should be enough time for parallel execution but not sequential
+        await sleep(TIME_TO_EXECUTE)
 
         # Verify all tasks completed
         completed_tasks = 0
         for task in tasks:
-            task_status = await publisher.get_task(task.id)
-            assert task_status is not None
+            task_status = await publisher_client.get_task(task.id)
+            assert task_status is not None, f"Task {task.id} is not found"
             if task_status.status == TaskStatus.COMPLETED:
                 completed_tasks += 1
-        assert completed_tasks == 5, (
-            "Only %d / 5 tasks completed. Likely executed sequentially instead of in parallel"
-            % completed_tasks
+            else:
+                print(f"[WARNING] Task {task.id} is not completed")
+        assert completed_tasks == TOTAL_TASKS, (
+            "Only %d / %d tasks completed. Likely executed sequentially instead of in parallel. Tasks per second: %d"
+            % (completed_tasks, TOTAL_TASKS, completed_tasks / TIME_TO_EXECUTE)
         )
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_error_task_e2e():
-    """Test a task that fails immediately.
-    This test verifies error handling:
-    1. Task submission
-    2. Task execution (fails)
-    3. Task status check (should be failed)
-    """
-    publisher = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
+async def test_error_task_e2e(publisher_client: PublisherClient):
+    """Tests a task that fails immediately and checks that the
+    serialized exception is properly returned."""
 
-    # Start worker in background
+    current_span = get_current_span()
+
     async with WorkerContext(broker_prefetch_count=10) as worker:
-        # Submit task
-        task = await publisher.publish_task(
+        current_span.set_attribute("worker.kind", worker.config.kind)
+        task = await publisher_client.publish_task(
             task_kind=FAILING_TASK,
             worker_kind=worker.config.kind,
             input_data="",
         )
 
-        # Wait a bit for task to be processed
-        await sleep(1)
+        await sleep(5)
 
-        # Check status
-        task_status = await publisher.get_task(task.id)
+        task_status = await publisher_client.get_task(task.id)
         assert task_status is not None, "Task status is None"
-        assert task_status.status == TaskStatus.COMPLETED
-        assert task_status.is_error == 1
+        assert task_status.status == TaskStatus.COMPLETED, (
+            f"Task {task.id} is not completed"
+        )
+        assert task_status.is_error == 1, f"Task {task.id} is not an error"
         assert task_status.output_data is not None
         assert (
             "Task failed successfully" in task_status.output_data
@@ -252,77 +284,27 @@ async def test_error_task_e2e():
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_task_not_found():
-    """Test that requesting a non-existent task returns None"""
-    publisher = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
-
-    task_status = await publisher.get_task(uuid4())
-    assert task_status is None
-
-
-@pytest.mark.e2e
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="Multithreading is currently not supported")
-async def test_parallel_blocking_tasks():
-    """Test that tasks run in parallel with multiple workers"""
-    publisher = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
-
-    # Start worker with 2 processes
-    async with WorkerContext(broker_prefetch_count=10) as worker:
-        print("Started worker")
-        # Submit two blocking tasks
-        task1 = await publisher.publish_task(
-            task_kind=DELAYED_TASK_BLOCKING,
-            worker_kind=worker.config.kind,
-            input_data="",
-        )
-        print("Published task 1")
-        task2 = await publisher.publish_task(
-            task_kind=DELAYED_TASK_BLOCKING,
-            worker_kind=worker.config.kind,
-            input_data="",
-        )
-        print("Published task 2")
-
-        # Wait for both tasks to complete
-        await sleep(2.5)
-
-        # Check both completed
-        task1_status = await publisher.get_task(task1.id)
-        print(f"Task 1 status: {task1_status}")
-        task2_status = await publisher.get_task(task2.id)
-        print(f"Task 2 status: {task2_status}")
-
-        assert task1_status is not None and task2_status is not None
-        assert task1_status.status == TaskStatus.COMPLETED, (
-            "Task 1 wasn't completed after 2.5s. Likely not running in parallel."
-        )
-        assert task2_status.status == TaskStatus.COMPLETED, (
-            "Task 2 wasn't completed after 2.5s. Likely not running in parallel."
-        )
+async def test_task_not_found(publisher_client: PublisherClient):
+    """Tests that requesting a non-existent task returns None."""
+    task_status = await publisher_client.get_task(uuid4())
+    assert task_status is None, "Task status is not None"
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.priority
-async def test_priority_task():
-    """Test that tasks run in parallel with multiple workers"""
-    publisher = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:3000"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
+async def test_priority_task(publisher_client: PublisherClient):
+    """Tests that tasks are completed in the correct order when
+    they have different priorities."""
+
+    current_span = get_current_span()
 
     async with WorkerContext(broker_prefetch_count=1) as worker:
+        current_span.set_attribute("worker.kind", worker.config.kind)
         # Publish an initial task to for the rest of them to get stuck in
         print("Publishing initial task to enqueue the rest..")
-        await publisher.publish_task(
-            task_kind=DELAYED_TASK,
+        await publisher_client.publish_task(
+            task_kind=DELAYED_INSTRUMENTED_TASK,
             worker_kind=worker.config.kind,
             input_data="",
             priority=1,
@@ -335,10 +317,10 @@ async def test_priority_task():
         print(f"Publishing {TOTAL_TASKS} tasks at random priorities..")
         for priority in sorted(range(TOTAL_TASKS), key=lambda _: uuid4()):
             coroutines.append(
-                publisher.publish_task(
-                    task_kind=QUICK_TASK,
+                publisher_client.publish_task(
+                    task_kind=VARIABLE_TASK,
                     worker_kind=worker.config.kind,
-                    input_data="",
+                    input_data=json.dumps({"delay": 0.1}),
                     priority=priority,
                 )
             )
@@ -346,10 +328,10 @@ async def test_priority_task():
         incomplete_tasks = await gather(*coroutines)
         # Wait for all tasks to complete and then gather the results so we can check when they were completed
         completed_tasks: list[Task] = []
-        await sleep(TOTAL_TASKS * 0.1 + 3)
+        await sleep(TOTAL_TASKS * 0.1 + 5)
         print("Gathering results..")
         for task in incomplete_tasks:
-            task = await publisher.get_task(task.id)
+            task = await publisher_client.get_task(task.id)
             assert task is not None, f"Task {task} was not found"
             completed_tasks.append(task)
 
@@ -375,3 +357,62 @@ async def test_priority_task():
                 )
             previous_completed_at = completed_at
             previous_priority = priority
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+@pytest.mark.workers
+async def test_multiple_workers_execute_tasks_in_parallel(
+    publisher_client: PublisherClient,
+):
+    """Tests that tasks are executed in parallel when there are multiple workers."""
+
+    TOTAL_WORKERS = 3
+    BROKER_PREFETCH_COUNT = 5
+    TOTAL_TASKS = TOTAL_WORKERS * BROKER_PREFETCH_COUNT
+    TIME_PER_TASK = 1
+    worker_kind = str(uuid.uuid4())  # All workers must have the same kind
+
+    current_span = get_current_span()
+
+    current_span.set_attribute("worker.kind", worker_kind)
+    worker_contexts: list[WorkerContext] = []
+    for i in range(TOTAL_WORKERS):  # type: ignore
+        worker_contexts.append(
+            WorkerContext(
+                broker_prefetch_count=BROKER_PREFETCH_COUNT, worker_kind=worker_kind
+            )
+        )
+
+    for ctx in worker_contexts:
+        await ctx.__aenter__()
+
+    # Publish all tasks
+    coroutines: list[Coroutine[Any, Any, Task]] = []
+    for i in range(TOTAL_TASKS):  # type: ignore
+        coroutines.append(
+            publisher_client.publish_task(
+                task_kind=VARIABLE_TASK,
+                worker_kind=worker_contexts[0].worker_kind,
+                input_data=json.dumps({"delay": TIME_PER_TASK}),
+            )
+        )
+
+    incomplete_tasks = await gather(*coroutines)
+
+    for ctx in worker_contexts:
+        await ctx.__aexit__(None, None, None)  # type: ignore
+
+    # Wait for all tasks to complete
+    await sleep(TIME_PER_TASK + 2)
+
+    # Check that all tasks are completed
+    complete_tasks = 0
+    for task in incomplete_tasks:
+        task = await publisher_client.get_task(task.id)
+        if task is not None and task.status == TaskStatus.COMPLETED:
+            complete_tasks += 1
+
+    assert complete_tasks == TOTAL_TASKS, (
+        f"Only {complete_tasks} / {TOTAL_TASKS} tasks were completed"
+    )

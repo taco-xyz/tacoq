@@ -1,4 +1,9 @@
 # pyright: reportPrivateUsage=false
+"""Tests for the PublisherClient functionality.
+
+These tests verify that the publisher client can correctly publish tasks
+to the broker and retrieve task information from the manager.
+"""
 
 from unittest import mock
 from broker.client import PublisherBrokerClient
@@ -7,26 +12,8 @@ import pytest
 from uuid import uuid4
 import json
 
-from broker.config import BrokerConfig
-from manager.config import ManagerConfig
 from models.task import Task, TaskStatus
 from publisher import PublisherClient
-
-
-# =========================================
-# Fixtures
-# =========================================
-
-
-@pytest.fixture
-def publisher_client():
-    """Creates a publisher client with mocked dependencies."""
-
-    client = PublisherClient(
-        manager_config=ManagerConfig(url="http://localhost:8080"),
-        broker_config=BrokerConfig(url="amqp://user:password@localhost:5672"),
-    )
-    return client
 
 
 # =========================================
@@ -79,8 +66,11 @@ async def test_publish_task_success(publisher_client: PublisherClient):
 async def test_get_task_success(
     publisher_client: PublisherClient,
 ):
-    """Test retrieving a task successfully. Here we mock the manager client because the actual
-    task retrieval behaviour is already tested in the manager client tests."""
+    """Test retrieving a task successfully.
+
+    Here we mock the manager client because the actual task retrieval
+    behaviour is already tested in the manager client tests.
+    """
 
     task_id = uuid4()
     expected_task = Task(

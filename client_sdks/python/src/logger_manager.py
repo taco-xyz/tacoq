@@ -1,4 +1,5 @@
-from logging import Filter, Handler, Logger, LogRecord, getLogger
+import sys
+from logging import Filter, Handler, Logger, LogRecord, getLogger, StreamHandler
 from threading import Lock
 from typing import Optional, Type
 
@@ -111,6 +112,9 @@ class LoggerManager:
 
         # Add a trace handler to emit spans
         logger.addHandler(TraceHandler())
+
+        # Add a stream handler to log to stdout
+        logger.addHandler(StreamHandler(sys.stdout))
 
         return logger
 

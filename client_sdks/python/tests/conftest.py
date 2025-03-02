@@ -1,5 +1,6 @@
 import os
 import pytest
+from time import sleep
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
@@ -9,11 +10,12 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
 
-
 from src.manager import ManagerClient, ManagerConfig
-from src.worker import WorkerApplication, WorkerApplicationConfig
+from src.worker import WorkerApplicationConfig
 from src.broker import BrokerConfig
-
+from src.publisher import PublisherClient
+from src.tracer_manager import TracerManager
+from logger_manager import LoggerManager
 
 MANAGER_TEST_URL = os.environ.get("MANAGER_TEST_URL", "http://localhost:3000")
 BROKER_TEST_URL = os.environ.get(
@@ -26,9 +28,10 @@ WORKER_NAME = "test_worker"
 pytest_plugins = ["pytest_asyncio"]
 
 
-@pytest.fixture(autouse=True)
-def init_tracer():
-    """Initialize a test tracer that prints to console."""
+@pytest.fixture(scope="session", autouse=True)
+def init_tracer_provider():
+    """Initialize a test tracer provider at session level."""
+
     provider = TracerProvider(
         resource=Resource.create(
             {"service.name": "test_python_client", "environment": "test"}
@@ -41,16 +44,36 @@ def init_tracer():
         OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces")
     )
     provider.add_span_processor(batch_processor)
-    # provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
     # Set as global provider
     trace.set_tracer_provider(provider)
 
+    # Set up a global logger too
+    LoggerManager.get_logger()
+
     yield provider
 
+    # Shutdown the provider after all tests
+    timed_out = batch_processor.force_flush()
+    sleep(2)
+
+    if timed_out:
+        print("[WARNING]: Failed to flush traces. Some traces may be lost.")
+
     # Shutdown the provider after test
-    batch_processor.force_flush()
     provider.shutdown()
+
+
+@pytest.fixture(autouse=True)
+def create_test_span():
+    """Create a span for the current test."""
+    # Get current test name and init a span
+    current_test = (
+        os.environ.get("PYTEST_CURRENT_TEST", "").split(":")[-1].split(" ")[0]
+    )
+    tracer = TracerManager.get_tracer()
+    with tracer.start_as_current_span(current_test):
+        yield
 
 
 ## ==============================
@@ -59,7 +82,7 @@ def init_tracer():
 
 
 @pytest.fixture
-async def manager_config() -> ManagerConfig:
+def manager_config() -> ManagerConfig:
     """Fixture that provides a configured ManagerConfig instance."""
     return ManagerConfig(url=MANAGER_TEST_URL)
 
@@ -80,19 +103,37 @@ def mock_manager_client() -> ManagerClient:
 
 
 @pytest.fixture
-async def broker_config() -> BrokerConfig:
+def broker_config() -> BrokerConfig:
     """Fixture that provides a configured BrokerConfig instance."""
     return BrokerConfig(url=BROKER_TEST_URL)
+
+
+## ==============================
+## Publisher Fixtures
+## ==============================
+
+
+@pytest.fixture
+def publisher_client(
+    manager_config: ManagerConfig,
+    broker_config: BrokerConfig,
+) -> PublisherClient:
+    """Fixture that provides a configured PublisherClient instance."""
+    return PublisherClient(manager_config=manager_config, broker_config=broker_config)
 
 
 ## ==============================
 ## Worker Fixtures
 ## ==============================
 
+DEFAULT_BROKER_PREFETCH_COUNT = 10
+
 
 @pytest.fixture
-async def worker_config(
-    manager_config: ManagerConfig, broker_config: BrokerConfig
+def worker_config(
+    manager_config: ManagerConfig,
+    broker_config: BrokerConfig,
+    broker_prefetch_count: int = DEFAULT_BROKER_PREFETCH_COUNT,
 ) -> WorkerApplicationConfig:
     """Fixture that provides a configured WorkerConfig instance."""
     return WorkerApplicationConfig(
@@ -100,13 +141,5 @@ async def worker_config(
         name=WORKER_NAME,
         manager_config=manager_config,
         broker_config=broker_config,
-        broker_prefetch_count=10,
+        broker_prefetch_count=broker_prefetch_count,
     )
-
-
-@pytest.fixture
-async def worker_application(
-    worker_config: WorkerApplicationConfig,
-) -> WorkerApplication:
-    """Fixture that provides a configured WorkerClient instance."""
-    return WorkerApplication(config=worker_config)

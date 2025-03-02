@@ -103,6 +103,7 @@ class BaseBrokerClient(BaseModel):
             durable=True,
             arguments={"x-max-priority": 255},
         )
+
         await manager_queue.bind(self._task_exchange, routing_key=MANAGER_ROUTING_KEY)
 
     async def disconnect(self) -> None:
@@ -155,6 +156,19 @@ class PublisherBrokerClient(BaseBrokerClient):
             self._task_exchange,
             routing_key=WORKER_ROUTING_KEY.format(worker_kind=worker_kind),
         )
+
+        # TODO: Make this a testing option instead of a comment
+        # Create clone queue for debugging
+        # clone_queue = await self._channel.declare_queue(
+        #     f"{worker_kind}_cloned",
+        #     durable=True,
+        #     arguments={"x-max-priority": 255},
+        # )
+        # await clone_queue.bind(
+        #     self._task_exchange,
+        #     routing_key=WORKER_ROUTING_KEY.format(worker_kind=worker_kind),
+        # )
+
         self._binded_worker_queues.add(worker_kind)
 
     async def purge_worker_queue(self, worker_kind: str) -> None:

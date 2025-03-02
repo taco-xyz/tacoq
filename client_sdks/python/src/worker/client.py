@@ -300,45 +300,35 @@ class WorkerApplication(BaseModel):
                 message="Listening for tasks",
             )
         )
-        try:
-            while not self._shutdown_event.is_set():
-                try:
-                    task, message = await asyncio.wait_for(
-                        self._broker_client.listen().__anext__(),
-                        timeout=1.0,  # Check shutdown signal every second
-                    )
-                    # Task is created and added to the tracker pool
-                    logger.info(
-                        _(
-                            message=f"Received task of kind {task.task_kind} with ID {task.id}",
-                            attributes={
-                                "task.id": str(task.id),
-                                "task.kind": task.task_kind,
-                            },
-                        )
-                    )
-                    async_task = asyncio.create_task(self._execute_task(task, message))
-                    self._active_tasks.add(async_task)
-                    async_task.add_done_callback(self._active_tasks.discard)
-                except asyncio.TimeoutError:
-                    continue
-            logger = LoggerManager.get_logger()
-            logger.info(
-                _(
-                    message=f"Waiting for {len(self._active_tasks)} active tasks to complete before shutting down",
-                    attributes={"active_tasks": len(self._active_tasks)},
+
+        # Loop
+        while not self._shutdown_event.is_set():
+            try:
+                task, message = await asyncio.wait_for(
+                    self._broker_client.listen().__anext__(),
+                    timeout=1.0,  # Check shutdown signal every second
                 )
-            )
-            await asyncio.gather(
-                *self._active_tasks
-            )  # Wait for all active tasks to complete
-        except asyncio.CancelledError:
-            pass
+                # Task is created and added to the tracker pool
+                logger.info(
+                    _(
+                        message=f"Received task of kind {task.task_kind} with ID {task.id}",
+                        attributes={
+                            "task.id": str(task.id),
+                            "task.kind": task.task_kind,
+                        },
+                    )
+                )
+                async_task = asyncio.create_task(self._execute_task(task, message))
+                async_task.add_done_callback(self._active_tasks.discard)
+                self._active_tasks.add(async_task)
+            except asyncio.TimeoutError:
+                continue
 
     # Graceful Shutdown
 
     def issue_shutdown(self):
         """Shutdown the worker application."""
+
         logger = LoggerManager.get_logger()
         logger.info(
             _(
@@ -362,10 +352,27 @@ class WorkerApplication(BaseModel):
 
         This method is called when the worker is shutting down. Used for cleaning internal state.
         """
+
+        # Wait for all active tasks to complete
+
         logger = LoggerManager.get_logger()
+
+        # Wait for all active tasks to complete
+
         logger.info(
             _(
-                message="Cleaning up",
+                message=f"Waiting for {len(self._active_tasks)} active tasks to complete before shutting down",
+                attributes={"active_tasks": len(self._active_tasks)},
+            )
+        )
+
+        await asyncio.gather(*self._active_tasks)
+
+        # Disconnect from broker
+
+        logger.info(
+            _(
+                message="Disconnecting from broker",
             )
         )
         if self._broker_client is not None:
