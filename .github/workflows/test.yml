@@ -23,7 +23,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: server/services/manager/Dockerfile
+          file: server/relay/Dockerfile
           target: builder
           outputs: type=docker,dest=/tmp/app-image.tar
           tags: tacoq-manager:latest
