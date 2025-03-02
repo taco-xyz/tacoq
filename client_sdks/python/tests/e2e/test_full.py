@@ -377,7 +377,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
 
     current_span.set_attribute("worker.kind", worker_kind)
     worker_contexts: list[WorkerContext] = []
-    for _ in range(TOTAL_WORKERS):
+    for i in range(TOTAL_WORKERS):  # type: ignore
         worker_contexts.append(
             WorkerContext(
                 broker_prefetch_count=BROKER_PREFETCH_COUNT, worker_kind=worker_kind
