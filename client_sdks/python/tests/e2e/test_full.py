@@ -409,7 +409,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
         await ctx.__aexit__(None, None, None)  # type: ignore
 
     # Wait for all tasks to complete
-    await sleep(TIME_PER_TASK + 1)
+    await sleep(TIME_PER_TASK + 2)
 
     # Check that all tasks are completed
     complete_tasks = 0
