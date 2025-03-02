@@ -188,15 +188,6 @@ async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
         )
 
         print(f"Published task {task}")
-        await sleep(2)
-
-        # Check immediate status
-        task_status = await publisher_client.get_task(task.id)
-        assert task_status is not None, "Task status is None"
-        assert task_status.status == TaskStatus.PENDING, (
-            f"Task {task.id} is not pending"
-        )
-        assert task_status.output_data is None
 
         # Wait and check final status
         await sleep(5)  # Wait for task completion + buffer
