@@ -1,3 +1,9 @@
+"""Tests for the task management functionality of the ManagerClient.
+
+These tests verify that the client can correctly retrieve tasks from the manager
+and handle various response scenarios.
+"""
+
 import pytest
 from uuid import UUID
 from aiohttp import ClientResponseError
@@ -8,8 +14,14 @@ from manager.client import ManagerClient
 from models.task import Task, TaskStatus
 
 
+# =========================================
+# Task Retrieval Tests
+# =========================================
+
+
 @pytest.mark.asyncio
 async def test_get_task_success(mock_manager_client: ManagerClient):
+    """Test successful retrieval of a task from the manager."""
     task_id = UUID("00000000-0000-0000-0000-000000000000")
     task_data = {
         "id": str(task_id),
@@ -37,6 +49,7 @@ async def test_get_task_success(mock_manager_client: ManagerClient):
 
 @pytest.mark.asyncio
 async def test_get_task_not_found(mock_manager_client: ManagerClient):
+    """Test behavior when requesting a non-existent task."""
     task_id = UUID("00000000-0000-0000-0000-000000000000")
 
     with aioresponses() as m:
@@ -52,6 +65,7 @@ async def test_get_task_not_found(mock_manager_client: ManagerClient):
 
 @pytest.mark.asyncio
 async def test_get_task_server_error(mock_manager_client: ManagerClient):
+    """Test behavior when the server returns an error response."""
     task_id = UUID("00000000-0000-0000-0000-000000000000")
 
     with aioresponses() as m:

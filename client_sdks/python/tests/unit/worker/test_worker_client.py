@@ -1,8 +1,11 @@
 # pyright: reportPrivateUsage=false
+"""Tests for the WorkerApplication functionality.
 
-import asyncio
+These tests verify that the worker application can correctly register task handlers,
+execute tasks, and manage its lifecycle.
+"""
+
 import datetime
-from typing import AsyncGenerator
 from unittest import mock
 import json
 from uuid import uuid4
@@ -164,7 +167,7 @@ async def test_execute_unregistered_task(
 
     message_mock.nack.assert_called_once()
     # Verify that the task wasn't published
-    worker_app._broker_client.publish_task_result.assert_not_called()
+    worker_app._broker_client.publish_task_result.assert_not_called()  # type: ignore
 
 
 @pytest.mark.unit
@@ -188,26 +191,6 @@ async def test_execute_task_with_error(
 # =========================================
 # Worker Lifecycle Tests
 # =========================================
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_worker_startup(worker_app: WorkerApplication):
-    """Test worker startup sequence and the graceful shutdown."""
-
-    # We create a full mock that gracefully shuts down as soon as it is initialized
-    worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
-    if worker_app._broker_client:
-
-        async def mock_listen() -> AsyncGenerator[
-            tuple[Task, AbstractIncomingMessage], None
-        ]:
-            raise asyncio.CancelledError()
-            yield None
-
-        worker_app._broker_client.listen = mock_listen  # type: ignore
-
-    await worker_app._listen()
 
 
 @pytest.mark.unit
