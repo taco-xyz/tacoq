@@ -7,6 +7,5 @@
 resolver = "2"
 
 members = [
-    "server/libs/common",
-    "server/services/manager",
+    "server/relay",
 ]

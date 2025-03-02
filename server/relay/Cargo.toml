@@ -2,10 +2,9 @@
 name = "manager"
 version = "0.2.0"
 edition = "2021"
-description = "The manager is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
+description = "The relay is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
 
 [dependencies]
-common = { path = "../../libs/common" }
 async-trait = "0.1.83"
 dotenv = "0.15.0"
 futures = "0.3.31"
