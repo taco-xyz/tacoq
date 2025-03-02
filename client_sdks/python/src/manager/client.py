@@ -5,9 +5,11 @@ from uuid import UUID
 from pydantic import BaseModel
 from aiohttp import ClientSession, ClientConnectorError
 from aiohttp_retry import RetryClient, RetryOptionsBase
+from opentelemetry.propagate import inject
 
 from manager.config import ManagerConfig
 from models.task import Task
+from tracer_manager import TracerManager
 
 # =========================================
 # Constants
@@ -95,19 +97,26 @@ class ManagerClient(BaseModel):
         ### Returns
         - Task: The task details
         """
+        tracer = TracerManager.get_tracer()
+        with tracer.start_as_current_span("get_task") as span:
+            span.set_attributes({"task.id": str(task_id)})
 
-        async with ClientSession() as session:
-            retry_client = RetryClient(
-                session,
-                retry_options=override_retry_options or self.config.retry_options,
-            )
+            # Inject context into headers so we can trace the request back to the manager
+            headers: dict[str, str] = {}
+            inject(headers)
 
-            async with retry_client.get(
-                f"{self.config.url}{TASK_PATH}/{task_id}"
-            ) as resp:
-                if resp.status == 404:
-                    return None
-                resp.raise_for_status()
-                data = await resp.json()
+            async with ClientSession() as session:
+                retry_client = RetryClient(
+                    session,
+                    retry_options=override_retry_options or self.config.retry_options,
+                )
 
-                return Task(**data)
+                async with retry_client.get(
+                    f"{self.config.url}{TASK_PATH}/{task_id}", headers=headers
+                ) as resp:
+                    if resp.status == 404:
+                        return None
+                    resp.raise_for_status()
+                    data = await resp.json()
+
+                    return Task(**data)
