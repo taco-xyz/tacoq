@@ -22,7 +22,7 @@ sqlx = { version = "0.8.2", features = [
 serde = { version = "1.0.215", features = ["derive"] }
 serde_json = "1.0.133"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-utoipa = { version = "5.2.0", features = ["axum_extras", "uuid"]}
+utoipa = { version = "5.2.0", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-axum = "0.1.2"
 time = { version = "0.3.36", features = ["serde"] }
 axum-tracing-opentelemetry = "0.26.1"

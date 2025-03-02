@@ -136,7 +136,10 @@ impl<T> RabbitMQProducer<T>
 where
     T: Debug,
 {
-    pub async fn new(url_string: &str, exchange: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn _new(
+        url_string: &str,
+        exchange: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let connection = Connection::connect(url_string, ConnectionProperties::default()).await?;
         let channel = connection.create_channel().await?;
 
@@ -182,7 +185,7 @@ where
     }
 }
 
-pub async fn setup_rabbit_producer<T>(
+pub async fn _setup_rabbit_producer<T>(
     url_string: &str,
     exchange: &str,
 ) -> Result<Arc<RabbitMQProducer<T>>, Box<dyn std::error::Error>>
@@ -190,7 +193,7 @@ where
     T: Debug,
 {
     Ok(Arc::new(
-        RabbitMQProducer::<T>::new(url_string, exchange).await?,
+        RabbitMQProducer::<T>::_new(url_string, exchange).await?,
     ))
 }
 
