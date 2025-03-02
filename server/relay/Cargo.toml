@@ -40,7 +40,6 @@ strum_macros = "0.26.4"
 lapin = "2.5.0"
 strum = { version = "0.26.3", features = ["derive"] }
 
-
 [dev-dependencies]
 ctor = "0.2.9"
 axum-test = "17.0.1"

@@ -1,9 +1,9 @@
+use crate::brokers::core::BrokerConsumer;
+use crate::models::Task;
 use crate::repo::worker_kind_repo::PgWorkerKindRepository;
 use crate::repo::{
     PgTaskRepository, PgWorkerRepository, TaskRepository, WorkerKindRepository, WorkerRepository,
 };
-use brokers::core::BrokerConsumer;
-use models::Task;
 use tracing::{error, info, info_span, warn, Instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 

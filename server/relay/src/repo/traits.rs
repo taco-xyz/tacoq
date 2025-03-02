@@ -1,7 +1,7 @@
 use std::{fmt::Debug, time::SystemTime};
 
+use crate::models::{Task, Worker, WorkerKind};
 use async_trait::async_trait;
-use models::{Task, Worker, WorkerKind};
 use uuid::Uuid;
 
 /// Repository trait for managing task records in the database

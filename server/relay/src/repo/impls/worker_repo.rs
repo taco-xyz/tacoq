@@ -1,5 +1,5 @@
+use crate::models::{Worker, WorkerHeartbeat};
 use async_trait::async_trait;
-use models::{Worker, WorkerHeartbeat};
 use sqlx::{Executor, Postgres};
 use std::time::SystemTime;
 use tracing::instrument;
@@ -149,12 +149,12 @@ impl WorkerRepository for PgWorkerRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::WorkerKind;
     use crate::{
         repo::impls::worker_kind_repo::PgWorkerKindRepository,
         repo::{PgRepositoryCore, WorkerKindRepository},
         testing::test::init_test_logger,
     };
-    use models::WorkerKind;
     use sqlx::PgPool;
     use std::time::Duration;
 
@@ -173,7 +173,7 @@ mod tests {
     }
 
     /// Tests registering workers with different worker kinds
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn worker_kinds(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
 
@@ -203,7 +203,7 @@ mod tests {
     }
 
     /// Registers a worker and then retrieves it by id
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn register_and_get_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
@@ -220,7 +220,7 @@ mod tests {
     }
 
     /// Registers two workers and then retrieves all workers
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn get_all_workers(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
@@ -242,7 +242,7 @@ mod tests {
     }
 
     /// Tests recording and retrieving worker heartbeats after worker registration
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn worker_heartbeat(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
@@ -276,7 +276,7 @@ mod tests {
     }
 
     /// Tests multiple heartbeats from different workers
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn multiple_worker_heartbeats(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let test_kind = setup_test_worker_kind(&pool, "test.worker").await;
@@ -301,7 +301,7 @@ mod tests {
     }
 
     /// Attempts to retrieve a nonexistent worker by id (should fail)
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn get_nonexistent_worker(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let result = repo._get_worker_by_id(&Uuid::new_v4()).await;
@@ -310,7 +310,7 @@ mod tests {
     }
 
     /// Attempts to retrieve a nonexistent heartbeat (should fail)
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn get_nonexistent_heartbeat(pool: PgPool) {
         let repo = PgWorkerRepository::new(PgRepositoryCore::new(pool.clone()));
         let result = repo._get_latest_heartbeat(&Uuid::new_v4()).await;

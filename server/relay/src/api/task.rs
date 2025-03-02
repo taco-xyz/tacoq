@@ -7,8 +7,7 @@ use axum::{
 use tracing::{error, info};
 use uuid::Uuid;
 
-use models::Task;
-
+use crate::models::Task;
 use crate::{repo::TaskRepository, AppState};
 
 pub fn routes() -> Router<AppState> {
@@ -105,8 +104,8 @@ async fn get_task_by_id(
 
 #[cfg(test)]
 mod test {
+    use crate::models::{Task, TaskStatus};
     use axum::http::StatusCode;
-    use models::{Task, TaskStatus};
     use sqlx::PgPool;
     use uuid::Uuid;
 
@@ -132,7 +131,7 @@ mod test {
             .with_status(TaskStatus::Pending)
     }
 
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn test_non_existent_task_by_id(db_pools: PgPool) {
         let server = get_test_server(db_pools).await;
 
@@ -141,7 +140,7 @@ mod test {
         assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
 
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
@@ -164,7 +163,7 @@ mod test {
         assert_eq!(response.status_code(), StatusCode::OK);
     }
 
-    #[sqlx::test(migrator = "MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn test_delete_task_with_expired_status(db_pools: PgPool) {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
