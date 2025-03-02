@@ -13,24 +13,24 @@ docker compose up -d
 ```
 """
 
-from asyncio import sleep, create_task, gather
-from typing import Coroutine, Any, Optional
+import json
 import time
 import uuid
-import pytest
+from asyncio import create_task, gather, sleep
 from datetime import datetime
+from types import TracebackType
+from typing import Any, Coroutine, Optional, Self, Type
 from uuid import uuid4
-import json
 
-from models.task import Task, TaskInput, TaskOutput, TaskStatus
-from publisher import PublisherClient
-from worker import WorkerApplication
-from worker.config import WorkerApplicationConfig
-from broker.config import BrokerConfig
-from logger_manager import LoggerManager, StructuredMessage as _
-from tracer_manager import TracerManager
-from manager.config import ManagerConfig
+import pytest
 from opentelemetry.trace import get_current_span
+from src.core.infra.broker import BrokerConfig
+from src.core.infra.manager import ManagerConfig
+from src.core.models import Task, TaskInput, TaskOutput, TaskStatus
+from src.core.telemetry import LoggerManager, TracerManager
+from src.core.telemetry import StructuredMessage as _
+from src.publisher import PublisherClient
+from src.worker import WorkerApplication, WorkerApplicationConfig
 
 # =========================================
 # Tasks
@@ -127,7 +127,9 @@ class WorkerContext:
     """ The kind of worker to use for this context. We generate it on the fly 
     so that we can run multiple workers in parallel and avoid queue collisions."""
 
-    def __init__(self, broker_prefetch_count: int, worker_kind: Optional[str] = None):
+    def __init__(
+        self: Self, broker_prefetch_count: int, worker_kind: Optional[str] = None
+    ):
         if worker_kind is None:
             self.worker_kind = str(uuid.uuid4())
         else:
@@ -155,12 +157,17 @@ class WorkerContext:
         self._worker_app.register_task(DELAYED_TASK_BLOCKING, delayed_task_blocking)
         self._worker_app.register_task(VARIABLE_TASK, variable_task)
 
-    async def __aenter__(self):
+    async def __aenter__(self: Self) -> WorkerApplication:
         # Run worker in background
         self._worker_task = create_task(self._worker_app.entrypoint())
         return self._worker_app
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):  # type: ignore
+    async def __aexit__(
+        self: Self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         self._worker_app.issue_shutdown()
         await self._worker_app.wait_for_shutdown()
 
