@@ -1,7 +1,7 @@
 services:
   tacoq:
     image: tacoq-manager:latest
-    entrypoint: [/app/target/release/manager]
+    entrypoint: [/app/target/release/relay]
     ports:
       - "3000:3000"
     environment:
