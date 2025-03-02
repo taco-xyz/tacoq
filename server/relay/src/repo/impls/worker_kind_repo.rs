@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::models::WorkerKind;
+use models::WorkerKind;
 use sqlx::{Executor, Postgres};
 use tracing::instrument;
 
@@ -81,7 +81,7 @@ mod tests {
     use super::*;
     use sqlx::PgPool;
 
-    #[sqlx::test(migrator = "common::MIGRATOR")]
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn test_worker_kind_operations(pool: PgPool) {
         let repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool));
 
