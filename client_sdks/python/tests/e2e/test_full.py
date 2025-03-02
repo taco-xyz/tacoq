@@ -389,7 +389,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
 
     # Publish all tasks
     coroutines: list[Coroutine[Any, Any, Task]] = []
-    for _ in range(TOTAL_TASKS):
+    for i in range(TOTAL_TASKS):  # type: ignore
         coroutines.append(
             publisher_client.publish_task(
                 task_kind=VARIABLE_TASK,
