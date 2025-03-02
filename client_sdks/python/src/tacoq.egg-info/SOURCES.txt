@@ -16,6 +16,7 @@ src/manager/__init__.py
 src/manager/client.py
 src/manager/config.py
 src/models/__init__.py
+src/models/exception.py
 src/models/task.py
 src/publisher/__init__.py
 src/publisher/client.py

@@ -108,8 +108,8 @@ FAILING_TASK = "failing_task"
 
 
 async def failing_task(input_data: TaskInput) -> TaskOutput:
-    """Fails immediately."""
-    raise ValueError("Task failed intentionally")
+    """Failing task."""
+    raise ValueError("Task failed successfully")
 
 
 # =========================================
@@ -284,7 +284,10 @@ async def test_error_task_e2e(publisher_client: PublisherClient):
         )
         assert task_status.is_error == 1, f"Task {task.id} is not an error"
         assert task_status.output_data is not None
-        assert task_status.output_data == "Task failed intentionally"
+        assert (
+            "Task failed successfully" in task_status.output_data
+            and "ValueError" in task_status.output_data
+        )
 
 
 @pytest.mark.e2e
