@@ -3,6 +3,5 @@ name = "server"
 
 [file_paths]
 include = [
-  "services/**/*",
-  "libs/**/*",
+  "relay/*",
 ]

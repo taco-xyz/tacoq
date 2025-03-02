@@ -5,6 +5,8 @@ pub mod test {
 
     use crate::setup_app;
 
+    pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
+
     /// Initializes a test logger with debug level output that writes to the test writer.
     /// This should be called at the start of test modules to enable logging during tests.
     pub fn init_test_logger() {

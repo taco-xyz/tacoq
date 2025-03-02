@@ -6,7 +6,6 @@ on:
     tags: ["v*"]
 
 jobs:
-
   # =================================================
   # Publish Manager
   # =================================================
@@ -45,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: server/services/manager/Dockerfile
+          file: server/relay/Dockerfile
           push: true
           tags: ${{steps.meta.outputs.tags}}
           labels: ${{steps.meta.outputs.labels}}

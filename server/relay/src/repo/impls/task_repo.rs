@@ -1,5 +1,5 @@
+use crate::models::{Task, TaskStatus};
 use async_trait::async_trait;
-use common::models::{Task, TaskStatus};
 use sqlx::{Executor, Postgres};
 use tracing::instrument;
 use uuid::Uuid;
@@ -202,7 +202,7 @@ mod tests {
     }
 
     /// Creates a task and then retrieves it by id
-    #[sqlx::test(migrator = "common::MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn create_and_get_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
@@ -223,7 +223,7 @@ mod tests {
     }
 
     /// Tests task updating logic
-    #[sqlx::test(migrator = "common::MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn update_task_progressive_status(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
@@ -260,7 +260,7 @@ mod tests {
     }
 
     /// Attempts to retrieve a non-existent task (should fail)
-    #[sqlx::test(migrator = "common::MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
 
     async fn get_nonexistent_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool));
@@ -269,7 +269,7 @@ mod tests {
     }
 
     // Tests task deletion
-    #[sqlx::test(migrator = "common::MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn delete_task(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
@@ -290,7 +290,7 @@ mod tests {
     }
 
     // Tests task cleanup on expired ttl
-    #[sqlx::test(migrator = "common::MIGRATOR")]
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
     async fn cleanup_expired_tasks(pool: PgPool) {
         let repo = PgTaskRepository::new(PgRepositoryCore::new(pool.clone()));
         let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
