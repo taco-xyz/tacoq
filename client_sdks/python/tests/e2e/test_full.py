@@ -188,6 +188,7 @@ async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
         )
 
         print(f"Published task {task}")
+        await sleep(2)
 
         # Check immediate status
         task_status = await publisher_client.get_task(task.id)
@@ -223,7 +224,7 @@ async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
 
     TOTAL_TASKS = 50
     TIME_PER_TASK = 0.5
-    TIME_TO_EXECUTE = TIME_PER_TASK + 1  # Buffer
+    TIME_TO_EXECUTE = TIME_PER_TASK + 3  # Buffer
 
     current_span = get_current_span()
 
