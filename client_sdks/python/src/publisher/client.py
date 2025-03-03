@@ -194,7 +194,9 @@ class PublisherClient(BaseModel):
             task = await self._manager_client.get_task(
                 task_id, override_retry_options=override_retry_options
             )
-            if not retry_until_complete:
+            if (
+                not retry_until_complete
+            ):  # TODO - Remove retry mechanism and make this work via a channel
                 break
             await asyncio.sleep(1)
 
