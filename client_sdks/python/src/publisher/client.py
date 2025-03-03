@@ -8,6 +8,7 @@ and eventual output.
 
 from typing import Dict, Optional
 from uuid import UUID, uuid4
+import asyncio
 
 from aiohttp_retry import RetryOptionsBase
 from core.infra.broker import BrokerConfig, PublisherBrokerClient
@@ -165,12 +166,14 @@ class PublisherClient(BaseModel):
     async def get_task(
         self: Self,
         task_id: UUID,
+        retry_until_complete: bool = False,
         override_retry_options: Optional[RetryOptionsBase] = None,
     ) -> Optional[Task]:
         """Get the status of a task by its UUID.
 
         ### Arguments:
         - task_id: The UUID of the task.
+        - retry_until_complete: Whether to retry until the task is complete.
         - override_retry_options: The retry options to use if you want to override the default ones.
 
         ### Returns
@@ -185,6 +188,14 @@ class PublisherClient(BaseModel):
         become impossible to retrieve it.
         """
 
-        return await self._manager_client.get_task(
-            task_id, override_retry_options=override_retry_options
-        )
+        task: Optional[Task] = None
+
+        while task is None or not task.has_finished:
+            task = await self._manager_client.get_task(
+                task_id, override_retry_options=override_retry_options
+            )
+            if not retry_until_complete:
+                break
+            await asyncio.sleep(1)
+
+        return task

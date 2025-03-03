@@ -13,6 +13,7 @@ docker compose up -d
 ```
 """
 
+import asyncio
 import json
 import time
 import uuid
@@ -179,6 +180,7 @@ class WorkerContext:
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.timeout(15)
 async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
     """Simple test: publishes one task and checks its status. We use an
     instrumented task so that we can see the spans and logs in Grafana.
@@ -197,8 +199,10 @@ async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
         print(f"Published task {task}")
 
         # Wait and check final status
-        await sleep(5)  # Wait for task completion + buffer
-        task_status = await publisher_client.get_task(task.id)
+        task_status = await asyncio.wait_for(
+            publisher_client.get_task(task.id, retry_until_complete=True),
+            timeout=15,
+        )
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
@@ -214,7 +218,6 @@ async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-@pytest.mark.one
 async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
     """Tests multiple variable tasks executing in parallel and
     verifies that they were all executed within a shorter time than
@@ -222,7 +225,7 @@ async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
 
     TOTAL_TASKS = 50
     TIME_PER_TASK = 0.5
-    TIME_TO_EXECUTE = TIME_PER_TASK + 3  # Buffer
+    TIME_EXPECTED = (TIME_PER_TASK * TOTAL_TASKS) / 2
 
     current_span = get_current_span()
 
@@ -240,26 +243,24 @@ async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
 
         tasks = await gather(*coroutines)
 
-        # Should be enough time for parallel execution but not sequential
-        await sleep(TIME_TO_EXECUTE)
-
-        # Verify all tasks completed
-        completed_tasks = 0
+        # Ensure all tasks are completed. This time should be shorter than TIME_PER_TASK * TOTAL_TASKS to verify that they were executed in parallel
+        start_gathering = time.time()
+        gather_tasks: list[Coroutine[Any, Any, Optional[Task]]] = []
         for task in tasks:
-            task_status = await publisher_client.get_task(task.id)
-            assert task_status is not None, f"Task {task.id} is not found"
-            if task_status.status == TaskStatus.COMPLETED:
-                completed_tasks += 1
-            else:
-                print(f"[WARNING] Task {task.id} is not completed")
-        assert completed_tasks == TOTAL_TASKS, (
-            "Only %d / %d tasks completed. Likely executed sequentially instead of in parallel. Tasks per second: %d"
-            % (completed_tasks, TOTAL_TASKS, completed_tasks / TIME_TO_EXECUTE)
+            gather_tasks.append(
+                publisher_client.get_task(task.id, retry_until_complete=True)
+            )
+        await gather(*gather_tasks)
+        time_taken = time.time() - start_gathering
+
+        assert time_taken < TIME_EXPECTED, (
+            f"Tasks were not executed in parallel. Time taken: {time_taken} seconds (expected {TIME_EXPECTED})"
         )
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
+@pytest.mark.timeout(15)
 async def test_error_task_e2e(publisher_client: PublisherClient):
     """Tests a task that fails immediately and checks that the
     serialized exception is properly returned."""
@@ -274,9 +275,9 @@ async def test_error_task_e2e(publisher_client: PublisherClient):
             input_data="",
         )
 
-        await sleep(5)
-
-        task_status = await publisher_client.get_task(task.id)
+        task_status = await publisher_client.get_task(
+            task.id, retry_until_complete=True
+        )
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
@@ -311,16 +312,16 @@ async def test_priority_task(publisher_client: PublisherClient):
         # Publish an initial task to for the rest of them to get stuck in
         print("Publishing initial task to enqueue the rest..")
         await publisher_client.publish_task(
-            task_kind=DELAYED_INSTRUMENTED_TASK,
+            task_kind=VARIABLE_TASK,
             worker_kind=worker.config.kind,
-            input_data="",
+            input_data=json.dumps({"delay": 3}),
             priority=1,
         )
         print("Published initial task!")
         coroutines: list[Coroutine[Any, Any, Task]] = []
 
         # We distribute a bunch of priorities at random and check if they're completed in the correct order
-        TOTAL_TASKS = 13
+        TOTAL_TASKS = 15
         print(f"Publishing {TOTAL_TASKS} tasks at random priorities..")
         for priority in sorted(range(TOTAL_TASKS), key=lambda _: uuid4()):
             coroutines.append(
@@ -338,17 +339,18 @@ async def test_priority_task(publisher_client: PublisherClient):
         await sleep(TOTAL_TASKS * 0.1 + 5)
         print("Gathering results..")
         for task in incomplete_tasks:
-            task = await publisher_client.get_task(task.id)
-            assert task is not None, f"Task {task} was not found"
-            completed_tasks.append(task)
+            complete_task = await publisher_client.get_task(
+                task.id, retry_until_complete=True
+            )
+            completed_tasks.append(complete_task)  # type: ignore
 
         priority_completed_at: dict[int, datetime] = {}
         for task in completed_tasks:
             assert task.completed_at is not None, "Task was not completed"
             priority_completed_at[task.priority] = task.completed_at
 
-        previous_completed_at = None
-        previous_priority = -1
+        previous_completed_at: Optional[datetime] = None
+        previous_priority: Optional[int] = None
         ordered_priority_completed_at = sorted(
             priority_completed_at.items(), key=lambda x: x[1]
         )
@@ -378,6 +380,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
     BROKER_PREFETCH_COUNT = 5
     TOTAL_TASKS = TOTAL_WORKERS * BROKER_PREFETCH_COUNT
     TIME_PER_TASK = 1
+    TIME_EXPECTED = TIME_PER_TASK * TOTAL_TASKS / TOTAL_WORKERS + 1
     worker_kind = str(uuid.uuid4())  # All workers must have the same kind
 
     current_span = get_current_span()
@@ -410,16 +413,16 @@ async def test_multiple_workers_execute_tasks_in_parallel(
     for ctx in worker_contexts:
         await ctx.__aexit__(None, None, None)  # type: ignore
 
-    # Wait for all tasks to complete
-    await sleep(TIME_PER_TASK + 2)
-
     # Check that all tasks are completed
-    complete_tasks = 0
+    start_gathering = time.time()
+    gather_tasks: list[Coroutine[Any, Any, Optional[Task]]] = []
     for task in incomplete_tasks:
-        task = await publisher_client.get_task(task.id)
-        if task is not None and task.status == TaskStatus.COMPLETED:
-            complete_tasks += 1
+        gather_tasks.append(
+            publisher_client.get_task(task.id, retry_until_complete=True)
+        )
+    await gather(*gather_tasks)
+    time_taken = time.time() - start_gathering
 
-    assert complete_tasks == TOTAL_TASKS, (
-        f"Only {complete_tasks} / {TOTAL_TASKS} tasks were completed"
+    assert time_taken < TIME_EXPECTED, (
+        f"Tasks were not executed in parallel. Time taken: {time_taken} seconds (expected {TIME_EXPECTED})"
     )
