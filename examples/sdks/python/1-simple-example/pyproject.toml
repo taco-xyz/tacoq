@@ -1,0 +1,11 @@
+[project]
+name = "1-multiple-containers"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.11",
+    "opentelemetry-api>=1.26.0",
+    "opentelemetry-sdk>=1.26.0",
+]

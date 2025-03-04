@@ -1,0 +1,28 @@
+volumes:
+  tacoq_data: {}
+
+services:
+
+  # ================================================
+  # TacoQ All-In-One
+  # This is the all-in-one container that includes
+  # the relay, broker, and database. You can use it
+  # for development and for smaller scale apps.
+  # ================================================
+
+  tacoq:
+    image: tacoq-all-in-one:latest
+    ports:
+      - "3000:3000" # Relay
+      - "5672:5672" # Broker
+      - "15672:15672" # Broker Interfaces
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - tacoq_data:/data
