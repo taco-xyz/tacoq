@@ -4,15 +4,14 @@ These tests verify that the client can correctly retrieve tasks from the manager
 and handle various response scenarios.
 """
 
-import pytest
+import json
 from uuid import UUID
+
+import pytest
 from aiohttp import ClientResponseError
 from aioresponses import aioresponses
-import json
-
-from manager.client import ManagerClient
-from models.task import Task, TaskStatus
-
+from src.core.infra.manager import ManagerClient
+from src.core.models import Task, TaskStatus
 
 # =========================================
 # Task Retrieval Tests

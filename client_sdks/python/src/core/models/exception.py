@@ -1,3 +1,10 @@
+"""Exception model for serialization.
+
+This model isn't meant to be used by the user. It abstracts the process of
+serializing a Python exception into a JSON object so that it can be shared
+with clients of any language.
+"""
+
 from pydantic import BaseModel
 
 
@@ -10,7 +17,7 @@ class SerializedException(BaseModel):
         raise RuntimeError("test")
     except Exception as e:
         serialized_exception = SerializedException.from_exception(e)
-        print(serialized_exception)
+        return serialized_exception
     ```
 
     >>> {"type": "RuntimeError", "message": "test"}

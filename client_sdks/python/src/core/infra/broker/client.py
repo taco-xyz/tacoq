@@ -1,8 +1,15 @@
+"""Abstraction on top of RabbitMQ to publish and consume tasks.
+
+This class is not meant to be used directly by the user. Instead, they should
+refer to the `PublisherClient` and `WorkerClient` to publish tasks and consume
+results, respectively.
+"""
+
 import json
-from typing import AsyncGenerator, Optional
-from broker.config import BrokerConfig
+from typing import AsyncGenerator, Optional, Self
+from core.infra.broker.config import BrokerConfig
 from aio_pika import Message, connect_robust
-from models.task import Task
+from core.models.task import Task
 from pydantic import BaseModel
 
 from aio_pika.abc import (
@@ -16,6 +23,8 @@ from aio_pika.abc import (
 
 # =========================================
 # Constants
+# NOTE: These are super duper important and
+# must be consistent across all nodes.
 # =========================================
 
 TASK_EXCHANGE = "task_exchange"
@@ -70,7 +79,12 @@ class ExchangeNotDeclaredError(Exception):
 
 
 class BaseBrokerClient(BaseModel):
-    """RabbitMQ implementation of the broker interface."""
+    """Base broker client that handles the connection and disconnection to the
+    broker.
+
+    ### Attributes:
+    - config: The configuration for the broker.
+    """
 
     config: BrokerConfig
     """ Configuration for the broker. """
@@ -84,7 +98,7 @@ class BaseBrokerClient(BaseModel):
     _task_exchange: Optional[AbstractExchange] = None
     """ The exchange for task assignments. """
 
-    async def connect(self) -> None:
+    async def connect(self: Self) -> None:
         """Establish connection to RabbitMQ server and setup channel."""
 
         self._connection = await connect_robust(self.config.url)
@@ -106,11 +120,11 @@ class BaseBrokerClient(BaseModel):
 
         await manager_queue.bind(self._task_exchange, routing_key=MANAGER_ROUTING_KEY)
 
-    async def disconnect(self) -> None:
-        """Close RabbitMQ connection.
+    async def disconnect(self: Self) -> None:
+        """Close the RabbitMQ connection.
 
         ### Raises
-        - `RabbitMQNotConnectedError`: If connection is not established
+        - NotConnectedError: If connection is not established
         """
 
         if self._connection is None:
@@ -128,12 +142,15 @@ class BaseBrokerClient(BaseModel):
 
 
 class PublisherBrokerClient(BaseBrokerClient):
-    """RabbitMQ client for publishing tasks to workers."""
+    """RabbitMQ client for publishing tasks to workers. Builds on top of the
+    base broker client and adds methods for publishing tasks, declaring new
+    queues for workers, and purging worker queues."""
 
     _binded_worker_queues: set[str] = set()
-    """ Track which worker queues we've already declared. """
+    """ Track which worker queues we've already declared so we don't need
+    to declare them again. """
 
-    async def _declare_worker_queue(self, worker_kind: str) -> None:
+    async def _declare_worker_queue(self: Self, worker_kind: str) -> None:
         """Declare a worker queue if it doesn't exist yet."""
         if worker_kind in self._binded_worker_queues:
             return
@@ -159,19 +176,19 @@ class PublisherBrokerClient(BaseBrokerClient):
 
         # TODO: Make this a testing option instead of a comment
         # Create clone queue for debugging
-        # clone_queue = await self._channel.declare_queue(
-        #     f"{worker_kind}_cloned",
-        #     durable=True,
-        #     arguments={"x-max-priority": 255},
-        # )
-        # await clone_queue.bind(
-        #     self._task_exchange,
-        #     routing_key=WORKER_ROUTING_KEY.format(worker_kind=worker_kind),
-        # )
+        clone_queue = await self._channel.declare_queue(
+            f"{worker_kind}_cloned",
+            durable=True,
+            arguments={"x-max-priority": 255},
+        )
+        await clone_queue.bind(
+            self._task_exchange,
+            routing_key=WORKER_ROUTING_KEY.format(worker_kind=worker_kind),
+        )
 
         self._binded_worker_queues.add(worker_kind)
 
-    async def purge_worker_queue(self, worker_kind: str) -> None:
+    async def purge_worker_queue(self: Self, worker_kind: str) -> None:
         """Purges the queue for a worker kind. Only works in test mode."""
         if not self.config.test_mode:
             raise RuntimeError(
@@ -196,7 +213,7 @@ class PublisherBrokerClient(BaseBrokerClient):
         # Purge the queue
         await queue.purge()
 
-    async def publish_task(self, task: Task) -> None:
+    async def publish_task(self: Self, task: Task) -> None:
         """Publish a task. The manager will receive it and workers of the correct kind will too."""
 
         if not self._task_exchange:
@@ -222,8 +239,11 @@ class PublisherBrokerClient(BaseBrokerClient):
 
 class WorkerBrokerClient(BaseBrokerClient):
     """RabbitMQ client for workers to consume tasks and publish results.
-    Each worker kind has its own queue for task assignments, but all workers
-    share a single queue for publishing results."""
+
+    ### Attributes:
+    - worker_kind: The name of the worker kind.
+    - prefetch_count: The number of tasks to prefetch from the broker.
+    """
 
     worker_kind: str
     """ The name of the worker kind. """
@@ -234,7 +254,11 @@ class WorkerBrokerClient(BaseBrokerClient):
     _queue: Optional[AbstractQueue] = None
     """ Queue for task assignments. """
 
-    async def connect(self) -> None:
+    async def connect(self: Self) -> None:
+        """Establishes a connection to the broker (as does the base class), but
+        then declares a queue for the worker kind and binds it to the task
+        exchange."""
+
         await super().connect()
         if not self._channel:
             raise RuntimeError("Channel not initialized")
@@ -255,9 +279,14 @@ class WorkerBrokerClient(BaseBrokerClient):
         await self._queue.bind(self._task_exchange, routing_key=routing_key)
 
     async def listen(
-        self,
+        self: Self,
     ) -> AsyncGenerator[tuple[Task, AbstractIncomingMessage], None]:
-        """Listen for tasks for this worker's kind. Only acknowledges tasks after they are processed."""
+        """Listen for tasks for this worker's kind. Only acknowledges tasks
+        after they are processed.
+
+        ### Yields:
+        tuple[Task, AbstractIncomingMessage]: A tuple of the task and the message to be ACK'd or NACK'd.
+        """
         if not self._queue:
             raise RuntimeError("Queue not initialized")
 
@@ -266,11 +295,11 @@ class WorkerBrokerClient(BaseBrokerClient):
                 task = Task(**json.loads(message.body))
                 yield (task, message)
 
-    async def publish_task_result(self, task: Task) -> None:
+    async def publish_task_result(self: Self, task: Task) -> None:
         """Publish a task result to the shared results queue.
 
-        ### Args:
-            task: The task to publish the result of.
+        ### Arguments:
+        - task: The task to publish the result of.
         """
 
         # Check if the task has a result attached

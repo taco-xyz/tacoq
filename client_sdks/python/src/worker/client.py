@@ -1,3 +1,9 @@
+"""Worker client for the TacoQ client SDK.
+
+This client is used to listen for tasks from the broker, execute them, and
+publish the results back to the manager.
+"""
+
 import asyncio
 import json
 from datetime import datetime
@@ -6,16 +12,15 @@ from typing import Awaitable, Callable, Dict, Optional
 from aio_pika.abc import (
     AbstractIncomingMessage,
 )
-from broker import WorkerBrokerClient
-from logger_manager import LoggerManager
-from logger_manager import StructuredMessage as _
-from manager import ManagerClient
-from models.exception import SerializedException
-from models.task import Task, TaskInput, TaskOutput, TaskStatus
+from core.infra.broker import WorkerBrokerClient
+from core.infra.manager import ManagerClient
+from core.models import SerializedException, Task, TaskInput, TaskOutput, TaskStatus
+from core.telemetry import LoggerManager, TracerManager
+from core.telemetry import StructuredMessage as _
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Status, StatusCode
 from pydantic import BaseModel
-from tracer_manager import TracerManager
+from typing_extensions import Self
 from worker.config import WorkerApplicationConfig
 
 # =========================================
@@ -24,10 +29,11 @@ from worker.config import WorkerApplicationConfig
 
 
 class TaskNotRegisteredError(Exception):
-    """Exception raised when a task is not registered."""
+    """Exception raised when a task tries to be executed but it hasn't been
+    registered in the current worker."""
 
     def __init__(
-        self,
+        self: Self,
         task_kind: str,
         registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]],
     ):
@@ -41,7 +47,48 @@ class TaskNotRegisteredError(Exception):
 
 
 class WorkerApplication(BaseModel):
-    """A worker application that processes tasks from a task queue."""
+    """A worker application that processes tasks from a task queue.
+
+    ### Attributes:
+    - config: The configuration for this worker application. See `WorkerApplicationConfig` for more details.
+
+    ### Usage
+    ```python
+    # Set up the config
+    config = WorkerApplicationConfig(
+        kind="my_worker",
+        manager_config=ManagerConfig(url="http://localhost:8080"),
+        broker_config=BrokerConfig(url="amqp://localhost:5672"),
+        broker_prefetch_count=10,
+    )
+
+    # Initialize the worker with the config
+    worker = WorkerApplication(config=config)
+
+    # Register a task. It must be async!
+    @worker.task(kind="my_task")
+    async def my_task(input_data: TaskInput) -> TaskOutput:
+        return TaskOutput(result="Hello, world!")
+
+    # Start the worker
+    await worker.entrypoint()
+    ```
+    You can can also initialize the worker within your existing application
+    using `asyncio.create_task`:
+    ```python
+    asyncio.create_task(worker.entrypoint())
+    ```
+    This makes it so you could, for example, initialize the worker within your
+    FastAPI application while keeping it running on a single thread. However,
+    this is only recommended for non-blocking tasks. If your workload is
+    at all blocking, make sure to isolate your worker in either a separate
+    process or an entirely different application.
+
+    You can also issue a shutdown signal to the worker application using
+    `worker.issue_shutdown()`. This will cause the worker to shut down gracefully
+    after the existing tasks are finished. You can await its shutdown using
+    `await worker.wait_for_shutdown()`.
+    """
 
     config: WorkerApplicationConfig
     """ The configuration for this worker application. """
@@ -55,6 +102,8 @@ class WorkerApplication(BaseModel):
     _broker_client: Optional[WorkerBrokerClient] = None
     """ The broker client that this worker application uses. """
 
+    # Graceful Shutdown
+
     _shutdown_event: asyncio.Event = asyncio.Event()
     """ Event that is set when the worker application is shutting down. """
 
@@ -64,7 +113,7 @@ class WorkerApplication(BaseModel):
     _active_tasks: set[asyncio.Task[None]] = set()
     """ The set of active tasks that this worker application is processing. """
 
-    def model_post_init(self, _) -> None:
+    def model_post_init(self: Self, _) -> None:
         self._registered_tasks = {}
         self._manager_client = ManagerClient(config=self.config.manager_config)
 
@@ -73,7 +122,7 @@ class WorkerApplication(BaseModel):
     # ================================
 
     def register_task(
-        self, kind: str, task: Callable[[TaskInput], Awaitable[TaskOutput]]
+        self: Self, kind: str, task: Callable[[TaskInput], Awaitable[TaskOutput]]
     ):
         """Register a task handler function for a specific task kind.
 
@@ -96,7 +145,7 @@ class WorkerApplication(BaseModel):
         self._registered_tasks[kind] = task
 
     def task(
-        self, kind: str
+        self: Self, kind: str
     ) -> Callable[
         [Callable[[TaskInput], Awaitable[TaskOutput]]],
         Callable[[TaskInput], Awaitable[TaskOutput]],
@@ -118,7 +167,7 @@ class WorkerApplication(BaseModel):
 
         return decorator
 
-    async def _execute_task(self, task: Task, message: AbstractIncomingMessage):
+    async def _execute_task(self: Self, task: Task, message: AbstractIncomingMessage):
         """Execute a task and update its status in the manager.
 
         ### Arguments
@@ -243,11 +292,11 @@ class WorkerApplication(BaseModel):
 
     # Entrypoint
 
-    async def _init_broker_client(self):
+    async def _init_broker_client(self: Self) -> None:
         """Initialize the broker client for this worker.
 
-        ### Raises
-        - `RuntimeError`: If manager client is not initialized
+        ### Raises:
+        - RuntimeError: If manager client is not initialized
         """
         if self._manager_client is None:
             raise RuntimeError("Manager client not initialized")
@@ -260,12 +309,14 @@ class WorkerApplication(BaseModel):
         )
         await self._broker_client.connect()
 
-    async def entrypoint(self):
-        """Start the worker application."""
-        return await self._entrypoint()
+    async def entrypoint(self: Self) -> None:
+        """Entrypoint into the worker application."""
+        return await self._lifecycle()
 
-    async def _entrypoint(self):
+    async def _lifecycle(self: Self) -> None:
         """Initialize and start listening for tasks."""
+
+        # Initialize the broker client
         await self._init_broker_client()
 
         logger = LoggerManager.get_logger()
@@ -275,20 +326,24 @@ class WorkerApplication(BaseModel):
                 attributes={"worker.kind": self.config.kind},
             )
         )
+
+        # Start listening for tasks
         try:
             await self._listen()
         except asyncio.CancelledError:
             pass
+
+        # Clean up after everything is done
         finally:
             await self._cleanup()
 
     # Loop
 
-    async def _listen(self):
-        """Listen for tasks of a specific kind from the broker.
+    async def _listen(self: Self) -> None:
+        """Listen for tasks from the broker, setting them to be executed in the background.
 
-        ### Raises
-        - `RuntimeError`: If broker client is not initialized
+        ### Raises:
+        - RuntimeError: If broker client is not initialized
         """
 
         if self._broker_client is None:
@@ -326,8 +381,18 @@ class WorkerApplication(BaseModel):
 
     # Graceful Shutdown
 
-    def issue_shutdown(self):
-        """Shutdown the worker application."""
+    def issue_shutdown(self: Self) -> None:
+        """Issue a shutdown signal to the worker application.
+
+        ### Usage:
+        Issue a shutdown signal to the worker application. This will cause the
+        worker to shut down gracefully after the existing tasks are finished.
+        You can await its shutdown using `await worker.wait_for_shutdown()`.
+
+        ```python
+        worker.issue_shutdown()
+        ```
+        """
 
         logger = LoggerManager.get_logger()
         logger.info(
@@ -337,8 +402,16 @@ class WorkerApplication(BaseModel):
         )
         self._shutdown_event.set()
 
-    async def wait_for_shutdown(self):
-        """Wait for the worker application to shut down."""
+    async def wait_for_shutdown(self: Self) -> None:
+        """Wait for the worker application to shut down.
+
+        ### Usage:
+        Wait for the worker application to shut down. This is non-blocking.
+        ```python
+        worker.issue_shutdown()
+        await worker.wait_for_shutdown()
+        ```
+        """
         logger = LoggerManager.get_logger()
         logger.info(
             _(
@@ -347,11 +420,8 @@ class WorkerApplication(BaseModel):
         )
         await self._shutdown_complete_event.wait()
 
-    async def _cleanup(self):
-        """Cleanup the worker application.
-
-        This method is called when the worker is shutting down. Used for cleaning internal state.
-        """
+    async def _cleanup(self: Self) -> None:
+        """Cleanup the internal state of the worker application."""
 
         # Wait for all active tasks to complete
 

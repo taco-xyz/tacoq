@@ -5,16 +5,15 @@ These tests verify that the publisher client can correctly publish tasks
 to the broker and retrieve task information from the manager.
 """
 
-from unittest import mock
-from broker.client import PublisherBrokerClient
-from manager.client import ManagerClient
-import pytest
-from uuid import uuid4
 import json
+from unittest import mock
+from uuid import uuid4
 
-from models.task import Task, TaskStatus
-from publisher import PublisherClient
-
+import pytest
+from src.core.infra.broker import PublisherBrokerClient
+from src.core.infra.manager import ManagerClient
+from src.core.models import Task, TaskStatus
+from src.publisher import PublisherClient
 
 # =========================================
 # Task Publishing Tests
