@@ -18,7 +18,7 @@ jobs:
 
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: tacoq-relay
+      IMAGE_NAME: ${{ github.repository_owner }}/tacoq-relay
 
     steps:
       - uses: actions/checkout@v4
