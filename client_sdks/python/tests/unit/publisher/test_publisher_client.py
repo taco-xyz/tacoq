@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import pytest
 from src.core.infra.broker import PublisherBrokerClient
-from src.core.infra.manager import ManagerClient
+from src.core.infra.relay import RelayClient
 from src.core.models import Task, TaskStatus
 from src.publisher import PublisherClient
 
@@ -81,14 +81,12 @@ async def test_get_task_success(
         status=TaskStatus.PENDING,
     )
 
-    publisher_client._manager_client = mock.create_autospec(
-        ManagerClient, instance=True
-    )
-    publisher_client._manager_client.get_task.return_value = expected_task  # type: ignore
+    publisher_client._relay_client = mock.create_autospec(RelayClient, instance=True)
+    publisher_client._relay_client.get_task.return_value = expected_task  # type: ignore
 
     task = await publisher_client.get_task(task_id)
     assert task == expected_task
-    publisher_client._manager_client.get_task.assert_called_once_with(  # type: ignore
+    publisher_client._relay_client.get_task.assert_called_once_with(  # type: ignore
         task_id,
         override_retry_options=None,
     )

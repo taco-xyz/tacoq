@@ -1,7 +1,7 @@
 """Worker client for the TacoQ client SDK.
 
 This client is used to listen for tasks from the broker, execute them, and
-publish the results back to the manager.
+publish the results back to the relay.
 """
 
 import asyncio
@@ -13,7 +13,7 @@ from aio_pika.abc import (
     AbstractIncomingMessage,
 )
 from core.infra.broker import WorkerBrokerClient
-from core.infra.manager import ManagerClient
+from core.infra.relay import RelayClient
 from core.models import SerializedException, Task, TaskInput, TaskOutput, TaskStatus
 from core.telemetry import LoggerManager, TracerManager
 from core.telemetry import StructuredMessage as _
@@ -57,7 +57,7 @@ class WorkerApplication(BaseModel):
     # Set up the config
     config = WorkerApplicationConfig(
         kind="my_worker",
-        manager_config=ManagerConfig(url="http://localhost:8080"),
+        relay_config=RelayConfig(url="http://localhost:8080"),
         broker_config=BrokerConfig(url="amqp://localhost:5672"),
         broker_prefetch_count=10,
     )
@@ -93,8 +93,8 @@ class WorkerApplication(BaseModel):
     config: WorkerApplicationConfig
     """ The configuration for this worker application. """
 
-    _manager_client: Optional[ManagerClient] = None
-    """ The manager client that this worker application uses to interface with the manager service. """
+    _relay_client: Optional[RelayClient] = None
+    """ The relay client that this worker application uses to interface with the relay service. """
 
     _registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]] = {}
     """ All the tasks that this worker application can handle. """
@@ -115,7 +115,7 @@ class WorkerApplication(BaseModel):
 
     def model_post_init(self: Self, _) -> None:
         self._registered_tasks = {}
-        self._manager_client = ManagerClient(config=self.config.manager_config)
+        self._relay_client = RelayClient(config=self.config.relay_config)
 
     # ================================
     # Task Registration & Execution
@@ -168,7 +168,7 @@ class WorkerApplication(BaseModel):
         return decorator
 
     async def _execute_task(self: Self, task: Task, message: AbstractIncomingMessage):
-        """Execute a task and update its status in the manager.
+        """Execute a task and update its status in the relay.
 
         ### Arguments
         - task: Task to execute
@@ -296,10 +296,8 @@ class WorkerApplication(BaseModel):
         """Initialize the broker client for this worker.
 
         ### Raises:
-        - RuntimeError: If manager client is not initialized
+        - RuntimeError: If relay client is not initialized
         """
-        if self._manager_client is None:
-            raise RuntimeError("Manager client not initialized")
 
         # Init the broker client using the queue name of the worker kind
         self._broker_client = WorkerBrokerClient(
@@ -355,7 +353,6 @@ class WorkerApplication(BaseModel):
                 message="Listening for tasks",
             )
         )
-
         # Loop
         while not self._shutdown_event.is_set():
             try:
@@ -363,6 +360,7 @@ class WorkerApplication(BaseModel):
                     self._broker_client.listen().__anext__(),
                     timeout=1.0,  # Check shutdown signal every second
                 )
+
                 # Task is created and added to the tracker pool
                 logger.info(
                     _(

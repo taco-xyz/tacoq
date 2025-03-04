@@ -1,18 +1,18 @@
 """Publisher client for the TacoQ client SDK.
 
 The publisher client abstracts the details of communicating with
-the broker and manager. This is a public-facing class that can
+the broker and relay. This is a public-facing class that can
 be used to both publish tasks and retrieve their current status
 and eventual output.
 """
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 import asyncio
 
 from aiohttp_retry import RetryOptionsBase
 from core.infra.broker import BrokerConfig, PublisherBrokerClient
-from core.infra.manager import ManagerClient, ManagerConfig
+from core.infra.relay import RelayClient, RelayConfig
 from core.models import Task, TaskInput
 from core.telemetry import TracerManager
 from opentelemetry.propagate import inject
@@ -25,24 +25,26 @@ class PublisherClient(BaseModel):
 
     ### Attributes
     - broker_config: The configuration for the broker. See `BrokerConfig` for more details on how to configure it.
-    - manager_config: The configuration for the manager. See `ManagerConfig` for more details on how to configure it.
+    - relay_config: The configuration for the relay. See `RelayConfig` for more details on how to configure it.
 
     ### Usage
     ```python
     from core.infra.broker import BrokerConfig
-    from core.infra.manager import ManagerConfig
+    from core.infra.relay import RelayConfig
 
     # Make sure RabbitMQ is running for tihs one!
     broker_config = BrokerConfig(
         host="localhost",
         port=5672,
     )
-    # Make sure the manager is running for this one!
-    manager_config = ManagerConfig(
+    # Make sure the relay is running for this one!
+    relay_config = RelayConfig(
         host="localhost",
         port=8080,
     )
-    publisher = PublisherClient(broker_config=broker_config, manager_config=manager_config)
+    publisher = PublisherClient(
+        broker_config=broker_config, relay_config=relay_config
+    )
 
     # Publish a task
     task = await publisher.publish_task(
@@ -67,15 +69,15 @@ class PublisherClient(BaseModel):
     _broker_client: Optional[PublisherBrokerClient] = None
     """ The broker client for publishing tasks. """
 
-    # Manager
-    manager_config: ManagerConfig
-    """ The configuration for the manager. """
+    # Relay
+    relay_config: RelayConfig
+    """ The configuration for the relay. """
 
-    _manager_client: ManagerClient = None  # type: ignore
-    """ The manager client for retrieving tasks. """
+    _relay_client: RelayClient = None  # type: ignore
+    """ The relay client for retrieving tasks. """
 
     def model_post_init(self: Self, _) -> None:
-        self._manager_client = ManagerClient(config=self.manager_config)
+        self._relay_client = RelayClient(config=self.relay_config)
 
     def _connect_to_broker(self: Self) -> None:
         self._broker_client = PublisherBrokerClient(config=self.broker_config)
@@ -89,7 +91,7 @@ class PublisherClient(BaseModel):
         priority: int = 0,
         otel_ctx_carrier: Optional[Dict[str, str]] = None,
     ) -> Task:
-        """Publish a task to the manager.
+        """Publish a task to the broker.
 
         ### Arguments:
         - task_kind: The kind of the task. Can either be in the format of `worker_kind:task_name` string or a `TaskKind` object.
@@ -157,7 +159,7 @@ class PublisherClient(BaseModel):
                 }
             )
 
-            # Publish the task to the manager
+            # Publish the task to the broker
             with tracer.start_as_current_span("publish_task"):
                 await self._broker_client.publish_task(task)
 
@@ -191,13 +193,31 @@ class PublisherClient(BaseModel):
         task: Optional[Task] = None
 
         while task is None or not task.has_finished:
-            task = await self._manager_client.get_task(
+            task = await self._relay_client.get_task(
                 task_id, override_retry_options=override_retry_options
             )
             if (
                 not retry_until_complete
             ):  # TODO - Remove retry mechanism and make this work via a channel
                 break
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.25)
 
         return task
+
+    async def cleanup(self: Self) -> None:
+        """Clean up the publisher client."""
+
+        # Disconnect broker client
+        if self._broker_client is not None:
+            await self._broker_client.disconnect()
+
+        # Disconnect relay client
+        await self._relay_client.disconnect()
+
+    async def __aenter__(self: Self) -> Self:
+        return self
+
+    async def __aexit__(
+        self: Self, exc_type: Any, exc_value: Any, traceback: Any
+    ) -> None:
+        await self.cleanup()

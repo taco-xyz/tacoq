@@ -10,7 +10,7 @@ from uuid import UUID
 import pytest
 from aiohttp import ClientResponseError
 from aioresponses import aioresponses
-from src.core.infra.manager import ManagerClient
+from src.core.infra.relay import RelayClient
 from src.core.models import Task, TaskStatus
 
 # =========================================
@@ -19,7 +19,7 @@ from src.core.models import Task, TaskStatus
 
 
 @pytest.mark.asyncio
-async def test_get_task_success(mock_manager_client: ManagerClient):
+async def test_get_task_success(mock_relay_client: RelayClient):
     """Test successful retrieval of a task from the manager."""
     task_id = UUID("00000000-0000-0000-0000-000000000000")
     task_data = {
@@ -39,7 +39,7 @@ async def test_get_task_success(mock_manager_client: ManagerClient):
             payload=task_data,
             status=200,
         )
-        task = await mock_manager_client.get_task(task_id)
+        task = await mock_relay_client.get_task(task_id)
         assert isinstance(task, Task)
         assert task.id == task_id
         assert task.task_kind == "test_kind"
@@ -47,7 +47,7 @@ async def test_get_task_success(mock_manager_client: ManagerClient):
 
 
 @pytest.mark.asyncio
-async def test_get_task_not_found(mock_manager_client: ManagerClient):
+async def test_get_task_not_found(mock_relay_client: RelayClient):
     """Test behavior when requesting a non-existent task."""
     task_id = UUID("00000000-0000-0000-0000-000000000000")
 
@@ -58,12 +58,12 @@ async def test_get_task_not_found(mock_manager_client: ManagerClient):
             body=b"Task not found",
             repeat=True,
         )
-        response = await mock_manager_client.get_task(task_id)
+        response = await mock_relay_client.get_task(task_id)
         assert response is None
 
 
 @pytest.mark.asyncio
-async def test_get_task_server_error(mock_manager_client: ManagerClient):
+async def test_get_task_server_error(mock_relay_client: RelayClient):
     """Test behavior when the server returns an error response."""
     task_id = UUID("00000000-0000-0000-0000-000000000000")
 
@@ -75,5 +75,5 @@ async def test_get_task_server_error(mock_manager_client: ManagerClient):
             repeat=True,
         )
         with pytest.raises(ClientResponseError) as exc_info:
-            await mock_manager_client.get_task(task_id)
+            await mock_relay_client.get_task(task_id)
         assert exc_info.value.status == 500

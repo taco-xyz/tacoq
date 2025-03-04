@@ -1,6 +1,6 @@
 import os
 from time import sleep
-
+from typing import AsyncGenerator
 import pytest
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -11,12 +11,12 @@ from opentelemetry.sdk.trace.export import (
 )
 from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
 from src.core.infra.broker import BrokerConfig
-from src.core.infra.manager import ManagerClient, ManagerConfig
+from src.core.infra.relay import RelayClient, RelayConfig
 from src.core.telemetry import LoggerManager, TracerManager
 from src.publisher import PublisherClient
 from src.worker import WorkerApplicationConfig
 
-MANAGER_TEST_URL = os.environ.get("MANAGER_TEST_URL", "http://localhost:3000")
+RELAY_TEST_URL = os.environ.get("RELAY_TEST_URL", "http://localhost:3000")
 BROKER_TEST_URL = os.environ.get(
     "BROKER_TEST_URL", "amqp://user:password@localhost:5672/"
 )
@@ -80,20 +80,22 @@ def create_test_span():
 ## ==============================
 
 
-@pytest.fixture
-def manager_config() -> ManagerConfig:
-    """Fixture that provides a configured ManagerConfig instance."""
-    return ManagerConfig(url=MANAGER_TEST_URL)
+@pytest.fixture(scope="session")
+def relay_config() -> RelayConfig:
+    """Fixture that provides a configured RelayConfig instance."""
+    return RelayConfig(url=RELAY_TEST_URL)
+
+
+@pytest.fixture(scope="session")
+def relay_client(relay_config: RelayConfig) -> RelayClient:
+    return RelayClient(config=relay_config)
 
 
 @pytest.fixture
-def manager_client(manager_config: ManagerConfig) -> ManagerClient:
-    return ManagerClient(config=manager_config)
-
-
-@pytest.fixture
-def mock_manager_client() -> ManagerClient:
-    return ManagerClient(config=ManagerConfig(url="http://test"))
+async def mock_relay_client() -> AsyncGenerator[RelayClient, None]:
+    client = RelayClient(config=RelayConfig(url="http://test"))
+    yield client
+    await client.disconnect()
 
 
 ## ==============================
@@ -101,7 +103,7 @@ def mock_manager_client() -> ManagerClient:
 ## ==============================
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def broker_config() -> BrokerConfig:
     """Fixture that provides a configured BrokerConfig instance."""
     return BrokerConfig(url=BROKER_TEST_URL)
@@ -113,12 +115,16 @@ def broker_config() -> BrokerConfig:
 
 
 @pytest.fixture
-def publisher_client(
-    manager_config: ManagerConfig,
+async def publisher_client(
+    relay_config: RelayConfig,
     broker_config: BrokerConfig,
-) -> PublisherClient:
+) -> AsyncGenerator[PublisherClient, None]:
     """Fixture that provides a configured PublisherClient instance."""
-    return PublisherClient(manager_config=manager_config, broker_config=broker_config)
+
+    async with PublisherClient(
+        relay_config=relay_config, broker_config=broker_config
+    ) as client:
+        yield client
 
 
 ## ==============================
@@ -128,9 +134,9 @@ def publisher_client(
 DEFAULT_BROKER_PREFETCH_COUNT = 10
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def worker_config(
-    manager_config: ManagerConfig,
+    relay_config: RelayConfig,
     broker_config: BrokerConfig,
     broker_prefetch_count: int = DEFAULT_BROKER_PREFETCH_COUNT,
 ) -> WorkerApplicationConfig:
@@ -138,7 +144,7 @@ def worker_config(
     return WorkerApplicationConfig(
         kind=WORKER_KIND_NAME,
         name=WORKER_NAME,
-        manager_config=manager_config,
+        relay_config=relay_config,
         broker_config=broker_config,
         broker_prefetch_count=broker_prefetch_count,
     )

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 
 class SerializedException(BaseModel):
-    """A serialized exception. Transforms the exception into a JSON object that is shared between the manager and the worker.
+    """A serialized exception. Transforms the exception into a JSON object that is shared between the relay and the worker.
 
     ### Example
     ```python
