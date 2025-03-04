@@ -80,7 +80,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            tacoq-manager cargo test --release --all-features
+            tacoq-relay cargo test --release --all-features
 
   # =================================================
   # SDK Tests
