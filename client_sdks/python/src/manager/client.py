@@ -1,24 +1,15 @@
-"""Manager client for the TacoQ client SDK.
-
-The manager client abstracts the details of communicating with
-the manager service. This class is not meant to be used directly
-by the user. Instead, they should refer to the `PublisherClient`
-to fetch existing tasks or publish new ones.
-"""
-
 from enum import Enum
 from typing import Optional
 from uuid import UUID
-from typing_extensions import Self
 
 from pydantic import BaseModel
 from aiohttp import ClientSession, ClientConnectorError
 from aiohttp_retry import RetryClient, RetryOptionsBase
 from opentelemetry.propagate import inject
 
-from core.infra.manager.config import ManagerConfig
-from core.models.task import Task
-from core.telemetry import TracerManager
+from manager.config import ManagerConfig
+from models.task import Task
+from tracer_manager import TracerManager
 
 # =========================================
 # Constants
@@ -36,8 +27,7 @@ HEALTH_PATH = "/health"
 
 
 class ManagerStates(str, Enum):
-    """Possible states of the manager. Used primarly for health checking during
-    tests."""
+    """Possible states of the manager. Used for health checking during tests."""
 
     HEALTHY = "healthy"
     """ The manager is healthy. """
@@ -53,54 +43,34 @@ class ManagerStates(str, Enum):
 
 
 class ManagerClient(BaseModel):
-    """Abstracts the manager API.
-
-    ### Attributes
-    - config: The configuration for the manager client.
-
-    ### Usage
-    ```python
-    # Initialize the client
-    client = ManagerClient(config=ManagerConfig(url="http://localhost:8080"))
-
-    # Check the health of the manager
-    health = await client.check_health()
-
-    # Get a task by its ID
-    task = await client.get_task(task.id)
-    ```
-    """
+    """Abstracts the manager API."""
 
     config: ManagerConfig
     """Configuration for the manager client."""
-
-    # TODO - Make the session long-lived to avoid having to reconnect
-    # every time a request is made to the manager.
 
     # ================================
     # Health Checking
     # ================================
 
     async def check_health(
-        self: Self, override_retry_options: Optional[RetryOptionsBase] = None
+        self, override_retry_options: Optional[RetryOptionsBase] = None
     ) -> ManagerStates:
         """Check whether the manager is healthy. This is currently used before
         tests are run to notify the user if the manager is not healthy or even
         running at all.
 
-        ### Arguments:
-        - override_retry_options: Retry options to override the default ones
+        ### Args
+        - `override_retry_options`: Retry options to override the default ones
 
-        ### Returns:
-        ManagerStates: Whether the manager is healthy.
+        ### Returns
+        - `ManagerStates`: Whether the manager is healthy.
         """
 
         try:
             async with ClientSession() as session:
                 retry_client = RetryClient(
                     session,
-                    retry_options=override_retry_options
-                    or self.config.default_retry_options,
+                    retry_options=override_retry_options or self.config.retry_options,
                 )
                 async with retry_client.get(f"{self.config.url}{HEALTH_PATH}") as resp:
                     match resp.status:
@@ -116,18 +86,16 @@ class ManagerClient(BaseModel):
     # ================================
 
     async def get_task(
-        self: Self,
-        task_id: UUID,
-        override_retry_options: Optional[RetryOptionsBase] = None,
+        self, task_id: UUID, override_retry_options: Optional[RetryOptionsBase] = None
     ) -> Optional[Task]:
         """Get a task by its UUID.
 
-        ### Arguments:
+        ### Args:
         - task_id: UUID of the task to retrieve
         - override_retry_options: Retry options to override the default ones
 
-        ### Returns:
-        Task: The task details
+        ### Returns
+        - Task: The task details
         """
         tracer = TracerManager.get_tracer()
         with tracer.start_as_current_span("get_task") as span:
@@ -140,8 +108,7 @@ class ManagerClient(BaseModel):
             async with ClientSession() as session:
                 retry_client = RetryClient(
                     session,
-                    retry_options=override_retry_options
-                    or self.config.default_retry_options,
+                    retry_options=override_retry_options or self.config.retry_options,
                 )
 
                 async with retry_client.get(

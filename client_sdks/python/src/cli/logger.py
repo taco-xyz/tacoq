@@ -1,6 +1,6 @@
 import logging
 import sys
-from typing import Optional, Self
+from typing import Optional
 
 
 class ColorFormatter(logging.Formatter):
@@ -15,7 +15,7 @@ class ColorFormatter(logging.Formatter):
         "ENDC": "\033[0m",  # Reset
     }
 
-    def format(self: Self, record: logging.LogRecord) -> str:
+    def format(self, record):
         if record.levelname in self.COLORS:
             record.levelname = f"{self.COLORS[record.levelname]}{record.levelname}{self.COLORS['ENDC']}"
         return super().format(record)

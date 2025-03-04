@@ -1,20 +1,21 @@
 import os
-from time import sleep
-
 import pytest
+from time import sleep
 from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
 )
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
-from src.core.infra.broker import BrokerConfig
-from src.core.infra.manager import ManagerClient, ManagerConfig
-from src.core.telemetry import LoggerManager, TracerManager
-from src.publisher import PublisherClient
+
+from src.manager import ManagerClient, ManagerConfig
 from src.worker import WorkerApplicationConfig
+from src.broker import BrokerConfig
+from src.publisher import PublisherClient
+from src.tracer_manager import TracerManager
+from logger_manager import LoggerManager
 
 MANAGER_TEST_URL = os.environ.get("MANAGER_TEST_URL", "http://localhost:3000")
 BROKER_TEST_URL = os.environ.get(

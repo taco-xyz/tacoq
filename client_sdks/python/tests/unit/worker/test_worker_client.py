@@ -6,16 +6,20 @@ execute tasks, and manage its lifecycle.
 """
 
 import datetime
-import json
 from unittest import mock
+import json
 from uuid import uuid4
 
 import pytest
+from broker import WorkerBrokerClient
+from broker.config import BrokerConfig
+from manager.config import ManagerConfig
+from models.task import Task, TaskInput, TaskOutput, TaskStatus
+from worker import WorkerApplication
+from worker.config import WorkerApplicationConfig
+
 from aio_pika.abc import AbstractIncomingMessage
-from src.core.infra.broker import BrokerConfig, WorkerBrokerClient
-from src.core.infra.manager import ManagerConfig
-from src.core.models import Task, TaskInput, TaskOutput, TaskStatus
-from src.worker import WorkerApplication, WorkerApplicationConfig
+
 
 # =========================================
 # Fixtures

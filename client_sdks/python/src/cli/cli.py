@@ -1,11 +1,10 @@
+import click
 import asyncio
+from cli.runner import run_application
+from cli.importer import ImportFromStringError
+from cli.logger import logger
 from functools import wraps
 from typing import Any, Awaitable, Callable
-
-import click
-from worker.cli.importer import ImportFromStringError
-from worker.cli.logger import logger
-from worker.cli.runner import run_application
 
 
 def async_command(

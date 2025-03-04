@@ -8,7 +8,9 @@ import pytest
 from aiohttp import ClientConnectorError
 from aiohttp.client_reqrep import ConnectionKey
 from aioresponses import aioresponses
-from src.core.infra.manager import ManagerClient, ManagerStates
+
+from manager.client import ManagerClient, ManagerStates
+
 
 # =========================================
 # Health Check Tests
