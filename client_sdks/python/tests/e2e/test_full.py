@@ -26,7 +26,7 @@ from uuid import uuid4
 import pytest
 from opentelemetry.trace import get_current_span
 from src.core.infra.broker import BrokerConfig
-from src.core.infra.manager import ManagerConfig
+from src.core.infra.relay import RelayConfig
 from src.core.models import Task, TaskInput, TaskOutput, TaskStatus
 from src.core.telemetry import LoggerManager, TracerManager
 from src.core.telemetry import StructuredMessage as _
@@ -141,7 +141,7 @@ class WorkerContext:
             config=WorkerApplicationConfig(
                 name=self.worker_kind,
                 kind=self.worker_kind,
-                manager_config=ManagerConfig(url="http://localhost:3000"),
+                relay_config=RelayConfig(url="http://localhost:3000"),
                 broker_prefetch_count=broker_prefetch_count,
                 broker_config=BrokerConfig(
                     url="amqp://user:password@localhost:5672",
@@ -181,6 +181,7 @@ class WorkerContext:
 @pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.timeout(15)
+@pytest.mark.one
 async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
     """Simple test: publishes one task and checks its status. We use an
     instrumented task so that we can see the spans and logs in Grafana.

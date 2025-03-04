@@ -17,7 +17,7 @@ use tracing::{info, info_span, warn};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
-use constants::MANAGER_QUEUE;
+use constants::RELAY_QUEUE;
 use models::Task;
 use sqlx::PgPool;
 
@@ -117,7 +117,7 @@ async fn initialize_system(
     info!("Database connection pools created");
 
     let new_task_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, MANAGER_QUEUE, shutdown.clone())
+        setup_consumer_broker::<Task>(&config.broker_addr, RELAY_QUEUE, shutdown.clone())
             .await
             .expect("Failed to setup task instance consumer");
     info!("Brokers initialized");

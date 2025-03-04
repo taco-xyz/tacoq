@@ -30,11 +30,11 @@ from aio_pika.abc import (
 TASK_EXCHANGE = "task_exchange"
 """ Single exchange for all task-related messages. """
 
-MANAGER_QUEUE = "manager_queue"
-""" Queue for manager to receive ALL tasks. """
+RELAY_QUEUE = "relay_queue"
+""" Queue for relay to receive ALL tasks. """
 
-MANAGER_ROUTING_KEY = "#"  # Wildcard to receive all messages
-""" Manager receives all messages. """
+RELAY_ROUTING_KEY = "#"  # Wildcard to receive all messages
+""" Relay receives all messages. """
 
 WORKER_ROUTING_KEY = "tasks.{worker_kind}"
 """ Workers only receive tasks for their kind. """
@@ -111,14 +111,14 @@ class BaseBrokerClient(BaseModel):
             durable=True,
         )
 
-        # Declare manager queue - all clients ensure it exists
-        manager_queue = await self._channel.declare_queue(
-            MANAGER_QUEUE,
+        # Declare relay queue - all clients ensure it exists
+        relay_queue = await self._channel.declare_queue(
+            RELAY_QUEUE,
             durable=True,
             arguments={"x-max-priority": 255},
         )
 
-        await manager_queue.bind(self._task_exchange, routing_key=MANAGER_ROUTING_KEY)
+        await relay_queue.bind(self._task_exchange, routing_key=RELAY_ROUTING_KEY)
 
     async def disconnect(self: Self) -> None:
         """Close the RabbitMQ connection.
@@ -214,7 +214,7 @@ class PublisherBrokerClient(BaseBrokerClient):
         await queue.purge()
 
     async def publish_task(self: Self, task: Task) -> None:
-        """Publish a task. The manager will receive it and workers of the correct kind will too."""
+        """Publish a task. The relay will receive it and workers of the correct kind will too."""
 
         if not self._task_exchange:
             await self.connect()
