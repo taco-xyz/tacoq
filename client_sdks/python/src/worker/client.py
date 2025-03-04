@@ -13,7 +13,6 @@ from aio_pika.abc import (
     AbstractIncomingMessage,
 )
 from core.infra.broker import WorkerBrokerClient
-from core.infra.relay import RelayClient
 from core.models import SerializedException, Task, TaskInput, TaskOutput, TaskStatus
 from core.telemetry import LoggerManager, TracerManager
 from core.telemetry import StructuredMessage as _
@@ -93,9 +92,6 @@ class WorkerApplication(BaseModel):
     config: WorkerApplicationConfig
     """ The configuration for this worker application. """
 
-    _relay_client: Optional[RelayClient] = None
-    """ The relay client that this worker application uses to interface with the relay service. """
-
     _registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]] = {}
     """ All the tasks that this worker application can handle. """
 
@@ -115,7 +111,6 @@ class WorkerApplication(BaseModel):
 
     def model_post_init(self: Self, _) -> None:
         self._registered_tasks = {}
-        self._relay_client = RelayClient(config=self.config.relay_config)
 
     # ================================
     # Task Registration & Execution

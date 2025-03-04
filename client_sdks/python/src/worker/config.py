@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from core.infra.broker import BrokerConfig
-from core.infra.relay import RelayConfig
 
 
 class WorkerApplicationConfig(BaseModel):
@@ -18,8 +17,6 @@ class WorkerApplicationConfig(BaseModel):
       This also dictates how many asynchronous tasks can be executed at once.
       This purposefully does not have a default as it is *very* important to set
       it correctly.
-    - relay_config: Configuration for the relay. See `RelayConfig` for more
-      details.
 
     ### Usage
     ```python
@@ -57,6 +54,3 @@ class WorkerApplicationConfig(BaseModel):
     broker_prefetch_count: int
     """ The number of tasks to prefetch from the broker. This also dictates how 
     many asynchronous tasks can be executed at once. """
-
-    relay_config: RelayConfig
-    """ Configuration for the relay. """
