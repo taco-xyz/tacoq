@@ -1,6 +1,6 @@
 services:
   tacoq:
-    image: tacoq-manager:latest
+    image: tacoq-relay:latest
     entrypoint: [/app/target/release/relay]
     ports:
       - "3000:3000"
