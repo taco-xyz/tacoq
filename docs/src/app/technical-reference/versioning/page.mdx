@@ -1,0 +1,42 @@
+
+## Semantic Versioning
+
+Until TacoQ reaches 1.0, TacoQ will adhere to the following versioning scheme:
+
+- Minor version number is bumped for breaking changes.
+- Patch version number is bumped for non-breaking changes.
+
+When TacoQ reaches 1.0, it will follow [Semantic versioning](https://semver.org/).
+
+## SDK and Image Lockstep Releases
+
+Until TacoQ reaches a stable 1.0 release, SDKs and images always share the same
+minor version number: 
+
+- If a breaking change happens in the Relay, both the Relay and SDKs are bumped
+  to a new minor version.
+- If a breaking change happens in the SDK, both the SDK and the Relay image are
+  bumped to a new minor version.
+
+Patch versions are not locked, but always reset to 0 when a minor version is
+bumped.
+
+## Message Versioning
+
+Right now, if the task object changes and you upgrade to a new version, your
+worker and relay will fail to process the message. We recommend that to 
+upgrade, you follow the following procedure:
+
+1. Shut down your publisher.
+2. Work through all the messages in your queue until they are all processed.
+3. Upgrade your worker and relay to the new version. They will apply migration
+   scripts to the database, but we take care of this automatically.
+4. Restart your publisher.
+
+In the future, we will implement Task object versioning using an Avro-like
+setup that you won't need to worry about. For now, this would slow down
+development and we prefer to keep it easy to iterate on.
+
+## Documentation
+
+Documentation is kept up to date and will not feature versioning until 1.0.
