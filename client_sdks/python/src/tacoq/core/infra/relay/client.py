@@ -16,9 +16,9 @@ from aiohttp import ClientSession, ClientConnectorError
 from aiohttp_retry import RetryClient, RetryOptionsBase
 from opentelemetry.propagate import inject
 
-from core.infra.relay.config import RelayConfig
-from core.models.task import Task
-from core.telemetry import TracerManager
+from tacoq.core.infra.relay.config import RelayConfig
+from tacoq.core.models.task import Task
+from tacoq.core.telemetry import TracerManager
 
 # =========================================
 # Constants

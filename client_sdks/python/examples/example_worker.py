@@ -3,7 +3,7 @@ import asyncio
 from broker import BrokerConfig
 from manager.config import ManagerConfig
 from worker import WorkerApplication, WorkerApplicationConfig
-from src.models import TaskInput, TaskOutput
+from src.tacoq.models import TaskInput, TaskOutput
 
 # GENERAL CONFIGURATION _______________________________________________________
 # These configs should be shared across both the publisher and the worker.

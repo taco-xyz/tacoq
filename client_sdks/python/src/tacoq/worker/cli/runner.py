@@ -4,10 +4,10 @@ import traceback
 from contextlib import AsyncExitStack
 from typing import Any, Optional, Self
 
-from worker.cli.importer import import_from_string
-from worker.cli.logger import logger
-from worker.cli.reloader import ModuleReloader
-from worker.client import WorkerApplication
+from tacoq.worker.cli.importer import import_from_string
+from tacoq.worker.cli.logger import logger
+from tacoq.worker.cli.reloader import ModuleReloader
+from tacoq.worker.client import WorkerApplication
 
 
 class ApplicationRunner:

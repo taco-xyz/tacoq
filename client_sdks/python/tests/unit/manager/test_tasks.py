@@ -10,8 +10,8 @@ from uuid import UUID
 import pytest
 from aiohttp import ClientResponseError
 from aioresponses import aioresponses
-from src.core.infra.relay import RelayClient
-from src.core.models import Task, TaskStatus
+from src.tacoq.core.infra.relay import RelayClient
+from src.tacoq.core.models import Task, TaskStatus
 
 # =========================================
 # Task Retrieval Tests

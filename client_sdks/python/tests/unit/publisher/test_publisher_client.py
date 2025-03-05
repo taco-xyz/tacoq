@@ -10,10 +10,10 @@ from unittest import mock
 from uuid import uuid4
 
 import pytest
-from src.core.infra.broker import PublisherBrokerClient
-from src.core.infra.relay import RelayClient
-from src.core.models import Task, TaskStatus
-from src.publisher import PublisherClient
+from src.tacoq.core.infra.broker import PublisherBrokerClient
+from src.tacoq.core.infra.relay import RelayClient
+from src.tacoq.core.models import Task, TaskStatus
+from src.tacoq.publisher import PublisherClient
 
 # =========================================
 # Task Publishing Tests
