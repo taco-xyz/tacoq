@@ -11,13 +11,14 @@ from uuid import UUID, uuid4
 import asyncio
 
 from aiohttp_retry import RetryOptionsBase
-from core.infra.broker import BrokerConfig, PublisherBrokerClient
-from core.infra.relay import RelayClient, RelayConfig
-from core.models import Task, TaskInput
-from core.telemetry import TracerManager
 from opentelemetry.propagate import inject
 from pydantic import BaseModel
 from typing_extensions import Self
+
+from tacoq.core.infra.broker import BrokerConfig, PublisherBrokerClient
+from tacoq.core.infra.relay import RelayClient, RelayConfig
+from tacoq.core.models import Task, TaskInput
+from tacoq.core.telemetry import TracerManager
 
 
 class PublisherClient(BaseModel):

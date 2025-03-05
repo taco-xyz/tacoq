@@ -1,9 +1,9 @@
-from core.infra.broker.client import (
+from tacoq.core.infra.broker.client import (
     PublisherBrokerClient,
     WorkerBrokerClient,
     BaseBrokerClient,
 )
-from core.infra.broker.config import BrokerConfig
+from tacoq.core.infra.broker.config import BrokerConfig
 
 __all__ = [
     "PublisherBrokerClient",

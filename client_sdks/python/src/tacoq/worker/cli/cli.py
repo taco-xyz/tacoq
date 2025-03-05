@@ -3,9 +3,9 @@ from functools import wraps
 from typing import Any, Awaitable, Callable
 
 import click
-from worker.cli.importer import ImportFromStringError
-from worker.cli.logger import logger
-from worker.cli.runner import run_application
+from tacoq.worker.cli.importer import ImportFromStringError
+from tacoq.worker.cli.logger import logger
+from tacoq.worker.cli.runner import run_application
 
 
 def async_command(

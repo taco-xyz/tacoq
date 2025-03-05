@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from core.infra.broker import BrokerConfig
-from core.infra.relay import RelayConfig
+from tacoq.core.infra.broker import BrokerConfig
+from tacoq.core.infra.relay import RelayConfig
 
 
 class WorkerApplicationConfig(BaseModel):

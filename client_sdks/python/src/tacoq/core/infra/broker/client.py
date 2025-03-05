@@ -7,9 +7,7 @@ results, respectively.
 
 import json
 from typing import AsyncGenerator, Optional, Self
-from core.infra.broker.config import BrokerConfig
 from aio_pika import Message, connect_robust
-from core.models.task import Task
 from pydantic import BaseModel
 
 from aio_pika.abc import (
@@ -20,6 +18,8 @@ from aio_pika.abc import (
     AbstractIncomingMessage,
 )
 
+from tacoq.core.infra.broker.config import BrokerConfig
+from tacoq.core.models.task import Task
 
 # =========================================
 # Constants

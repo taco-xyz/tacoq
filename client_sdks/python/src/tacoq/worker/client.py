@@ -12,16 +12,23 @@ from typing import Awaitable, Callable, Dict, Optional
 from aio_pika.abc import (
     AbstractIncomingMessage,
 )
-from core.infra.broker import WorkerBrokerClient
-from core.infra.relay import RelayClient
-from core.models import SerializedException, Task, TaskInput, TaskOutput, TaskStatus
-from core.telemetry import LoggerManager, TracerManager
-from core.telemetry import StructuredMessage as _
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Status, StatusCode
 from pydantic import BaseModel
 from typing_extensions import Self
-from worker.config import WorkerApplicationConfig
+
+from tacoq.worker.config import WorkerApplicationConfig
+from tacoq.core.infra.broker import WorkerBrokerClient
+from tacoq.core.infra.relay import RelayClient
+from tacoq.core.models import (
+    SerializedException,
+    Task,
+    TaskInput,
+    TaskOutput,
+    TaskStatus,
+)
+from tacoq.core.telemetry import LoggerManager, TracerManager
+from tacoq.core.telemetry import StructuredMessage as _
 
 # =========================================
 # Errors
