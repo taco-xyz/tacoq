@@ -40,6 +40,10 @@ import {
   BuildingLibraryIcon,
   CpuChipIcon,
   AdjustmentsVerticalIcon,
+  ArrowUpIcon,
+  ChevronDoubleRightIcon,
+  PencilSquareIcon,
+  PresentationChartLineIcon,
 } from "@heroicons/react/24/outline";
 
 // Custom Icons Imports
@@ -234,6 +238,93 @@ const pages: Page[] = [
           sidebar: {
             title: "Versioning",
             Icon: AdjustmentsVerticalIcon,
+          },
+        },
+      },
+    ],
+  },
+  {
+    metadata: {
+      title: "Guides",
+      description: "Learn how to perform common tasks using TacoQ.",
+      sidebar: {
+        title: "Guides",
+        Icon: PencilSquareIcon,
+      },
+    },
+    children: [
+      {
+        url: "/guides/task-versioning",
+        metadata: {
+          title: "Serialization & Versioning",
+          description:
+            "Learn how to serialize your tasks' input and output data as well as version your tasks.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Task Serialization & Versioning",
+            Icon: ArrowUpIcon,
+          },
+        },
+      },
+      {
+        url: "/guides/same-app-worker-pattern",
+        metadata: {
+          title: "Same-app Worker Pattern",
+          description:
+            "Learn how to set up a worker and publisher in the same application to make your life easier.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Same-app Worker Pattern",
+            Icon: ChevronDoubleRightIcon,
+          },
+        },
+      },
+      {
+        url: "/guides/maximizing-performance",
+        metadata: {
+          title: "Maximizing Performance",
+          description:
+            "Understand how to get the best performance out of TacoQ.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Maximizing Performance",
+            Icon: BoltIcon,
+          },
+        },
+      },
+      {
+        url: "/guides/horizontal-scaling",
+        metadata: {
+          title: "Scaling TacoQ",
+          description:
+            "Learn how to scale your TacoQ application horizontally on the cloud with multiple workers, auto-scaling, distributed Postgres, replicated relays, and more.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Horizontal Scaling",
+            Icon: PresentationChartLineIcon,
+          },
+        },
+      },
+      {
+        url: "/guides/api-integration",
+        metadata: {
+          title: "API Integration",
+          description:
+            "Learn publish and fetch tasks without an SDK by using the relay endpoints.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "API Integration",
+            Icon: LinkIcon,
           },
         },
       },
