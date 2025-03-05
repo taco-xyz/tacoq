@@ -33,6 +33,13 @@ import {
   LinkIcon,
   PencilIcon,
   RocketLaunchIcon,
+  LightBulbIcon,
+  AcademicCapIcon,
+  ArrowDownTrayIcon,
+  BookOpenIcon,
+  BuildingLibraryIcon,
+  CpuChipIcon,
+  AdjustmentsVerticalIcon,
 } from "@heroicons/react/24/outline";
 
 // Custom Icons Imports
@@ -59,27 +66,26 @@ const anchors: Anchor[] = [
 const pages: Page[] = [
   {
     metadata: {
-      title: "Getting Started",
-      description: "Start building your app with the following steps.",
+      title: "Quickstart",
+      description: "Get started using TacoQ",
       sidebar: {
-        title: "Getting Started",
-        Icon: BoltIcon,
+        title: "Quickstart",
+        Icon: RocketLaunchIcon,
       },
     },
     children: [
       {
-        url: "/getting-started/quickstart",
+        url: "/quickstart/core-concepts",
         metadata: {
-          title: "Quickstart",
+          title: "Core Concepts",
           description:
-            "Start building your app with the following steps. Follow these tutorials to get started and you'll be up and running in no time.",
+            "Understand the core concepts of TacoQ and how it works at a basic level.",
           badge: {
-            text: "Getting Started",
+            text: "Quickstart",
           },
-
           sidebar: {
-            title: "Quickstart",
-            Icon: RocketLaunchIcon,
+            title: "Core Concepts",
+            Icon: AcademicCapIcon,
           },
         },
         content: [
@@ -92,110 +98,32 @@ const pages: Page[] = [
         ],
       },
       {
-        url: "/getting-started/editing",
+        url: "/quickstart/set-up",
         metadata: {
-          title: "Editing",
-          description: "Edit your content with the web app or local editor.",
+          title: "Setup",
+          description:
+            "Setup TacoQ on your project using Docker and installing your preferred SDK.",
           badge: {
-            text: "Getting Started",
+            text: "Quickstart",
           },
           sidebar: {
-            title: "Editing",
-            Icon: PencilIcon,
-          },
-        },
-        content: [
-          { type: HeadingTypes.H1, name: "Editing Your Documentation" },
-          { type: HeadingTypes.H2, name: "Available Editors" },
-          { type: HeadingTypes.H2, name: "File Structure" },
-          { type: HeadingTypes.H2, name: "Best Practices" },
-        ],
-        children: [
-          {
-            url: "/getting-started/editing/local",
-            metadata: {
-              title: "Local Development",
-              description: "Edit your content with the local editor.",
-              badge: {
-                text: "Getting Started",
-              },
-              sidebar: {
-                title: "Local Development",
-                Icon: CodeBracketIcon,
-              },
-            },
-            content: [
-              { type: HeadingTypes.H1, name: "Local Development Setup" },
-              { type: HeadingTypes.H2, name: "Prerequisites" },
-              { type: HeadingTypes.H2, name: "Editor Configuration" },
-              { type: HeadingTypes.H3, name: "VS Code Setup" },
-              { type: HeadingTypes.H3, name: "Extensions" },
-              { type: HeadingTypes.H2, name: "Development Workflow" },
-            ],
-          },
-          {
-            url: "/getting-started/editing/web",
-            metadata: {
-              title: "Web Editor",
-              description: "Edit your content with the web app.",
-              badge: {
-                text: "Getting Started",
-              },
-              sidebar: {
-                title: "Web Editor",
-                Icon: ComputerDesktopIcon,
-              },
-            },
-            content: [
-              { type: HeadingTypes.H1, name: "Web Editor Guide" },
-              { type: HeadingTypes.H2, name: "Getting Started" },
-              { type: HeadingTypes.H2, name: "Interface Overview" },
-              { type: HeadingTypes.H3, name: "Toolbar" },
-              { type: HeadingTypes.H3, name: "Preview Panel" },
-              { type: HeadingTypes.H2, name: "Collaboration Features" },
-            ],
-          },
-        ],
-      },
-      {
-        url: "/getting-started/settings",
-        metadata: {
-          title: "Global Settings",
-          description: "Edit your global settings.",
-          badge: {
-            text: "Getting Started",
-          },
-          sidebar: {
-            title: "Global Settings",
-            Icon: Cog6ToothIcon,
+            title: "Setup",
+            Icon: ArrowDownTrayIcon,
           },
         },
       },
       {
-        url: "/getting-started/navigation",
+        url: "/quickstart/usage",
         metadata: {
-          title: "Navigation",
-          description: "You can customize the navigation of your docs.",
+          title: "Usage",
+          description:
+            "Use TacoQ in your project by setting up a publisher and a worker.",
           badge: {
-            text: "Getting Started",
+            text: "Quickstart",
           },
           sidebar: {
-            title: "Navigation",
-            Icon: LinkIcon,
-          },
-        },
-      },
-      {
-        url: "/getting-started/migration",
-        metadata: {
-          title: "Migration",
-          description: "Migrate your docs to Mintlify.",
-          badge: {
-            text: "Getting Started",
-          },
-          sidebar: {
-            title: "Migration",
-            Icon: ArrowUpTrayIcon,
+            title: "Usage",
+            Icon: CodeBracketIcon,
           },
         },
       },
@@ -203,36 +131,110 @@ const pages: Page[] = [
   },
   {
     metadata: {
-      title: "Writing Content",
-      badge: {
-        text: "Writing Content",
-        Icon: BoltIcon,
+      title: "Technical Reference",
+      description: "Learn about the technical details of TacoQ.",
+      sidebar: {
+        title: "Technical Reference",
+        Icon: BookOpenIcon,
       },
-      description: "Start writing your content with the following steps.",
     },
     children: [
       {
-        url: "/writing/page-titles",
+        url: "/technical-reference/system-architecture",
         metadata: {
-          title: "Page Titles",
+          title: "System Architecture",
+          description:
+            "Learn how services interact with each other and why they are structured the way they are.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "System Architecture",
+            Icon: BuildingLibraryIcon,
+          },
         },
+        content: [
+          { type: HeadingTypes.H1, name: "Interactive Map" },
+          { type: HeadingTypes.H1, name: "System Services" },
+          { type: HeadingTypes.H2, name: "Broker" },
+          { type: HeadingTypes.H3, name: "RabbitMQ Implementation Details" },
+          { type: HeadingTypes.H2, name: "Database" },
+          { type: HeadingTypes.H2, name: "Relay" },
+          { type: HeadingTypes.H3, name: "Task Update Consumer" },
+          { type: HeadingTypes.H3, name: "Data Retrieval" },
+          { type: HeadingTypes.H3, name: "Cleanup" },
+          { type: HeadingTypes.H3, name: "Replication" },
+          { type: HeadingTypes.H3, name: "Rust Implementation Details" },
+          { type: HeadingTypes.H1, name: "User Services" },
+          { type: HeadingTypes.H2, name: "Worker" },
+          { type: HeadingTypes.H2, name: "Publisher" },
+        ],
       },
       {
-        url: "/writing/metadata",
+        url: "/technical-reference/relay-endpoints",
         metadata: {
-          title: "Metadata",
+          title: "Relay Endpoints",
+          description:
+            "Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "Relay Endpoints",
+            Icon: CpuChipIcon,
+          },
         },
+        content: [
+          { type: HeadingTypes.H1, name: "Quickstart Guide" },
+          { type: HeadingTypes.H2, name: "Installation" },
+          { type: HeadingTypes.H2, name: "Basic Setup" },
+          { type: HeadingTypes.H3, name: "Configuration" },
+          { type: HeadingTypes.H3, name: "Environment Variables" },
+          { type: HeadingTypes.H2, name: "Next Steps" },
+        ],
       },
       {
-        url: "/writing/headers-and-text",
         metadata: {
-          title: "Headers and Text",
+          title: "SDKs",
+          description: "Reference for each of the available SDKs.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "SDKs",
+            Icon: ComputerDesktopIcon,
+          },
         },
+        children: [
+          {
+            url: "/technical-reference/sdks/python",
+            metadata: {
+              title: "Python SDK",
+              description: "Reference for the Python SDK.",
+              badge: {
+                text: "Technical Reference",
+              },
+              sidebar: {
+                title: "Python SDK",
+                Icon: CodeBracketIcon,
+              },
+            },
+          },
+        ],
       },
       {
-        url: "/writing/tables",
+        url: "/technical-reference/versioning",
         metadata: {
-          title: "Tables",
+          title: "Versioning",
+          description:
+            "Learn how TacoQ handles versioning for images and libraries.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "Versioning",
+            Icon: AdjustmentsVerticalIcon,
+          },
         },
       },
     ],
