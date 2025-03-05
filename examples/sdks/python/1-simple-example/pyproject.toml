@@ -8,4 +8,5 @@ dependencies = [
     "fastapi>=0.115.11",
     "opentelemetry-api>=1.26.0",
     "opentelemetry-sdk>=1.26.0",
+    "tacoq>=0.2.1",
 ]
