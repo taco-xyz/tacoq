@@ -1,17 +1,18 @@
 
 ## Semantic Versioning
 
-Until TacoQ reaches 1.0, TacoQ will adhere to the following versioning scheme:
+Until TacoQ reaches 1.0, it will adhere to the following versioning scheme:
 
-- Minor version number is bumped for breaking changes.
-- Patch version number is bumped for non-breaking changes.
+- The major version will be 0 until 1.0.
+- The minor version increases for breaking changes or major features.
+- The patch version increases for non-breaking changes.
 
-When TacoQ reaches 1.0, it will follow [Semantic versioning](https://semver.org/).
+After 1.0, TacoQ will follow [Semantic versioning](https://semver.org/).
 
 ## SDK and Image Lockstep Releases
 
-Until TacoQ reaches a stable 1.0 release, SDKs and images always share the same
-minor version number: 
+Until TacoQ stabelizes at 1.0, SDKs and images always share the same minor 
+version number. For example:
 
 - If a breaking change happens in the Relay, both the Relay and SDKs are bumped
   to a new minor version.
@@ -23,20 +24,22 @@ bumped.
 
 ## Message Versioning
 
-Right now, if the task object changes and you upgrade to a new version, your
-worker and relay will fail to process the message. We recommend that to 
-upgrade, you follow the following procedure:
+Currently, changes to the task object can cause compatibility issues, preventing 
+your workers and relays from processing messages and NACK'ing them. To upgrade
+without compatibility issues, follow these steps:
 
 1. Shut down your publisher.
 2. Work through all the messages in your queue until they are all processed.
-3. Upgrade your worker and relay to the new version. They will apply migration
-   scripts to the database, but we take care of this automatically.
-4. Restart your publisher.
+3. Handle any necessary operations on your task objects. They will be deleted
+from the database.
+4. Purge your database.
+5. Upgrade your worker, relay, and publisher to the new version.
+6. You can now begin publishing tasks again!
 
-In the future, we will implement Task object versioning using an Avro-like
-setup that you won't need to worry about. For now, this would slow down
-development and we prefer to keep it easy to iterate on.
+Future releases will introduce Task object versioning using an Avro-like setup
+to improve compatibility and make upgrades more robust. For now, prioritizing
+fast iteration outweighs the benefits of versioned Task objects.
 
 ## Documentation
 
-Documentation is kept up to date and will not feature versioning until 1.0.
+Documentation remains up to date and will not include versioning until 1.0.
