@@ -117,7 +117,7 @@ and multiple `task_kind`'s that it is capable of executing.
         The drawbacks to the current approach are:
         1. Additional setup parameter that must be known pre-runtime.
         2. There cannot be two different worker kinds with the shared task kind 
-        capabilities. The user must always choose with worker kind to route to.
+        capabilities. The user must always choose which worker kind to route a task to.
 
         Given these extremely specific drawbacks which apply to almost no one and can
         easily be worked around, we've decided to use worker kinds to route tasks.
