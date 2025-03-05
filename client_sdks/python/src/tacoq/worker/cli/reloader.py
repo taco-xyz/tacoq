@@ -6,7 +6,7 @@ from types import ModuleType
 from typing import Dict, Self
 
 from watchfiles import awatch  # type: ignore
-from worker.cli.logger import logger
+from tacoq.worker.cli.logger import logger
 
 
 class ModuleReloader:

@@ -12,10 +12,10 @@ from uuid import uuid4
 
 import pytest
 from aio_pika.abc import AbstractIncomingMessage
-from src.core.infra.broker import BrokerConfig, WorkerBrokerClient
-from src.core.infra.relay import RelayConfig
-from src.core.models import Task, TaskInput, TaskOutput, TaskStatus
-from src.worker import WorkerApplication, WorkerApplicationConfig
+from src.tacoq.core.infra.broker import BrokerConfig, WorkerBrokerClient
+from src.tacoq.core.infra.relay import RelayConfig
+from src.tacoq.core.models import Task, TaskInput, TaskOutput, TaskStatus
+from src.tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
 # =========================================
 # Fixtures
