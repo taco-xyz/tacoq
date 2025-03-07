@@ -25,15 +25,11 @@ import {
   CreditCardIcon,
 } from "@heroicons/react/24/solid";
 import {
-  ArrowUpTrayIcon,
   BoltIcon,
   CodeBracketIcon,
-  Cog6ToothIcon,
   ComputerDesktopIcon,
   LinkIcon,
-  PencilIcon,
   RocketLaunchIcon,
-  LightBulbIcon,
   AcademicCapIcon,
   ArrowDownTrayIcon,
   BookOpenIcon,
@@ -44,6 +40,7 @@ import {
   ChevronDoubleRightIcon,
   PencilSquareIcon,
   PresentationChartLineIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
 // Custom Icons Imports
@@ -68,6 +65,7 @@ const anchors: Anchor[] = [
 ];
 
 const pages: Page[] = [
+  // Quickstart
   {
     metadata: {
       title: "Quickstart",
@@ -133,6 +131,7 @@ const pages: Page[] = [
       },
     ],
   },
+  // Technical Reference
   {
     metadata: {
       title: "Technical Reference",
@@ -173,6 +172,21 @@ const pages: Page[] = [
           { type: HeadingTypes.H2, name: "Worker" },
           { type: HeadingTypes.H2, name: "Publisher" },
         ],
+      },
+      {
+        url: "/technical-reference/benchmarking",
+        metadata: {
+          title: "Benchmarks",
+          description:
+            "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "Benchmarks",
+            Icon: ChartBarIcon,
+          },
+        },
       },
       {
         url: "/technical-reference/relay-endpoints",
@@ -243,6 +257,7 @@ const pages: Page[] = [
       },
     ],
   },
+  // Guides
   {
     metadata: {
       title: "Guides",
@@ -318,7 +333,7 @@ const pages: Page[] = [
         metadata: {
           title: "API Integration",
           description:
-            "Learn publish and fetch tasks without an SDK by using the relay endpoints.",
+            "Learn how to publish and fetch tasks without an SDK by using the relay endpoints.",
           badge: {
             text: "Guides",
           },
