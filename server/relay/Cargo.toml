@@ -41,5 +41,5 @@ lapin = "2.5.0"
 strum = { version = "0.26.3", features = ["derive"] }
 
 [dev-dependencies]
-ctor = "0.2.9"
+ctor = "0.4.0"
 axum-test = "17.0.1"
