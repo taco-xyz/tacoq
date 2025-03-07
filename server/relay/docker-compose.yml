@@ -6,9 +6,7 @@ services:
   # Main App
 
   tacoq:
-    build:
-      context: .
-      dockerfile: server/relay/Dockerfile
+    build: .
     ports:
       - "3000:3000"
     depends_on:
