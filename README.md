@@ -1,6 +1,10 @@
 # TacoQ
 
-A multi-language distributed task queue
+![Git Tag](https://img.shields.io/github/v/tag/taco-xyz/tacoq)
+![CI](https://img.shields.io/github/actions/workflow/status/taco-xyz/tacoq/.github%2Fworkflows%2Ftest.yml)
+![Github Stars](https://img.shields.io/github/stars/taco-xyz/tacoq)
+
+TacoQ is a multi-language distributed task queue with built-in observability, low latency, and first-class idiomatic support.
 
 ## Highlights
 
@@ -13,16 +17,17 @@ A multi-language distributed task queue
 - ⚙️ Distributed and **horizontally scalable**.
 
 > [!TIP]
-> TacoQ is **not a workflow engine** like Hatchet and Windmill. We have plans 
-> of building a tool like those (fittingly named **TacoFlow**), but TacoQ's
-> codebase will never depend on it because we want to keep it focused and easy
-> to understand and contribute to.
+> 🚨 Not a workflow engine! TacoQ is a distributed task queue, not an orchestrator
+> like Hatchet or Windmill. While we plan to build TacoFlow (a future orchestration
+> tool), TacoQ will remain lightweight, standalone, and easy to contribute to.
+
+
 
 ## Quick Start
 
 ### Server
 
-Launch TacoQ using the following `docker-compose.yml`:
+Use this `docker-compose.yml` to spin up the full stack:
 
 ```yml
 volumes:
@@ -116,7 +121,8 @@ uv add tacoq
 
 ### Client (Worker)
 
-Set up your worker:
+Your worker will be the service executing the tasks. Spin up a worker using the
+following code:
 
 ```py
 # worker.py
