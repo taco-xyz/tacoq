@@ -160,7 +160,7 @@ impl TaskRepository for PgTaskRepository {
     }
 
     #[instrument(skip(self))]
-    async fn delete_expired_tasks(&self) -> Result<u64, Box<dyn std::error::Error>> {
+    async fn delete_expired_tasks(&self) -> Result<u64, sqlx::Error> {
         let now = chrono::Utc::now();
 
         let result = sqlx::query!(
