@@ -26,8 +26,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    env_file:
-      - .env.example
+    environment:
+      DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_DATABASE_READER_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_DATABASE_WRITER_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_BROKER_ADDR: amqp://user:password@localhost:5672
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://localhost:4317
+      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+      OTEL_SERVICE_NAME: tacoq.manager
+
 
   # ================================================
   # Broker
@@ -72,37 +80,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  # ================================================
-  # Observability
-  # This is the observability stack that we use to
-  # monitor the app. Feel free to integrate into
-  # your own observability stack.
-  # ================================================
-
-  tempo:
-    image: grafana/tempo:latest
-    command: ["-config.file=/etc/tempo.yaml"]
-    volumes:
-      - type: bind
-        source: ./tempo.yaml
-        target: /etc/tempo.yaml
-        read_only: true
-    ports:
-      - "3200" # Collection
-      - "4317:4317" # OTLP gRPC - We keep these ports open so that we can run the app outside the container
-      - "4318:4318" # OTLP HTTP
-
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - type: bind
-        source: ./grafana-datasources.yaml
-        target: /etc/grafana/provisioning/datasources/datasources.yaml
-        read_only: true
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-    ports:
-      - "3001:3000" # Grafana UI
