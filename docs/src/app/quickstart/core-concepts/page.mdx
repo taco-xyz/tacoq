@@ -1,0 +1,78 @@
+
+# What is TacoQ?
+
+TacoQ is a task queue system that allows you to schedule tasks to be executed
+asynchronously in workers outside your application. (e.g. in a different container).
+
+> [!NOTE]
+> To properly use TacoQ, it is recommended that you have a basic understand of
+> the core concepts of task queues. This section will provide a rapid-fire 
+> overview of the core concepts of task queues and TacoQ so you can hit the 
+> ground running.
+
+# Core Concepts: Rapid-fire Overview
+
+> [!NOTE]
+> You can skip this section if you're already familiar with task queues. Just
+> make sure to read about the [Relay](/quickstart/core-concepts/relay).
+
+## Tasks
+
+Tasks are a unit of work that can be scheduled to be executed asynchronously.
+They have the following properties:
+
+- Tasks are uniquely represented by a string identifier `kind`. (e.g.
+  `"my_custom_task"`), which is used by workers to identify which task to run.
+- Tasks have a `priority` value, which is used to sort tasks and determine which
+  ones to assign to workers first.
+
+## Message Broker
+
+The message broker carries task assignments, updates, and results across the 
+entire TacoQ system. The broker is also responsible for routing the tasks to the
+correct set of workers based on its properties. 
+
+> [!NOTE]
+> TacoQ uses RabbitMQ as its message broker.
+
+## Workers
+
+Workers receive task assignments from the message broker, execute them, and then
+send the result back through the message broker so they can be stored in the database.
+
+> [!NOTE]
+> TacoQ uses Postgres as its database.
+
+## Publishers
+
+Publishers are services that publish tasks to the message broker. They can then
+query the TacoQ's REST API to retrieve the results and current status of the task.
+
+## Relay
+
+The relay is a unique concept to TacoQ. It is essentially TacoQ's engine, and has
+the following properties:
+
+- Hosts a REST API that enables any SDK or even non-supported languages to retrieve
+  task results and status. Task publishing is traditionally done through the broker,
+  but the relay also allows for task publishing for non-supported languages.
+- Is a permanent consumer of messages from the broker to update the database with
+  the latest task statuses and results.
+- Is horizontally scalable and can be scaled to run thousands of instances.
+
+# What makes TacoQ different?
+
+From a high level perspective, TacoQ aims to differentiate itself from other task
+queues by providing the following features:
+
+- Multi-language interoperability (e.g. schedule a CPU-intensive task to be 
+  executed by a Rust worker from a Python application).
+- Modern SDKs for popular languages like Python, supporting async functions,
+  `pydantic`, having a type safe API, built-in hot reloading, and more.
+- A REST API, allowing languages without an SDK to schedule and retrieve task
+  results.
+- Is horizontally scalable and can be scaled to run thousands of workers.
+
+> [!NOTE]
+> You can learn more about TacoQ's architecture and design in the 
+> [Technical Reference](/technical-reference) section.

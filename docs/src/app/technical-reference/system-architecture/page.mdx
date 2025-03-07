@@ -20,62 +20,72 @@ task data.
 ## Broker
 
 The broker, implemented in RabbitMQ, is responsible for transporting task objects
-between services. This works by having a central exchange that routes **all
-task objects to the relay** and new tasks to be executed to the **appropriate worker**.
+between services. This works by having a central exchange that routes **all task
+objects to the relay** and new tasks to be executed to the **appropriate worker**. 
+More on this in the [Broker](/technical-reference/#h2-worker) section.
 
-We **do not plan on supporting additional brokers in the near future**, though we
-are open to making the broker an abstract class and accepting contributions for
-other message brokers if there is enough demand.
+> [!NOTE]
+> We **do not plan on supporting additional brokers in the near future**, though we
+> are open to making the broker an abstract class and accepting contributions for
+> other message brokers if there is enough demand.
+>
+> The reason behind this is that other brokers (Redis, Kafka, etc...) do not 
+> support core features like routing and priorities, which we heavily rely on.
 
 ### RabbitMQ Implementation Details
 
 The basic structure of the broker infrastructure is as follows:
 
-- A task exchange to which new tasks are published
-- One queue per worker kind - the task exchange filters new tasks to be routed
-to the appropriate queue
-- The relay queue. All tasks that go through the task exchange are routed to 
-the relay queue, but new task results are published directly to the queue 
-rather than the exchange.
+- A `task_exchange` exchange to which new tasks are published
+- One queue per worker kind - the `task_exchange` filters new tasks to be routed
+  to the appropriate queue. More on worker kinds in the 
+  [Worker](/technical-reference/#h2-worker) section.
+- The relay queue. All tasks that go through the `task_exchange` are routed to 
+  the relay queue, but new task results are published directly to the queue 
+  rather than the exchange as they don't need to be used in the workers.
 
-All queues and exchanges are **durable** and **do not auto-delete**. All
-queues have a default `{"x-max-priority": 255}` to allow for maximum flexibility
-in task priority and to have the priority feature available by default.
+Queues and exchanges are not customizable because RabbitMQ doesn't like it
+when different services expect different queue and exchange configurations.
+Therefore:
+
+- All queues and exchanges are **durable**.
+- All queues and exchanges are **do not auto-delete**.
+- All queues have a default `{"x-max-priority": 255}` to allow for maximum 
+  flexibility in task priority and to have the priority feature available by
+  default.
 
 ## Database
 
 The latest state of each task is stored in the database by the relay. The database is 
 implemented in Postgres and managed via Rust's SQLX by the relay.
 
-**We want to support more relational databases in the near future**, namely 
-SQLite to make the local development experience easier.
-
 ## Relay
 
 The relay, as the name implies, is responsible for relaying information 
-between the core services and the user's application. It is implemented in Rust.
+between the core services and the user's application. It is implemented in Rust
+and has the following capabilities:
 
-### Task Update Consumer
+### 1. Task Update Consumer
 
 The relay consumes task updates from the broker and stores them in the database as they come in.
 
-### Data Retrieval
+### 2. Data Retrieval
 
 The relay also serves a **REST API** for retrieving task data from the database. 
 You can read the API swagger definition in [Relay Endpoints](/technical-reference/relay-endpoints). 
 
-### Cleanup
+### 3. Cleanup
 
 The relay will run a cron job to delete tasks that have been in the database for
 longer than a set period of time specified by the user.
 
-### Replication
+### 4. Replication
 
 The relay is stateless and can be scaled horizontally if you need to
 load balance requests between multiple relays or increase the consuming
 rate of tasks.
 
-### Rust Implementation Details
+### Bonus: Rust Implementation Details
 
 The relay is implemented in Rust with the following specs:
 - The API is an Axum app
@@ -85,8 +95,6 @@ The relay is implemented in Rust with the following specs:
 make it a Postgres job so that we can support additional datastores in the future.
 
 ---
-
-
 
 # User Services
 
