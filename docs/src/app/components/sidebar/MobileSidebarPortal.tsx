@@ -60,7 +60,7 @@ export default function MobileSidebarPortal() {
           )}
         >
           {/* Header */}
-          <div className="sticky top-0  border-b dark:border-white/10 border-zinc-200 dark:bg-zinc-900/50 bg-white/50 backdrop-blur-md overflow-hidden transition-all duration-300 ease-in-out">
+          <div className="sticky top-0  border-b dark:border-white/10 border-zinc-200 dark:bg-zinc-900/50 bg-white/50 backdrop-blur-lg overflow-hidden transition-all duration-300 ease-in-out">
             <div className="w-full h-full relative flex flex-row items-center justify-between px-8 py-5">
               {/* Theme Toggle and GitHub Link */}
               <div className="flex items-center gap-x-6">

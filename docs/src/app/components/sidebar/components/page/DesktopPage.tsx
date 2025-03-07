@@ -51,7 +51,9 @@ export default function DesktopPageComponent({
     <div
       data-child-of={childOf}
       ref={elementRef}
-      className={clsx("flex flex-col text-sm relative outline-hidden")}
+      className={clsx(
+        "flex flex-col text-sm relative outline-hidden overflow-hidden"
+      )}
     >
       {/* If the item has a url, it's a link */}
       {url ? (

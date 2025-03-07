@@ -260,14 +260,14 @@ export function PageNavigationProvider({
     // Check if page is below the sidebar container
     if (pageRect.bottom > sidebarRect.bottom) {
       sidebarElement.scrollBy({
-        top: pageRect.bottom - sidebarRect.bottom,
+        top: pageRect.bottom - sidebarRect.bottom + 18, // Overscroll slightly
       });
     }
 
     // Check if page is above the sidebar container
     if (pageRect.top < sidebarRect.top) {
       sidebarElement.scrollBy({
-        top: pageRect.top - sidebarRect.top,
+        top: pageRect.top - sidebarRect.top - 18, // Overscroll slightly
       });
     }
   }, [focusedPageTitle]);

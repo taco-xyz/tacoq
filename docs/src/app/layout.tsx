@@ -5,7 +5,7 @@ import "./globals.css";
 import { TopBar } from "./components/topbar/TopBar";
 import { Footer } from "./components/Footer";
 import DesktopSideBar from "./components/sidebar/DesktopSideBar";
-import DocsPageLayout from "./components/DocsPageLayout";
+import DocsPageLayout from "./components/docs-page-layout/DocsPageLayout";
 import PageLinksBar from "./components/PageLinksBar";
 
 // Context imports
@@ -40,7 +40,7 @@ export default function RootLayout({
           <div className="sticky top-0 w-full z-10">
             <TopBar />
           </div>
-          <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative py-8 px-8 ">
+          <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative md:py-8 px-8 ">
             {/* Sidebar - height is calculated to account for the topbar and bottom padding */}
             <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
               <PageNavigationProvider>

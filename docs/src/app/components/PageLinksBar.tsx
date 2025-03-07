@@ -32,13 +32,13 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
   const router = useRouter();
 
   // Extract the page tree context
-  const { currentPageTitle, getPageByTitle } = usePageTree();
+  const { breadcrumbs } = usePageTree();
 
-  // Memoize the current page
+  // Memoize the current page (the last breadcrumb)
   const currentPage = useMemo(() => {
-    if (!currentPageTitle) return null;
-    return getPageByTitle(currentPageTitle);
-  }, [currentPageTitle, getPageByTitle]);
+    if (!breadcrumbs.length) return null;
+    return breadcrumbs[breadcrumbs.length - 1];
+  }, [breadcrumbs]);
 
   // Set the active heading to the first heading in the current page
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
@@ -68,34 +68,31 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
     // Check URL hash on initial load
     const hash = window.location.hash.slice(1); // Remove the # symbol
 
-    // If the url has a hash, set the active heading to the element with the same id
-    // Scroll smoothly to the element
+    // If the url has a hash, scroll smoothly to the element
     if (hash) {
       const element = document.getElementById(hash);
       if (element) {
-        setActiveHeadingId(hash);
         element.scrollIntoView({ behavior: "smooth" });
       }
-    } else {
-      // If there's no hash, no scroll will be forced and the user will simply remain in the same position as before
-      // We want to check what's the closest heading to the 94px mark to set it as the active heading
-      let closestHeading = null;
-      let closestDistance = Infinity;
+    }
 
-      currentPage.content.forEach((heading) => {
-        const element = document.getElementById(getHeaderId(heading));
-        if (element) {
-          // Calculate the distance between the heading and the 94px mark
-          const distance = Math.abs(element.getBoundingClientRect().top - 94);
-          if (distance < closestDistance) {
-            closestDistance = distance;
-            closestHeading = element.id;
-          }
+    // We want to check what's the closest heading to the 94px mark to set it as the active heading
+    let closestHeading = null;
+    let closestDistance = Infinity;
+
+    currentPage.content.forEach((heading) => {
+      const element = document.getElementById(getHeaderId(heading));
+      if (element) {
+        // Calculate the distance between the heading and the 94px mark
+        const distance = Math.abs(element.getBoundingClientRect().top - 94);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestHeading = element.id;
         }
-      });
-      if (closestHeading) {
-        setActiveHeadingId(closestHeading);
       }
+    });
+    if (closestHeading) {
+      setActiveHeadingId(closestHeading);
     }
 
     // Set up intersection observer for scroll updates
@@ -125,7 +122,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
   return (
     <div className="w-full h-full relative">
       {/* Top gradient overlay */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-all duration-150 ease-in-out" />
       <nav
         className={clsx(
           "flex flex-col gap-y-2 text-sm w-full overflow-y-scroll scrollbar-hidden h-full",
@@ -165,7 +162,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
         </div>
       </nav>
       {/* Bottom gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none transition-all duration-150 ease-in-out" />
     </div>
   );
 }

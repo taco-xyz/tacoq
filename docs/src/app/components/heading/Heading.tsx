@@ -69,7 +69,7 @@ export default function Heading({ id, Level, children }: HeadingProps) {
       >
         {children}
       </Level>
-      <div className="absolute right-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-in-out pr-3">
+      <div className="absolute md:block hidden right-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-in-out pr-3">
         <CopyLinkButton headerId={id} />
       </div>
     </button>
