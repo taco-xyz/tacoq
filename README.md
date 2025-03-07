@@ -225,7 +225,7 @@ async def main():
         print(result)
 ```
 
-> [!WARN]
+> [!WARNING]
 > Until TacoQ reaches a stable 1.0 and for the time being, it is recommended you
 > keep your clients and images always in the same version and never perform a 
 > migration with tasks in your database or your queue. This will be improved in
