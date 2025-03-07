@@ -17,7 +17,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.11" },
     { name = "opentelemetry-api", specifier = ">=1.26.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.26.0" },
-    { name = "tacoq", specifier = ">=0.2.1" },
+    { name = "tacoq", specifier = ">=0.2.2" },
 ]
 
 [[package]]
@@ -565,7 +565,7 @@ wheels = [
 
 [[package]]
 name = "tacoq"
-version = "0.2.1"
+version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aio-pika" },
@@ -579,9 +579,9 @@ dependencies = [
     { name = "uuid" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c7/6c/f6f2cad8773809eec8e9fcafdb8ffec543e571425af60eac08b0ce362653/tacoq-0.2.1.tar.gz", hash = "sha256:afbfd3b80ef541e9ccc5fd42cb572909eaeb2dffad9d3de34ba9d39c9ad5fe54", size = 23193 }
+sdist = { url = "https://files.pythonhosted.org/packages/79/81/4525dc8af4012bb3c4170c7d5c372c97f9ff6b346232d141f0c0151e40b2/tacoq-0.2.2.tar.gz", hash = "sha256:41c8af4aeb7862aab2ace3cc2d8ef9064aefec206ccebe313cd9314667559740", size = 21030 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/34/abd56a3b5a8d1d2098619af0a6ac53458731181b04fc1fca598f2de2cf48/tacoq-0.2.1-py3-none-any.whl", hash = "sha256:61548042e579ca3fadc24dd1631775328f12c37f88f269cc3dd80546ec6ad40f", size = 28694 },
+    { url = "https://files.pythonhosted.org/packages/22/8a/c45d543af08c1a77fb02c1f0eb74495af30c98f2366ec07eeddbc9736ccb/tacoq-0.2.2-py3-none-any.whl", hash = "sha256:335205f4480795c8b33a6f5c44c77af3da77de39fa1c54adfaf71e1cfe79d765", size = 27687 },
 ]
 
 [[package]]
