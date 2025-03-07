@@ -21,8 +21,6 @@ TacoQ is a multi-language distributed task queue with built-in observability, lo
 > like Hatchet or Windmill. While we plan to build TacoFlow (a future orchestration
 > tool), TacoQ will remain lightweight, standalone, and easy to contribute to.
 
-
-
 ## Quick Start
 
 ### Server
@@ -226,6 +224,12 @@ async def main():
         result = json.loads(task.output_data)
         print(result)
 ```
+
+> [!WARN]
+> Until TacoQ reaches a stable 1.0 and for the time being, it is recommended you
+> keep your clients and images always in the same version and never perform a 
+> migration with tasks in your database or your queue. This will be improved in
+> the coming months.
 
 ## Examples
 
