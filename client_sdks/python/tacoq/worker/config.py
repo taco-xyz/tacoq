@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from core.infra.broker import BrokerConfig
+from tacoq.core.infra.broker import BrokerConfig
 
 
 class WorkerApplicationConfig(BaseModel):

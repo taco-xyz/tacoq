@@ -30,8 +30,8 @@ class PublisherClient(BaseModel):
 
     ### Usage
     ```python
-    from core.infra.broker import BrokerConfig
-    from core.infra.relay import RelayConfig
+    from tacoq.core.infra.broker import BrokerConfig
+    from tacoq.core.infra.relay import RelayConfig
 
     # Make sure RabbitMQ is running for tihs one!
     broker_config = BrokerConfig(
