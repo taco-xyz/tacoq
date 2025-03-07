@@ -1,0 +1,2 @@
+[console_scripts]
+tacoq = tacoq.worker.cli.cli:cli

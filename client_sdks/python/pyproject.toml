@@ -1,7 +1,7 @@
 [project]
 name = "tacoq"
-version = "0.2.0"
-description = "Python SDK to interact with the TacoQ Service API"
+version = "0.2.2"
+description = "Python SDK to interact with the TacoQ task queue."
 readme = "README.md"
 authors = [
     { name="Manuel Costa" },

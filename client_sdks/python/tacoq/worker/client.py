@@ -12,14 +12,7 @@ from typing import Awaitable, Callable, Dict, Optional
 from aio_pika.abc import (
     AbstractIncomingMessage,
 )
-from opentelemetry.propagate import extract
-from opentelemetry.trace import Status, StatusCode
-from pydantic import BaseModel
-from typing_extensions import Self
-
-from tacoq.worker.config import WorkerApplicationConfig
 from tacoq.core.infra.broker import WorkerBrokerClient
-from tacoq.core.infra.relay import RelayClient
 from tacoq.core.models import (
     SerializedException,
     Task,
@@ -29,6 +22,12 @@ from tacoq.core.models import (
 )
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
+from opentelemetry.propagate import extract
+from opentelemetry.trace import Status, StatusCode
+from pydantic import BaseModel
+from typing_extensions import Self
+
+from tacoq.worker.config import WorkerApplicationConfig
 
 # =========================================
 # Errors
@@ -100,9 +99,6 @@ class WorkerApplication(BaseModel):
     config: WorkerApplicationConfig
     """ The configuration for this worker application. """
 
-    _relay_client: Optional[RelayClient] = None
-    """ The relay client that this worker application uses to interface with the relay service. """
-
     _registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]] = {}
     """ All the tasks that this worker application can handle. """
 
@@ -122,7 +118,6 @@ class WorkerApplication(BaseModel):
 
     def model_post_init(self: Self, _) -> None:
         self._registered_tasks = {}
-        self._relay_client = RelayClient(config=self.config.relay_config)
 
     # ================================
     # Task Registration & Execution
