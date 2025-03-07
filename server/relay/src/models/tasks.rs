@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::Error;
 
 use chrono::{DateTime, Duration, Utc};
 use opentelemetry::propagation::{Extractor, TextMapPropagator};
@@ -9,8 +8,16 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 use strum_macros::{Display, EnumString};
+use thiserror::Error; // Add thiserror
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+/// Task-related errors
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Context extraction failed")]
+    ContextExtractionError,
+}
 
 // Custom serializer function
 fn serialize_bytes<S>(bytes: &Option<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
@@ -244,7 +251,7 @@ impl Task {
     pub fn context(&self) -> Context {
         let carrier_value = self.otel_ctx_carrier.clone();
         match carrier_value {
-            Some(carrier) => extract_context(&carrier).unwrap(),
+            Some(carrier) => extract_context(&carrier).unwrap_or_else(|_| Context::new()),
             None => Context::new(),
         }
     }
@@ -288,6 +295,6 @@ fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
             let otel_cx = propagator.extract(&HashMapExtractor(&strip_map(map)));
             Ok(otel_cx)
         }
-        _ => Err(Error),
+        _ => Err(Error::ContextExtractionError),
     }
 }
