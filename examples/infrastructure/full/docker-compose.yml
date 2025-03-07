@@ -1,0 +1,108 @@
+volumes:
+  rabbitmq_data: {}
+  postgres_data: {}
+
+services:
+
+  # ================================================
+  # TacoQ Relay
+  # The relay has two functions:
+  # 1. Reads task updates from the message broker
+  #    and writes them to the database.
+  # 2. Has a REST API for getting tasks by ID.
+  # ================================================
+
+  relay:
+    image: tacoq-relay:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - .env.relay
+
+  # ================================================
+  # Broker
+  # This is the message broker where all tasks get
+  # routed through to the appropriate worker and to
+  # the relay so it can save them to the database.
+  # ================================================
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ================================================
+  # Storage
+  # This is the database where all tasks get saved.
+  # ================================================
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tacoq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d tacoq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ================================================
+  # Observability
+  # This is the observability stack that we use to
+  # monitor the app. Feel free to integrate into
+  # your own observability stack.
+  # ================================================
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - type: bind
+        source: ./tempo.yaml
+        target: /etc/tempo.yaml
+        read_only: true
+    ports:
+      - "3200" # Collection
+      - "4317:4317" # OTLP gRPC - We keep these ports open so that we can run the app outside the container
+      - "4318:4318" # OTLP HTTP
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - type: bind
+        source: ./grafana-datasources.yaml
+        target: /etc/grafana/provisioning/datasources/datasources.yaml
+        read_only: true
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3001:3000" # Grafana UI
