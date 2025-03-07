@@ -43,7 +43,7 @@ services:
   # ================================================
 
   relay:
-    image: tacoq-relay:latest
+    image: ghcr.io/taco-xyz/tacoq-relay:latest
     ports:
       - "3000:3000"
     depends_on:
