@@ -12,6 +12,12 @@ A multi-language distributed task queue
 - ⚡️ Backed by **RabbitMQ** (broker) and **Postgres** (storage). Super low latency.
 - ⚙️ Distributed and **horizontally scalable**.
 
+> [!TIP]
+> TacoQ is **not a workflow engine** like Hatchet and Windmill. We have plans 
+> of building a tool like those (fittingly named **TacoFlow**), but TacoQ's
+> codebase will never depend on it because we want to keep it focused and easy
+> to understand and contribute to.
+
 ## Quick Start
 
 ### Server
@@ -218,3 +224,26 @@ async def main():
 ## Examples
 
 View more in-depth examples in [`/examples`](https://github.com/taco-xyz/tacoq/tree/main/examples)
+
+## Roadmap
+
+### Current Priorities (March)
+
+- **Improve error handling**, tracing, logging, and metrics.
+- Build a **proper documentation** and website.
+- Create an *all-in-one* Docker image to simplify user onboarding.
+- Add SDK support for **Rust**.
+
+### Coming Up (Q2 2025)
+
+- Add SDK support for **Go** and **Typescript**.
+- Add **contract testing** to all clients and the server.
+- Keep improving TacoQ and squashing bugs.
+
+### The Future
+
+- Add support for more languages.
+- Implement native support for task versioning and improved serialization,
+  making the tool properly usable in enterprise environments.
+- Create TacoFlow, an MIT-licensed task orchestration engine using TacoQ as its
+  core, but in an entirely different repository and without compromising TacoQ.
