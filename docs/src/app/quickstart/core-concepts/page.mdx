@@ -12,7 +12,7 @@ asynchronously in workers outside your application. (e.g. in a different contain
 
 # Core Concepts: Rapid-fire Overview
 
-> [!NOTE]
+> [!TIP]
 > You can skip this section if you're already familiar with task queues. Just
 > make sure to read about the [Relay](/quickstart/core-concepts/relay).
 
@@ -32,7 +32,7 @@ The message broker carries task assignments, updates, and results across the
 entire TacoQ system. The broker is also responsible for routing the tasks to the
 correct set of workers based on its properties. 
 
-> [!NOTE]
+> [!TIP]
 > TacoQ uses RabbitMQ as its message broker.
 
 ## Workers
@@ -40,7 +40,7 @@ correct set of workers based on its properties.
 Workers receive task assignments from the message broker, execute them, and then
 send the result back through the message broker so they can be stored in the database.
 
-> [!NOTE]
+> [!TIP]
 > TacoQ uses Postgres as its database.
 
 ## Publishers
@@ -73,6 +73,6 @@ queues by providing the following features:
   results.
 - Is horizontally scalable and can be scaled to run thousands of workers.
 
-> [!NOTE]
+> [!TIP]
 > You can learn more about TacoQ's architecture and design in the 
 > [Technical Reference](/technical-reference) section.
