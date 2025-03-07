@@ -15,7 +15,7 @@
 
 # Infrastructure
 
-TacoQ requires the Postgres, RabbitMQ, and the Relay to be running. Let's start
+TacoQ requires Postgres, RabbitMQ, and the Relay to be running. Let's start
 by creating a `docker-compose.yml` file to launch them:
 
 ```yml
@@ -103,13 +103,13 @@ services:
 
 ```
 
-Now just run `docker compose up` to start the services.
+Now, just run `docker compose up` to start the services.
 
 # Client
 
 ## Worker
 
-Now that the infrastructure is running, we want to create a worker that can
+With the infrastructure running, we want to create a worker that can
 execute tasks. Let's start by installing the TacoQ Python SDK:
 
 ```bash
@@ -137,24 +137,32 @@ worker_config = WorkerApplicationConfig(
 worker_app = WorkerApplication(config=worker_config)
 ```
 
-Note the worker field `kind` is set to `"worker_waiter_kind"`. This field will be
-used by the publisher to know to which set of workers to send the task. We recommend
-using environment variables to coordinate these values.
+> [!NOTE]
+> Note that the worker field `kind` is set to `"worker_waiter_kind"`. This 
+> field will be used by the publisher to know which set of workers to send 
+> the task to. We recommend using environment variables to align these values.
 
 The worker application has been created, but it doesn't know how to handle any
 tasks that come its way. So let's declare a task:
 
 ```python
 import json
-from typing import Any
 from tacoq import TaskInput, TaskOutput
 
 @worker_app.task(kind="task_wait_n_seconds")
 async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
+    
+    # The input data must be de-serialized from a string into your preferred
+    # data structure. In this case, we're using JSON.
     input_data_dict: dict[str, Any] = json.loads(input_data)
     seconds = input_data_dict.get("seconds", 0)
+
+    # The task is now executed. Here we simply wait for the specified number of
+    # seconds and then return a results dictionary.
     await asyncio.sleep(seconds)
 
+    # The results are serialized back into a string so that they can be
+    # transported back to whomever requested the task.
     return json.dumps(
         {
             "result": "Hello, world! You waited for %d seconds" % seconds,
@@ -163,24 +171,31 @@ async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
     )
 ```
 
-Again, note the task field `kind` is set to `"task_wait_n_seconds"`. You can think about it
-the following way:
-- Worker Kind: Helps the publisher know which set of workers to send the task to.
-- Task Kind: Helps the worker know which method to use to handle a task.
+> [!NOTE]
+> Note the task field `kind` is set to `"task_wait_n_seconds"`. You can think about it
+> the following way:
+> - Worker Kind: Helps the publisher know which set of workers to send the task to.
+> - Task Kind: Helps the worker know which method to use to handle a task.
 
 Now that we have a worker and a task, we can start up the worker:
 
 ```python
-import asyncio
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(worker_app.entrypoint())
 ```
 
-The worker is ready to handle tasks. Now let's publish some tasks for it to handle.
+The worker is running and ready to handle tasks. Now let's publish some tasks
+for it to handle.
 
 ## Publisher
 
-Let's start by setting up the publisher and its configuration:
+We'll start by setting up the publisher and its configuration:
+
+- It must know how to communicate with the message broker so that it can publish
+  tasks to the worker.
+- It must know how to communicate with the relay so that it can retrieve the
+  results of the task after it has been completed and sent to the relay.
 
 ```python
 from tacoq import PublisherClient, BrokerConfig, RelayConfig, Task
@@ -191,9 +206,9 @@ publisher = PublisherClient(broker_config=broker_config, relay_config=relay_conf
 ```
 
 With the publisher application created, we don't need to run an entrypoint.
-Instead, we will simply use to when we want to publish or retrieve a task.
+Instead, we will simply use the publisher to publish or retrieve a task.
 
-Let's publish a new task:
+Let's publish a new task, wait for it to complete, and then retrieve the results:
 
 ```python
 # We must serialize the input data in a string so that it can be passed and 

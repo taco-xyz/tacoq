@@ -81,7 +81,7 @@ const pages: Page[] = [
         metadata: {
           title: "Core Concepts",
           description:
-            "Understand the core concepts of TacoQ and how it works at a basic level.",
+            "Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.",
           badge: {
             text: "Quickstart",
           },
@@ -90,42 +90,19 @@ const pages: Page[] = [
             Icon: AcademicCapIcon,
           },
         },
-        content: [
-          { type: HeadingTypes.H1, name: "Quickstart Guide" },
-          { type: HeadingTypes.H2, name: "Installation" },
-          { type: HeadingTypes.H2, name: "Basic Setup" },
-          { type: HeadingTypes.H3, name: "Configuration" },
-          { type: HeadingTypes.H3, name: "Environment Variables" },
-          { type: HeadingTypes.H2, name: "Next Steps" },
-        ],
       },
       {
-        url: "/quickstart/set-up",
+        url: "/quickstart/setup",
         metadata: {
           title: "Setup",
           description:
-            "Setup TacoQ on your project using Docker and installing your preferred SDK.",
+            "Get TacoQ up and running on your project using Docker and the Python SDK.",
           badge: {
             text: "Quickstart",
           },
           sidebar: {
             title: "Setup",
             Icon: ArrowDownTrayIcon,
-          },
-        },
-      },
-      {
-        url: "/quickstart/usage",
-        metadata: {
-          title: "Usage",
-          description:
-            "Use TacoQ in your project by setting up a publisher and a worker.",
-          badge: {
-            text: "Quickstart",
-          },
-          sidebar: {
-            title: "Usage",
-            Icon: CodeBracketIcon,
           },
         },
       },
