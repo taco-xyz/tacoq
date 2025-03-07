@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
     env_file:
-      - server/relay/.env.docker
+      - .env.docker
 
   # Queue
 
