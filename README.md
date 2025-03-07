@@ -43,7 +43,7 @@ services:
   # ================================================
 
   relay:
-    image: tacoq-relay:latest
+    image: ghcr.io/taco-xyz/tacoq-relay:latest
     ports:
       - "3000:3000"
     depends_on:
@@ -56,8 +56,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    env_file:
-      - .env.relay
+    environment:
+      DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_DATABASE_READER_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_DATABASE_WRITER_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_BROKER_ADDR: amqp://user:password@localhost:5672
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://localhost:4317
+      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+      OTEL_SERVICE_NAME: tacoq.manager
 
   # ================================================
   # Broker

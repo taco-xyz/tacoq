@@ -26,3 +26,5 @@ services:
       retries: 5
     volumes:
       - tacoq_data:/data
+    env_file:
+      - .env.example
