@@ -10,11 +10,11 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
 )
 from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
-from src.core.infra.broker import BrokerConfig
-from src.core.infra.relay import RelayClient, RelayConfig
-from src.core.telemetry import LoggerManager, TracerManager
-from src.publisher import PublisherClient
-from src.worker import WorkerApplicationConfig
+from tacoq.core.infra.broker import BrokerConfig
+from tacoq.core.infra.relay import RelayClient, RelayConfig
+from tacoq.core.telemetry import LoggerManager, TracerManager
+from tacoq.publisher import PublisherClient
+from tacoq.worker import WorkerApplicationConfig
 
 RELAY_TEST_URL = os.environ.get("RELAY_TEST_URL", "http://localhost:3000")
 BROKER_TEST_URL = os.environ.get(

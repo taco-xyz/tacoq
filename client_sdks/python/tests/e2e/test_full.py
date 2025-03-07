@@ -25,13 +25,13 @@ from uuid import uuid4
 
 import pytest
 from opentelemetry.trace import get_current_span
-from src.core.infra.broker import BrokerConfig
-from src.core.infra.relay import RelayConfig
-from src.core.models import Task, TaskInput, TaskOutput, TaskStatus
-from src.core.telemetry import LoggerManager, TracerManager
-from src.core.telemetry import StructuredMessage as _
-from src.publisher import PublisherClient
-from src.worker import WorkerApplication, WorkerApplicationConfig
+from tacoq.core.infra.broker import BrokerConfig
+from tacoq.core.infra.relay import RelayConfig
+from tacoq.core.models import Task, TaskInput, TaskOutput, TaskStatus
+from tacoq.core.telemetry import LoggerManager, TracerManager
+from tacoq.core.telemetry import StructuredMessage as _
+from tacoq.publisher import PublisherClient
+from tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
 # =========================================
 # Tasks
