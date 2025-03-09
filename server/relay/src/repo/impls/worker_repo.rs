@@ -2,7 +2,7 @@ use crate::models::{Worker, WorkerHeartbeat};
 use async_trait::async_trait;
 use sqlx::{Executor, Postgres};
 use std::time::SystemTime;
-use tracing::instrument;
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, WorkerRepository};
@@ -21,6 +21,7 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(worker_id = %w.id, worker_kind = %w.worker_kind_name, "Saving worker");
         sqlx::query_as!(
             Worker,
             r#"
@@ -46,6 +47,7 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(worker_id = %id, "Finding worker by ID");
         sqlx::query_as!(Worker, "SELECT * FROM workers WHERE id = $1", id)
             .fetch_optional(executor)
             .await
@@ -55,6 +57,7 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!("Finding all workers");
         sqlx::query_as!(Worker, "SELECT * FROM workers")
             .fetch_all(executor)
             .await
@@ -68,6 +71,11 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(
+            worker_id = %whb.worker_id, 
+            heartbeat_time = ?whb.heartbeat_time, 
+            "Saving worker heartbeat"
+        );
         sqlx::query!(
             r#"
             INSERT INTO worker_heartbeats (worker_id, heartbeat_time, created_at)
@@ -90,6 +98,7 @@ impl PgWorkerRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(worker_id = %worker_id, "Getting latest heartbeat");
         sqlx::query_as!(
             WorkerHeartbeat,
             r#"
@@ -110,38 +119,98 @@ impl PgWorkerRepository {
 impl WorkerRepository for PgWorkerRepository {
     #[instrument(skip(self, id, worker_kind_name), fields(id = %id, worker_kind_name = %worker_kind_name))]
     async fn update_worker(&self, id: Uuid, worker_kind_name: &str) -> Result<Worker, sqlx::Error> {
-        let mut tx = self.core.pool.begin().await?;
+        info!(worker_id = %id, worker_kind = %worker_kind_name, "Updating worker");
+        let mut tx = match self.core.pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                error!(worker_id = %id, error = %e, "Failed to start transaction");
+                return Err(e);
+            }
+        };
 
         let worker = if let Some(worker) = self.find_worker_by_id(&mut *tx, &id).await? {
+            debug!(worker_id = %id, "Worker exists, updating");
             worker
         } else {
+            info!(worker_id = %id, worker_kind = %worker_kind_name, "Creating new worker");
             let worker = Worker::new(id, worker_kind_name);
-            self.save_worker(&mut *tx, &worker).await?
+            match self.save_worker(&mut *tx, &worker).await {
+                Ok(w) => w,
+                Err(e) => {
+                    error!(worker_id = %id, error = %e, "Failed to save worker");
+                    return Err(e);
+                }
+            }
         };
 
         let heartbeat = WorkerHeartbeat::new(worker.id);
-        self.save_heartbeat(&mut *tx, &heartbeat).await?;
+        if let Err(e) = self.save_heartbeat(&mut *tx, &heartbeat).await {
+            error!(worker_id = %id, error = %e, "Failed to save heartbeat");
+            return Err(e);
+        }
 
-        tx.commit().await?;
+        if let Err(e) = tx.commit().await {
+            error!(worker_id = %id, error = %e, "Failed to commit transaction");
+            return Err(e);
+        }
 
+        info!(worker_id = %id, worker_kind = %worker_kind_name, "Worker successfully updated");
         Ok(worker)
     }
 
     #[instrument(skip(self, id), fields(id = %id))]
     async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Option<Worker>, sqlx::Error> {
-        self.find_worker_by_id(&self.core.pool, id).await
+        debug!(worker_id = %id, "Getting worker by ID");
+        let result = self.find_worker_by_id(&self.core.pool, id).await;
+        
+        match &result {
+            Ok(Some(worker)) => info!(
+                worker_id = %id, 
+                worker_kind = %worker.worker_kind_name, 
+                "Worker found"
+            ),
+            Ok(None) => debug!(worker_id = %id, "Worker not found"),
+            Err(e) => error!(
+                worker_id = %id, 
+                error = %e, 
+                "Error fetching worker"
+            ),
+        }
+        
+        result
     }
 
     #[instrument(skip(self))]
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
-        self.find_all_workers(&self.core.pool).await
+        info!("Getting all workers");
+        let result = self.find_all_workers(&self.core.pool).await;
+        
+        match &result {
+            Ok(workers) => info!(count = workers.len(), "Retrieved all workers"),
+            Err(e) => error!(error = %e, "Failed to retrieve all workers"),
+        }
+        
+        result
     }
 
     #[instrument(skip(self, worker_id), fields(worker_id = %worker_id))]
     async fn _get_latest_heartbeat(&self, worker_id: &Uuid) -> Result<SystemTime, sqlx::Error> {
-        let heartbeat = self
-            .get_latest_heartbeat(&self.core.pool, worker_id)
-            .await?;
+        debug!(worker_id = %worker_id, "Getting latest heartbeat");
+        let heartbeat = match self.get_latest_heartbeat(&self.core.pool, worker_id).await {
+            Ok(hb) => {
+                debug!(
+                    worker_id = %worker_id, 
+                    heartbeat_time = ?hb.heartbeat_time, 
+                    "Retrieved heartbeat"
+                );
+                hb
+            },
+            Err(e) => {
+                error!(worker_id = %worker_id, error = %e, "Failed to retrieve heartbeat");
+                return Err(e);
+            }
+        };
+        
         Ok(heartbeat.heartbeat_time.into())
     }
 }

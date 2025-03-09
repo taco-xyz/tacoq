@@ -1,7 +1,7 @@
 use crate::models::{Task, TaskStatus};
 use async_trait::async_trait;
 use sqlx::{Executor, Postgres};
-use tracing::instrument;
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::repo::{PgRepositoryCore, TaskRepository};
@@ -20,6 +20,7 @@ impl PgTaskRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(task_id = %t.id, task_kind = %t.task_kind, status = %t.status, "Saving task");
         sqlx::query_as!(
             Task,
             r#"
@@ -84,6 +85,7 @@ impl PgTaskRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(task_id = %id, "Finding task by ID");
         sqlx::query_as!(
             Task,
             r#"SELECT 
@@ -113,6 +115,7 @@ impl PgTaskRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(task_id = %id, "Deleting task");
         sqlx::query!("DELETE FROM tasks WHERE id = $1", id)
             .execute(executor)
             .await?;
@@ -124,55 +127,132 @@ impl PgTaskRepository {
 impl TaskRepository for PgTaskRepository {
     #[instrument(skip(self, id), fields(id = %id))]
     async fn get_task_by_id(&self, id: &Uuid) -> Result<Option<Task>, sqlx::Error> {
-        self.find_by_id(&self.core.pool, id).await
+        debug!(task_id = %id, "Getting task by ID");
+        let result = self.find_by_id(&self.core.pool, id).await;
+
+        match &result {
+            Ok(Some(task)) => info!(
+                task_id = %id,
+                task_kind = %task.task_kind,
+                status = %task.status,
+                "Task found"
+            ),
+            Ok(None) => debug!(task_id = %id, "Task not found"),
+            Err(e) => error!(
+                task_id = %id,
+                error = %e,
+                "Error fetching task"
+            ),
+        }
+
+        result
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self, task), fields(task_id = %task.id, task_kind = %task.task_kind, status = %task.status))]
     async fn update_task(&self, task: &Task) -> Result<Task, sqlx::Error> {
-        let mut tx = self.core.pool.begin().await?;
+        info!(task_id = %task.id, "Updating task");
+        let mut tx = match self.core.pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                error!(task_id = %task.id, error = %e, "Failed to start transaction");
+                return Err(e);
+            }
+        };
 
         let existing = self.find_by_id(&mut *tx, &task.id).await?;
 
         let task_to_save = if let Some(existing) = existing {
+            debug!(
+                task_id = %task.id,
+                existing_status = %existing.status,
+                new_status = %task.status,
+                "Determining task priority"
+            );
+
             match (existing.status(), task.status()) {
                 // Don't override completed tasks
-                (TaskStatus::Completed, _) => existing,
+                (TaskStatus::Completed, _) => {
+                    debug!(task_id = %task.id, "Task already completed, not updating");
+                    existing
+                }
 
                 // Processing overrides pending
-                (TaskStatus::Pending, TaskStatus::Processing) => task.clone(),
-                (TaskStatus::Processing, TaskStatus::Pending) => existing,
+                (TaskStatus::Pending, TaskStatus::Processing) => {
+                    debug!(task_id = %task.id, "Updating from Pending to Processing");
+                    task.clone()
+                }
+                (TaskStatus::Processing, TaskStatus::Pending) => {
+                    debug!(task_id = %task.id, "Already Processing, ignoring Pending update");
+                    existing
+                }
 
                 // Default to the new task
-                _ => task.clone(),
+                _ => {
+                    debug!(task_id = %task.id, "Updating task with new data");
+                    task.clone()
+                }
             }
         } else {
+            info!(task_id = %task.id, task_kind = %task.task_kind, "Creating new task");
             task.clone()
         };
 
-        let saved = self.save(&mut *tx, &task_to_save).await?;
-        tx.commit().await?;
+        let saved = match self.save(&mut *tx, &task_to_save).await {
+            Ok(saved) => saved,
+            Err(e) => {
+                error!(task_id = %task.id, error = %e, "Failed to save task");
+                return Err(e);
+            }
+        };
+
+        if let Err(e) = tx.commit().await {
+            error!(task_id = %task.id, error = %e, "Failed to commit transaction");
+            return Err(e);
+        }
+
+        info!(task_id = %task.id, "Task successfully updated");
         Ok(saved)
     }
 
-    #[instrument(skip(self, id))]
+    #[instrument(skip(self, id), fields(task_id = %id))]
     async fn delete_task(&self, id: &Uuid) -> Result<(), sqlx::Error> {
-        self.delete(&self.core.pool, id).await
+        info!(task_id = %id, "Deleting task");
+        match self.delete(&self.core.pool, id).await {
+            Ok(_) => {
+                info!(task_id = %id, "Task successfully deleted");
+                Ok(())
+            }
+            Err(e) => {
+                error!(task_id = %id, error = %e, "Failed to delete task");
+                Err(e)
+            }
+        }
     }
 
     #[instrument(skip(self))]
     async fn delete_expired_tasks(&self) -> Result<u64, sqlx::Error> {
+        info!("Cleaning up expired tasks");
         let now = chrono::Utc::now();
 
-        let result = sqlx::query!(
+        let result = match sqlx::query!(
             r#"DELETE FROM tasks
                 WHERE ttl IS NOT NULL AND ttl < $1
             "#,
             now,
         )
         .execute(&self.core.pool)
-        .await?;
+        .await
+        {
+            Ok(result) => result,
+            Err(e) => {
+                error!(error = %e, "Failed to delete expired tasks");
+                return Err(e);
+            }
+        };
 
-        Ok(result.rows_affected())
+        let count = result.rows_affected();
+        info!(deleted_count = count, "Deleted expired tasks");
+        Ok(count)
     }
 }
 
