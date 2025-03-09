@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO tasks (\n                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, ttl_duration, assigned_to,\n                is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier\n            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)\n            ON CONFLICT (id) DO UPDATE SET\n                input_data = EXCLUDED.input_data,\n                started_at = EXCLUDED.started_at,\n                completed_at = EXCLUDED.completed_at,\n                ttl = EXCLUDED.ttl,\n                ttl_duration = EXCLUDED.ttl_duration,\n                assigned_to = EXCLUDED.assigned_to,\n                is_error = EXCLUDED.is_error,\n                output_data = EXCLUDED.output_data,\n                status = EXCLUDED.status,\n                priority = EXCLUDED.priority,\n                updated_at = NOW(),\n                otel_ctx_carrier = EXCLUDED.otel_ctx_carrier\n            RETURNING \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                assigned_to, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            ",
+  "query": "\n            INSERT INTO tasks (\n                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, ttl_duration, executed_by,\n                is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier\n            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)\n            ON CONFLICT (id) DO UPDATE SET\n                input_data = EXCLUDED.input_data,\n                started_at = EXCLUDED.started_at,\n                completed_at = EXCLUDED.completed_at,\n                ttl = EXCLUDED.ttl,\n                ttl_duration = EXCLUDED.ttl_duration,\n                executed_by = EXCLUDED.executed_by,\n                is_error = EXCLUDED.is_error,\n                output_data = EXCLUDED.output_data,\n                status = EXCLUDED.status,\n                priority = EXCLUDED.priority,\n                updated_at = NOW(),\n                otel_ctx_carrier = EXCLUDED.otel_ctx_carrier\n            RETURNING \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                executed_by, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            ",
   "describe": {
     "columns": [
       {
@@ -55,7 +55,7 @@
       },
       {
         "ordinal": 10,
-        "name": "assigned_to",
+        "name": "executed_by",
         "type_info": "Uuid"
       },
       {
@@ -123,5 +123,5 @@
       true
     ]
   },
-  "hash": "9fc6922fdcd5dde3dd11e6bdc7874163f8d2151f9ab0ddcfe87b069d8bb5d775"
+  "hash": "66b4b138996ebb70a9121d93d89c146d5a83b02af32de35dbdaf4d3022c3a7b6"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                assigned_to, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
+  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                executed_by, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -55,7 +55,7 @@
       },
       {
         "ordinal": 10,
-        "name": "assigned_to",
+        "name": "executed_by",
         "type_info": "Uuid"
       },
       {
@@ -108,5 +108,5 @@
       true
     ]
   },
-  "hash": "9fa4bc75695487ad11c654a156b7d340401f7da38361207b444b4c0ce0e6be32"
+  "hash": "76d197a96bf6ad64f870223f25024b1dc4e379cf200838ae445e8b78dbe12dc5"
 }

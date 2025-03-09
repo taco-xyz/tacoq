@@ -61,14 +61,14 @@ impl TaskController {
             };
             info!("Task updated successfully: {:?}", task);
 
-            if let Some(assigned_to) = task.executed_by {
+            if let Some(executed_by) = task.executed_by {
                 match self
                     .worker_repository
-                    .update_worker(assigned_to, &kind.name)
+                    .update_worker(executed_by, &kind.name)
                     .await
                 {
-                    Ok(_) => info!("Worker updated successfully: {}", assigned_to),
-                    Err(e) => warn!("Failed to update worker {}: {}", assigned_to, e),
+                    Ok(_) => info!("Worker updated successfully: {}", executed_by),
+                    Err(e) => warn!("Failed to update worker {}: {}", executed_by, e),
                 }
             }
 
