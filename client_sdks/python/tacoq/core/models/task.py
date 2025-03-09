@@ -110,6 +110,9 @@ class Task(BaseModel):
     [Priority Queues](https://www.rabbitmq.com/priority.html).
     """
 
+    ttl_duration: int | None = Field(default=None)
+    """ The duration of how long the task should live after it has been completed"""
+
     # Telemetry
 
     otel_ctx_carrier: Optional[dict[str, str]] = Field(default=None)
