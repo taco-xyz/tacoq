@@ -72,8 +72,8 @@ impl PgWorkerRepository {
         E: Executor<'e, Database = Postgres>,
     {
         debug!(
-            worker_id = %whb.worker_id, 
-            heartbeat_time = ?whb.heartbeat_time, 
+            worker_id = %whb.worker_id,
+            heartbeat_time = ?whb.heartbeat_time,
             "Saving worker heartbeat"
         );
         sqlx::query!(
@@ -162,21 +162,21 @@ impl WorkerRepository for PgWorkerRepository {
     async fn _get_worker_by_id(&self, id: &Uuid) -> Result<Option<Worker>, sqlx::Error> {
         debug!(worker_id = %id, "Getting worker by ID");
         let result = self.find_worker_by_id(&self.core.pool, id).await;
-        
+
         match &result {
             Ok(Some(worker)) => info!(
-                worker_id = %id, 
-                worker_kind = %worker.worker_kind_name, 
+                worker_id = %id,
+                worker_kind = %worker.worker_kind_name,
                 "Worker found"
             ),
             Ok(None) => debug!(worker_id = %id, "Worker not found"),
             Err(e) => error!(
-                worker_id = %id, 
-                error = %e, 
+                worker_id = %id,
+                error = %e,
                 "Error fetching worker"
             ),
         }
-        
+
         result
     }
 
@@ -184,12 +184,12 @@ impl WorkerRepository for PgWorkerRepository {
     async fn _get_all_workers(&self) -> Result<Vec<Worker>, sqlx::Error> {
         info!("Getting all workers");
         let result = self.find_all_workers(&self.core.pool).await;
-        
+
         match &result {
             Ok(workers) => info!(count = workers.len(), "Retrieved all workers"),
             Err(e) => error!(error = %e, "Failed to retrieve all workers"),
         }
-        
+
         result
     }
 
@@ -199,18 +199,18 @@ impl WorkerRepository for PgWorkerRepository {
         let heartbeat = match self.get_latest_heartbeat(&self.core.pool, worker_id).await {
             Ok(hb) => {
                 debug!(
-                    worker_id = %worker_id, 
-                    heartbeat_time = ?hb.heartbeat_time, 
+                    worker_id = %worker_id,
+                    heartbeat_time = ?hb.heartbeat_time,
                     "Retrieved heartbeat"
                 );
                 hb
-            },
+            }
             Err(e) => {
                 error!(worker_id = %worker_id, error = %e, "Failed to retrieve heartbeat");
                 return Err(e);
             }
         };
-        
+
         Ok(heartbeat.heartbeat_time.into())
     }
 }
