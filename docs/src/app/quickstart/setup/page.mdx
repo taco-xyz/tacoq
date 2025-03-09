@@ -52,10 +52,6 @@ services:
       TACOQ_DATABASE_READER_URL: postgresql://user:password@localhost:5432/tacoq
       TACOQ_DATABASE_WRITER_URL: postgresql://user:password@localhost:5432/tacoq
       TACOQ_BROKER_ADDR: amqp://user:password@localhost:5672
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://localhost:4317
-      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
-      OTEL_TRACES_SAMPLER: always_on
-      OTEL_SERVICE_NAME: tacoq.manager
 
   # ================================================
   # Broker
@@ -143,7 +139,7 @@ worker_app = WorkerApplication(config=worker_config)
 > the task to. We recommend using environment variables to align these values.
 
 The worker application has been created, but it doesn't know how to handle any
-tasks that come its way. So let's declare a task:
+tasks that come its way. So, let's teach it how to handle a task:
 
 ```python
 import json
@@ -172,12 +168,17 @@ async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
 ```
 
 > [!NOTE]
-> Note the task field `kind` is set to `"task_wait_n_seconds"`. You can think about it
-> the following way:
+> Note the task field `kind` is set to `"task_wait_n_seconds"`. You can 
+> think about it the following way:
 > - Worker Kind: Helps the publisher know which set of workers to send the task to.
 > - Task Kind: Helps the worker know which method to use to handle a task.
+>
+> If you're familiar with task queues, you're probably used to only specifying
+> the task kind and not the worker kind. You can read about this design decision
+> in the [System Architecture](/technical-reference/system-architecture) section.
 
-Now that we have a worker and a task, we can start up the worker:
+Now that our worker is ready to handle tasks, we can boot it up via its 
+`entrypoint` method:
 
 ```python
 if __name__ == "__main__":
@@ -185,8 +186,8 @@ if __name__ == "__main__":
     asyncio.run(worker_app.entrypoint())
 ```
 
-The worker is running and ready to handle tasks. Now let's publish some tasks
-for it to handle.
+The worker is running and ready to handle tasks. Now, let's publish some tasks
+for it to take care of!
 
 ## Publisher
 
