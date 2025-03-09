@@ -56,7 +56,8 @@ class Task(BaseModel):
     - output_data: The data output by the task.
     - is_error: Whether the task failed. Used primarly for the dead letter queue.
     - status: The current status of the task at the time of retrieval. See `TaskStatus` for more details.
-    - priority: The priority of the task, ranging from 0 (lowest) to 255 (highest). For best practices on using the priority, see RabbitMQ's
+    - priority: The priority of the task, ranging from 0 (lowest) to 255 (highest). For best practices on using the priority, see RabbitMQ's.
+    - ttl_duration: An optional determining for how long a task should stay alive after it has been completed.
     - otel_ctx_carrier: The OpenTelemetry context carrier for the task.
 
     ### Usage:
@@ -110,7 +111,7 @@ class Task(BaseModel):
     [Priority Queues](https://www.rabbitmq.com/priority.html).
     """
 
-    ttl_duration: int | None = Field(default=None)
+    ttl_duration: Optional[int] = Field(default=None)
     """ The duration of how long the task should live after it has been completed"""
 
     # Telemetry

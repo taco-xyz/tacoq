@@ -61,7 +61,8 @@ CREATE TABLE
         assigned_to UUID REFERENCES workers (id),
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         -- Task status
-        started_at TIMESTAMP
+        started_at TIMESTAMP,
+        ttl_duration BIGINT,
         WITH
             TIME ZONE,
             completed_at TIMESTAMP

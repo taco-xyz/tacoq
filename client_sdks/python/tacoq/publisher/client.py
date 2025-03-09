@@ -90,7 +90,7 @@ class PublisherClient(BaseModel):
         input_data: TaskInput = "",
         task_id: Optional[UUID] = None,
         priority: int = 0,
-        ttl_duration: int | None = None,
+        ttl_duration: Optional[int] = None,
         otel_ctx_carrier: Optional[Dict[str, str]] = None,
     ) -> Task:
         """Publish a task to the broker.
