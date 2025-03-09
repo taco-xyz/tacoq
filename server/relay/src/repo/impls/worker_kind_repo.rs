@@ -1,7 +1,7 @@
 use crate::models::WorkerKind;
 use async_trait::async_trait;
 use sqlx::{Executor, Postgres};
-use tracing::instrument;
+use tracing::{debug, error, info, instrument};
 
 use crate::repo::{PgRepositoryCore, WorkerKindRepository};
 
@@ -19,6 +19,12 @@ impl PgWorkerKindRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(
+            kind_name = %w.name,
+            routing_key = %w.routing_key,
+            queue_name = %w.queue_name,
+            "Saving worker kind"
+        );
         sqlx::query_as!(
             WorkerKind,
             r#"
@@ -46,6 +52,7 @@ impl PgWorkerKindRepository {
     where
         E: Executor<'e, Database = Postgres>,
     {
+        debug!(kind_name = %name, "Finding worker kind by name");
         sqlx::query_as!(
             WorkerKind,
             r#"
@@ -62,16 +69,41 @@ impl PgWorkerKindRepository {
 impl WorkerKindRepository for PgWorkerKindRepository {
     #[instrument(skip(self, name), fields(name = %name))]
     async fn get_or_create_worker_kind(&self, name: &str) -> Result<WorkerKind, sqlx::Error> {
-        let mut tx = self.core.pool.begin().await?;
-
-        let worker_kind = if let Some(kind) = self.find_by_name(&mut *tx, name).await? {
-            kind
-        } else {
-            let worker_kind = WorkerKind::new(name, name, name);
-            self.save(&mut *tx, &worker_kind).await?
+        info!(kind_name = %name, "Getting or creating worker kind");
+        let mut tx = match self.core.pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                error!(kind_name = %name, error = %e, "Failed to start transaction");
+                return Err(e);
+            }
         };
 
-        tx.commit().await?;
+        let worker_kind = if let Some(kind) = self.find_by_name(&mut *tx, name).await? {
+            debug!(kind_name = %name, "Worker kind exists, returning");
+            kind
+        } else {
+            info!(kind_name = %name, "Creating new worker kind");
+            let worker_kind = WorkerKind::new(name, name, name);
+            match self.save(&mut *tx, &worker_kind).await {
+                Ok(wk) => wk,
+                Err(e) => {
+                    error!(kind_name = %name, error = %e, "Failed to save worker kind");
+                    return Err(e);
+                }
+            }
+        };
+
+        if let Err(e) = tx.commit().await {
+            error!(kind_name = %name, error = %e, "Failed to commit transaction");
+            return Err(e);
+        }
+
+        info!(
+            kind_name = %worker_kind.name,
+            routing_key = %worker_kind.routing_key,
+            queue_name = %worker_kind.queue_name,
+            "Worker kind operation successful"
+        );
         Ok(worker_kind)
     }
 }

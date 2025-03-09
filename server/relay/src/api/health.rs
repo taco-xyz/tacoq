@@ -1,9 +1,11 @@
 use axum::http::StatusCode;
 use axum::{routing::get, Router};
+use tracing::{debug, info, instrument};
 
 use crate::AppState;
 
 pub fn routes() -> Router<AppState> {
+    debug!("Setting up health API routes");
     Router::new().route("/", get(health))
 }
 
@@ -16,6 +18,11 @@ pub fn routes() -> Router<AppState> {
     ),
     tag = "health"
 )]
+#[instrument]
 async fn health() -> StatusCode {
+    info!("Health check requested");
+    // Here you could add additional health checks for backend services
+
+    debug!("Health check successful");
     StatusCode::OK
 }

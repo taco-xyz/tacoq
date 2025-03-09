@@ -6,9 +6,7 @@ services:
   # Main App
 
   tacoq:
-    build:
-      context: .
-      dockerfile: server/relay/Dockerfile
+    build: .
     ports:
       - "3000:3000"
     depends_on:
@@ -22,7 +20,7 @@ services:
       timeout: 5s
       retries: 5
     env_file:
-      - server/relay/.env.docker
+      - .env.docker
 
   # Queue
 

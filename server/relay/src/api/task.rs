@@ -4,13 +4,14 @@ use axum::{
     routing::get,
     Router,
 };
-use tracing::{error, info};
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::models::Task;
 use crate::{repo::TaskRepository, AppState};
 
 pub fn routes() -> Router<AppState> {
+    debug!("Setting up task API routes");
     Router::new().route("/{id}", get(get_task_by_id))
 }
 
@@ -35,35 +36,58 @@ pub fn routes() -> Router<AppState> {
     ),
     tag = "tasks"
 )]
+#[instrument(skip(state), fields(task_id = %id))]
 async fn get_task_by_id(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
-    info!("Getting task by ID: {:?}", id);
+    info!(task_id = %id, "API request: Get task by ID");
 
-    let result = state
-        .task_repository
-        .get_task_by_id(&id)
-        .await
-        .map_err(|e| {
-            error!("Error getting task by id: {:?}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to get task: {}", e),
-            )
-        });
+    let result: Result<Option<Task>, sqlx::Error> =
+        match state.task_repository.get_task_by_id(&id).await {
+            Ok(task) => Ok(task),
+            Err(e) => {
+                error!(
+                    task_id = %id,
+                    error = %e,
+                    "Database error while fetching task"
+                );
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to get task: {}", e),
+                ));
+            }
+        };
 
     if let Ok(Some(task)) = &result {
+        debug!(
+            task_id = %id,
+            task_kind = %task.task_kind,
+            status = %task.status,
+            "Task found, checking expiration"
+        );
+
         if task.is_expired() {
+            info!(
+                task_id = %id,
+                ttl = ?task.ttl,
+                "Task is expired, deleting"
+            );
+
             // Delete the task
             if let Err(e) = state.task_repository.delete_task(&task.id).await {
-                error!("Error deleting expired task: {:?}", e);
+                error!(
+                    task_id = %id,
+                    error = %e,
+                    "Failed to delete expired task"
+                );
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     format!("Failed to delete expired task: {}", e),
                 ));
             }
 
+            debug!(task_id = %id, "Expired task deleted successfully");
             return Err((
                 StatusCode::NOT_FOUND,
                 format!("Task with ID {} not found", id),
@@ -72,15 +96,23 @@ async fn get_task_by_id(
     }
 
     match result {
-        Ok(Some(task)) => Ok(Json(task)),
+        Ok(Some(task)) => {
+            info!(
+                task_id = %id,
+                task_kind = %task.task_kind,
+                status = %task.status,
+                "Successfully retrieved task"
+            );
+            Ok(Json(task))
+        }
         Ok(None) => {
-            info!("Task with ID {:?} not found", id);
+            debug!(task_id = %id, "Task not found");
             Err((
                 StatusCode::NOT_FOUND,
                 format!("Task with ID {} not found", id),
             ))
         }
-        Err((status, message)) => Err((status, message)),
+        Err(_) => unreachable!(), // We handled this above
     }
 }
 

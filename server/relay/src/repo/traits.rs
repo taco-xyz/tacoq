@@ -28,8 +28,8 @@ pub trait TaskRepository: Send + Sync + Clone + Debug {
     /// Delete a task by its ID
     async fn delete_task(&self, id: &Uuid) -> Result<(), sqlx::Error>;
 
-    // Delete all tasks that have the ttl expired
-    async fn delete_expired_tasks(&self) -> Result<u64, Box<dyn std::error::Error>>;
+    /// Delete all tasks that have the ttl expired
+    async fn delete_expired_tasks(&self) -> Result<u64, sqlx::Error>;
 }
 
 /// Repository trait for managing worker records in the database

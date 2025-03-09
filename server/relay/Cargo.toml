@@ -39,6 +39,7 @@ tracing-opentelemetry = "0.29.0"
 strum_macros = "0.27.1"
 lapin = "2.5.0"
 strum = { version = "0.27.1", features = ["derive"] }
+thiserror = "2.0.12"
 
 [dev-dependencies]
 ctor = "0.4.0"
