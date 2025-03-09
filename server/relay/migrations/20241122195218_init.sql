@@ -58,9 +58,10 @@ CREATE TABLE
         -- OpenTelemetry context carrier
         otel_ctx_carrier JSONB,
         -- Relations
-        assigned_to UUID REFERENCES workers (id),
+        executed_by UUID REFERENCES workers (id),
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         -- Task status
+        ttl_duration BIGINT,
         started_at TIMESTAMP
         WITH
             TIME ZONE,
