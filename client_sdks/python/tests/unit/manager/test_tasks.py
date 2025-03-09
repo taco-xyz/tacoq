@@ -10,7 +10,7 @@ from uuid import UUID
 import pytest
 from aiohttp import ClientResponseError
 from aioresponses import aioresponses
-from tacoq.core.infra.relay import RelayClient
+from tacoq.relay import RelayClient
 from tacoq.core.models import Task, TaskStatus
 
 # =========================================

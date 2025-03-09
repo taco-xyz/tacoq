@@ -13,7 +13,6 @@ from uuid import uuid4
 import pytest
 from aio_pika.abc import AbstractIncomingMessage
 from tacoq.core.infra.broker import BrokerConfig, WorkerBrokerClient
-from tacoq.core.infra.relay import RelayConfig
 from tacoq.core.models import Task, TaskInput, TaskOutput, TaskStatus
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
@@ -29,9 +28,6 @@ def worker_app():
     config = WorkerApplicationConfig(
         name="test_worker",
         kind="test_kind",
-        relay_config=RelayConfig(
-            url="http://localhost:8080",
-        ),
         broker_config=BrokerConfig(
             url="amqp://user:password@localhost:5672",
         ),

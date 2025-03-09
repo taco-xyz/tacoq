@@ -8,43 +8,35 @@ and eventual output.
 
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
-import asyncio
 
-from aiohttp_retry import RetryOptionsBase
 from opentelemetry.propagate import inject
 from pydantic import BaseModel
 from typing_extensions import Self
 
 from tacoq.core.infra.broker import BrokerConfig, PublisherBrokerClient
-from tacoq.core.infra.relay import RelayClient, RelayConfig
 from tacoq.core.models import Task, TaskInput
 from tacoq.core.telemetry import TracerManager
 
 
 class PublisherClient(BaseModel):
-    """A client for publishing and retrieving tasks.
+    """A client for publishing tasks to the message broker.
+
+    To retrieve tasks, refer to the `RelayClient` class.
 
     ### Attributes
     - broker_config: The configuration for the broker. See `BrokerConfig` for more details on how to configure it.
-    - relay_config: The configuration for the relay. See `RelayConfig` for more details on how to configure it.
 
     ### Usage
     ```python
     from tacoq.core.infra.broker import BrokerConfig
-    from tacoq.core.infra.relay import RelayConfig
 
     # Make sure RabbitMQ is running for tihs one!
     broker_config = BrokerConfig(
         host="localhost",
         port=5672,
     )
-    # Make sure the relay is running for this one!
-    relay_config = RelayConfig(
-        host="localhost",
-        port=8080,
-    )
     publisher = PublisherClient(
-        broker_config=broker_config, relay_config=relay_config
+        broker_config=broker_config
     )
 
     # Publish a task
@@ -54,12 +46,6 @@ class PublisherClient(BaseModel):
         input_data="Hello, world!",
         priority=5,
     )
-
-    # Wait for the task to be processed...
-    await asyncio.sleep(1)
-
-    # Get the task
-    task = await publisher.get_task(task.id)
     ```
     """
 
@@ -69,19 +55,6 @@ class PublisherClient(BaseModel):
 
     _broker_client: Optional[PublisherBrokerClient] = None
     """ The broker client for publishing tasks. """
-
-    # Relay
-    relay_config: RelayConfig
-    """ The configuration for the relay. """
-
-    _relay_client: RelayClient = None  # type: ignore
-    """ The relay client for retrieving tasks. """
-
-    def model_post_init(self: Self, _) -> None:
-        self._relay_client = RelayClient(config=self.relay_config)
-
-    def _connect_to_broker(self: Self) -> None:
-        self._broker_client = PublisherBrokerClient(config=self.broker_config)
 
     async def publish_task(
         self: Self,
@@ -132,9 +105,9 @@ class PublisherClient(BaseModel):
             # Connect to the broker if that hasn't yet been done
             if self._broker_client is None:
                 with tracer.start_as_current_span("connect_to_broker"):
-                    self._connect_to_broker()
-            if self._broker_client is None:
-                raise ConnectionError("Failed to connect to the broker")
+                    self._broker_client = PublisherBrokerClient(
+                        config=self.broker_config
+                    )
 
             # Inject context into the carrier
             if otel_ctx_carrier is None:
@@ -166,45 +139,6 @@ class PublisherClient(BaseModel):
 
             return task
 
-    async def get_task(
-        self: Self,
-        task_id: UUID,
-        retry_until_complete: bool = False,
-        override_retry_options: Optional[RetryOptionsBase] = None,
-    ) -> Optional[Task]:
-        """Get the status of a task by its UUID.
-
-        ### Arguments:
-        - task_id: The UUID of the task.
-        - retry_until_complete: Whether to retry until the task is complete.
-        - override_retry_options: The retry options to use if you want to override the default ones.
-
-        ### Returns
-        Task: The task.
-
-        ### Usage
-        You can get a task with the following code:
-        ```python
-        task = await publisher.get_task(task_id)
-        ```
-        The task ID must be saved at the time of publishing the task or it will
-        become impossible to retrieve it.
-        """
-
-        task: Optional[Task] = None
-
-        while task is None or not task.has_finished:
-            task = await self._relay_client.get_task(
-                task_id, override_retry_options=override_retry_options
-            )
-            if (
-                not retry_until_complete
-            ):  # TODO - Remove retry mechanism and make this work via a channel
-                break
-            await asyncio.sleep(0.25)
-
-        return task
-
     async def cleanup(self: Self) -> None:
         """Clean up the publisher client."""
 
@@ -212,8 +146,7 @@ class PublisherClient(BaseModel):
         if self._broker_client is not None:
             await self._broker_client.disconnect()
 
-        # Disconnect relay client
-        await self._relay_client.disconnect()
+    # Context Management
 
     async def __aenter__(self: Self) -> Self:
         return self

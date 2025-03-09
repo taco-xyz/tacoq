@@ -1,7 +1,7 @@
 Metadata-Version: 2.2
 Name: tacoq
 Version: 0.2.2
-Summary: Python SDK to interact with the TacoQ Service API
+Summary: Python SDK to interact with the TacoQ task queue.
 Author: Manuel Costa, Pedro Ribeiro
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
