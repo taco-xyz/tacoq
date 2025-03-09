@@ -12,6 +12,11 @@ from typing import Awaitable, Callable, Dict, Optional
 from aio_pika.abc import (
     AbstractIncomingMessage,
 )
+from opentelemetry.propagate import extract
+from opentelemetry.trace import Status, StatusCode
+from pydantic import BaseModel
+from typing_extensions import Self
+
 from tacoq.core.infra.broker import WorkerBrokerClient
 from tacoq.core.models import (
     SerializedException,
@@ -22,11 +27,6 @@ from tacoq.core.models import (
 )
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
-from opentelemetry.propagate import extract
-from opentelemetry.trace import Status, StatusCode
-from pydantic import BaseModel
-from typing_extensions import Self
-
 from tacoq.worker.config import WorkerApplicationConfig
 
 # =========================================
@@ -116,8 +116,9 @@ class WorkerApplication(BaseModel):
     _active_tasks: set[asyncio.Task[None]] = set()
     """ The set of active tasks that this worker application is processing. """
 
-    def model_post_init(self: Self, _) -> None:
-        self._registered_tasks = {}
+    def __init__(self: Self, config: WorkerApplicationConfig) -> None:
+        super().__init__(config=config)
+        self._registered_tasks = {}  # This must be set here so that the dictionary is per-instance
 
     # ================================
     # Task Registration & Execution
@@ -159,6 +160,13 @@ class WorkerApplication(BaseModel):
 
         ### Returns
         - Callable: Decorator function that registers the task handler
+
+        ### Usage
+        ```python
+        @worker.task(kind="my_task")
+        async def my_task(input_data: TaskInput) -> TaskOutput:
+            return TaskOutput(result="Hello, world!")
+        ```
         """
 
         def decorator(
