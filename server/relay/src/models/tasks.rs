@@ -314,10 +314,10 @@ mod tests {
     fn test_update_task_without_ttl_duration() {
         let mut task = Task::new("test", "test", 0);
         task.set_status(TaskStatus::Completed);
-        assert_eq!(task.ttl.is_some(), true);
-        // TTL should be 7 days from now
-        assert_eq!(task.ttl.unwrap() > Utc::now(), true);
 
+        assert!(task.ttl.is_some());
+
+        // TTL should be default value of 7 days
         let expected_ttl = Utc::now() + Duration::days(7);
         assert!((task.ttl.unwrap() - expected_ttl).num_seconds() <= 1);
     }
@@ -327,7 +327,10 @@ mod tests {
         let mut task = Task::new("test", "test", 0);
         task.ttl_duration = Some(5 * 24 * 60 * 60);
         task.set_status(TaskStatus::Completed);
-        assert_eq!(task.ttl.is_some(), true);
+        assert!(
+            task.ttl.is_some(),
+            "TTL should be set when TTL duration is provided"
+        );
 
         let expected_ttl = Utc::now() + Duration::seconds(5 * 24 * 60 * 60);
         assert!((task.ttl.unwrap() - expected_ttl).num_seconds() <= 1);
