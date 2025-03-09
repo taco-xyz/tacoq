@@ -190,7 +190,7 @@ async fn setup_shutdown_signal() -> oneshot::Receiver<()> {
         debug!("Waiting for shutdown signal");
         if tokio::signal::ctrl_c().await.is_ok() {
             info!("Shutdown signal (Ctrl+C) received");
-            if let Err(_) = shutdown_tx.send(()) {
+            if shutdown_tx.send(()).is_err() {
                 error!("Failed to send shutdown signal");
             }
         }
