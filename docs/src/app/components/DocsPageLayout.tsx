@@ -48,7 +48,7 @@ export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
           </h5>
         )}
       </div>
-      <div className="flex flex-col gap-y-4 w-full h-[1500px]">
+      <div className="flex flex-col gap-y-4 w-full">
         {/* Content */}
         {children}
       </div>

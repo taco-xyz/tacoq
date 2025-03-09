@@ -196,8 +196,6 @@ from typing import Any, Optional
 from uuid import UUID
 from pydantic import BaseModel
 
-from fastapi import FastAPI
-
 # =============================
 # Publisher Setup
 # =============================
@@ -215,7 +213,7 @@ TASK_KIND_NAME = "task_wait_n_seconds"
 
 async def main():
     # Serialize the input of the task to be a JSON string. All task inputs and outputs MUST be strings!
-    task_input = json.dumps({"duration": duration})
+    task_input = json.dumps({"duration": 1})
 
     task = await publisher.publish_task(
         worker_kind=WORKER_KIND_NAME,
