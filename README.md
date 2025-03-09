@@ -17,13 +17,19 @@ TacoQ is a multi-language distributed task queue with built-in observability, lo
 - ⚙️ Distributed and **horizontally scalable**.
 
 > [!TIP]
-> 🚨 Not a workflow engine! TacoQ is a distributed task queue, not an orchestrator
-> like Hatchet or Windmill. While we plan to build TacoFlow (a future orchestration
-> tool), TacoQ will remain lightweight, standalone, and easy to contribute to.
+> 🚨 **Not a workflow engine** 🚨 TacoQ is a distributed task queue, not an 
+> orchestrator like [Hatchet](https://hatchet.run/) or 
+> [Windmill](https://www.windmill.dev/). While we plan to build TacoFlow (a 
+> workflow orchestration engine), TacoQ will remain lightweight, standalone, 
+> and easy to contribute to.
 
-## Quick Start
+# Quick Start
 
-### Server
+To get started, we first need to make sure our core services are running.
+Afterwards, we'll setup the basic Python code to run a worker, publish tasks,
+and then retrieve their results.
+
+## Infrastructure Setup
 
 Use this `docker-compose.yml` to spin up the full stack:
 
@@ -58,13 +64,7 @@ services:
       retries: 5
     environment:
       DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_DATABASE_READER_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_DATABASE_WRITER_URL: postgresql://user:password@localhost:5432/tacoq
       TACOQ_BROKER_ADDR: amqp://user:password@localhost:5672
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://localhost:4317
-      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
-      OTEL_TRACES_SAMPLER: always_on
-      OTEL_SERVICE_NAME: tacoq.manager
 
   # ================================================
   # Broker
@@ -112,7 +112,9 @@ services:
 
 ```
 
-### Client
+## Client Setup
+
+### Installation
 
 Install it in your Python project using `pip` or `uv`:
 
@@ -124,22 +126,15 @@ pip install tacoq
 uv add tacoq
 ```
 
-### Client (Worker)
+### Worker
 
 Your worker will be the service executing the tasks. Spin up a worker using the
 following code:
 
 ```py
-# worker.py
-
 import asyncio
 import json
 from typing import Any, Literal
-
-# =============================
-# Worker Setup
-# =============================
-
 from tacoq import (
     WorkerApplication,
     BrokerConfig,
@@ -147,6 +142,11 @@ from tacoq import (
     TaskInput,
     TaskOutput,
 )
+
+
+# =============================
+# Worker Setup
+# =============================
 
 WORKER_KIND = "worker_waiter_kind"
 TASK_KIND = "task_wait_n_seconds"
@@ -165,7 +165,6 @@ worker_app = WorkerApplication(config=worker_config)
 # Task Setup
 # =============================
 
-
 @worker_app.task(kind=TASK_KIND)
 async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
     input_data_dict: dict[str, Any] = json.loads(input_data)
@@ -179,42 +178,45 @@ async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
         }
     )
 
-
 if __name__ == "__main__":
     asyncio.run(worker_app.entrypoint())
 ```
 
-### Client (Publisher)
+### Task Publishing
 
-And you can now start publishing tasks:
+With the worker running, you can now start publishing tasks for it to work on:
 
 ```python
-# publisher.py
-
 import json
 from typing import Any, Optional
 from uuid import UUID
 from pydantic import BaseModel
 
-from fastapi import FastAPI
+from tacoq import PublisherClient, BrokerConfig, Task
 
 # =============================
 # Publisher Setup
 # =============================
 
-from tacoq import PublisherClient, BrokerConfig, RelayConfig, Task
 
-# These settings are based on the relay and broker configurations in the docker compose files.
+# These settings are based on the broker configurations in the 
+# docker-compose.yml files.
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
-relay_config = RelayConfig(url="http://localhost:3000")
-publisher = PublisherClient(broker_config=broker_config, relay_config=relay_config)
+publisher = PublisherClient(broker_config=broker_config)
 
-# These must be consistent with the worker app. Consider using a .env file to coordinate these.
+# =============================
+# Task Publishing
+# =============================
+
+# These must be consistent with the worker app. Consider using a .env file 
+# to coordinate these.
 WORKER_KIND_NAME = "worker_waiter_kind"
 TASK_KIND_NAME = "task_wait_n_seconds"
 
-async def main():
-    # Serialize the input of the task to be a JSON string. All task inputs and outputs MUST be strings!
+
+# Serialize the input of the task to be a JSON string. All task inputs and
+# outputs MUST be strings!
+async def publish_task() -> Task:
     task_input = json.dumps({"duration": duration})
 
     task = await publisher.publish_task(
@@ -223,13 +225,36 @@ async def main():
         input_data=task_input,
     )
 
-    # Fetch the task from the relay
-    task = await publisher.get_task(task_id=task_id, retry_until_complete=True)
+    return task
+```
 
-    # Print result
-    if task.has_finished and task.output_data is not None:
-        result = json.loads(task.output_data)
-        print(result)
+### Task Retrieval
+
+To retrieve tasks from the system, you can instantiate a `RelayClient` object
+and begin getting current task results and statuses. Depending on when you fetch
+the task, the task may be pending, running, or already complete!
+
+```python
+from uuid import UUID
+from tacoq import RelayConfig, RelayClient
+
+# =============================
+# RelayClient Setup
+# =============================
+
+relay_config = RelayConfig(url="http://localhost:3000")
+relay_client = RelayClient(config=relay_config)
+
+# =============================
+# Task Fetching
+# =============================
+
+# You must use the ID generated at time of publishing to retrieve it later
+async def fetch_task(task_id: UUID) -> Task:
+  updated_task = await relay_client.get_task(task_id) 
+
+  return updated_task
+
 ```
 
 > [!WARNING]
