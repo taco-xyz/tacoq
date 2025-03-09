@@ -125,7 +125,7 @@ pub struct Task {
     // Relations
     #[sqlx(rename = "worker_kind_name")]
     pub worker_kind: String,
-    pub assigned_to: Option<Uuid>, // worker that it is assigned to
+    pub executed_by: Option<Uuid>, // worker that it is assigned to
 
     // Task status
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
@@ -159,7 +159,7 @@ impl Task {
             status: TaskStatus::Pending,
             priority,
             worker_kind: worker_kind_name.to_string(),
-            assigned_to: None,
+            executed_by: None,
             started_at: None,
             completed_at: None,
             ttl: None,
@@ -206,8 +206,8 @@ impl Task {
     }
 
     /// Sets the assigned worker
-    pub fn assigned_to(mut self, worker_id: Uuid) -> Self {
-        self.assigned_to = Some(worker_id);
+    pub fn executed_by(mut self, worker_id: Uuid) -> Self {
+        self.executed_by = Some(worker_id);
         self
     }
 
@@ -223,7 +223,7 @@ impl Task {
                 self.started_at = None;
                 self.completed_at = None;
                 self.ttl = None;
-                self.assigned_to = None;
+                self.executed_by = None;
             }
             TaskStatus::Processing => {
                 self.started_at = Some(Utc::now());

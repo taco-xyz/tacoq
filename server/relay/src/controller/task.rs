@@ -61,7 +61,7 @@ impl TaskController {
             };
             info!("Task updated successfully: {:?}", task);
 
-            if let Some(assigned_to) = task.assigned_to {
+            if let Some(assigned_to) = task.executed_by {
                 match self
                     .worker_repository
                     .update_worker(assigned_to, &kind.name)

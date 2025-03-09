@@ -24,7 +24,7 @@ impl PgTaskRepository {
             Task,
             r#"
             INSERT INTO tasks (
-                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, ttl_duration, assigned_to,
+                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, ttl_duration, executed_by,
                 is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             ON CONFLICT (id) DO UPDATE SET
@@ -33,7 +33,7 @@ impl PgTaskRepository {
                 completed_at = EXCLUDED.completed_at,
                 ttl = EXCLUDED.ttl,
                 ttl_duration = EXCLUDED.ttl_duration,
-                assigned_to = EXCLUDED.assigned_to,
+                executed_by = EXCLUDED.executed_by,
                 is_error = EXCLUDED.is_error,
                 output_data = EXCLUDED.output_data,
                 status = EXCLUDED.status,
@@ -51,7 +51,7 @@ impl PgTaskRepository {
                 ttl, 
                 ttl_duration,
                 worker_kind_name AS "worker_kind!", 
-                assigned_to, 
+                executed_by, 
                 created_at, 
                 updated_at,
                 status,
@@ -66,7 +66,7 @@ impl PgTaskRepository {
             t.completed_at,
             t.ttl,
             t.ttl_duration,
-            t.assigned_to,
+            t.executed_by,
             t.is_error,
             t.output_data,
             t.created_at,
@@ -100,7 +100,7 @@ impl PgTaskRepository {
                 ttl, 
                 ttl_duration,
                 worker_kind_name AS "worker_kind!", 
-                assigned_to, 
+                executed_by, 
                 created_at, 
                 updated_at,
                 status,
