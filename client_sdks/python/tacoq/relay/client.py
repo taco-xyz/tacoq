@@ -10,13 +10,13 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID
 from typing_extensions import Self
-
+from typing import Any
 from pydantic import BaseModel
 from aiohttp import ClientSession, ClientConnectorError
 from aiohttp_retry import RetryClient, RetryOptionsBase
 from opentelemetry.propagate import inject
 
-from tacoq.core.infra.relay.config import RelayConfig
+from tacoq.relay.config import RelayConfig
 from tacoq.core.models.task import Task
 from tacoq.core.telemetry import TracerManager
 
@@ -53,7 +53,8 @@ class RelayStates(str, Enum):
 
 
 class RelayClient(BaseModel):
-    """Abstracts the relay API.
+    """Abstracts the relay API. Allows for getting task results from the relay
+    and performing health checks.
 
     ### Attributes
     - config: The configuration for the relay client.
@@ -62,7 +63,6 @@ class RelayClient(BaseModel):
     ```python
     # Initialize and use the client with async context relay
     relay = RelayClient(config=RelayConfig(url="http://localhost:8080"))
-    await relay.connect()
 
     # Check the health of the relay
     health = await relay.check_health()
@@ -72,6 +72,12 @@ class RelayClient(BaseModel):
 
     # Disconnect from the relay
     await relay.disconnect()
+    ```
+    It can also be used as a context manager:
+    ```python
+    async with RelayClient(config=RelayConfig(url="http://localhost:8080")) as relay:
+        # Check the health of the relay
+        health = await relay.check_health()
     ```
     """
 
@@ -98,6 +104,19 @@ class RelayClient(BaseModel):
         if self._session:
             await self._session.close()
             self._session = None
+
+    # ================================
+    # Context Management
+    # ================================
+
+    async def __aenter__(self: Self) -> Self:
+        await self.connect()
+        return self
+
+    async def __aexit__(
+        self: Self, exc_type: Any, exc_value: Any, traceback: Any
+    ) -> None:
+        await self.disconnect()
 
     # ================================
     # Health Checking

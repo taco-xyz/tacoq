@@ -13,7 +13,6 @@ docker compose up -d
 ```
 """
 
-import asyncio
 import json
 import time
 import uuid
@@ -21,16 +20,16 @@ from asyncio import create_task, gather, sleep
 from datetime import datetime
 from types import TracebackType
 from typing import Any, Coroutine, Optional, Self, Type
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from opentelemetry.trace import get_current_span
 from tacoq.core.infra.broker import BrokerConfig
-from tacoq.core.infra.relay import RelayConfig
 from tacoq.core.models import Task, TaskInput, TaskOutput, TaskStatus
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
 from tacoq.publisher import PublisherClient
+from tacoq.relay import RelayClient
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
 # =========================================
@@ -141,7 +140,6 @@ class WorkerContext:
             config=WorkerApplicationConfig(
                 name=self.worker_kind,
                 kind=self.worker_kind,
-                relay_config=RelayConfig(url="http://localhost:3000"),
                 broker_prefetch_count=broker_prefetch_count,
                 broker_config=BrokerConfig(
                     url="amqp://user:password@localhost:5672",
@@ -174,6 +172,33 @@ class WorkerContext:
 
 
 # =========================================
+# Auxiliary functions
+# =========================================
+
+
+async def get_completed_task(
+    relay_client: RelayClient,
+    task_id: UUID,
+) -> Task:
+    """Get a completed task from the relay. Polls repeatedly until the task is
+    completed.
+
+    ### Arguments:
+    - relay_client: The relay client to use to get the task.
+    - task_id: The ID of the task to get.
+
+    ### Returns:
+    - The completed task.
+    """
+
+    while True:
+        task = await relay_client.get_task(task_id)
+        if task is not None and task.has_finished:
+            return task
+        await sleep(0.1)
+
+
+# =========================================
 # Tests
 # =========================================
 
@@ -182,7 +207,9 @@ class WorkerContext:
 @pytest.mark.asyncio
 @pytest.mark.timeout(15)
 @pytest.mark.one
-async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
+async def test_delayed_instrumented_task_e2e(
+    publisher_client: PublisherClient, relay_client: RelayClient
+):
     """Simple test: publishes one task and checks its status. We use an
     instrumented task so that we can see the spans and logs in Grafana.
     """
@@ -200,10 +227,7 @@ async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
         print(f"Published task {task}")
 
         # Wait and check final status
-        task_status = await asyncio.wait_for(
-            publisher_client.get_task(task.id, retry_until_complete=True),
-            timeout=15,
-        )
+        task_status = await get_completed_task(relay_client, task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
@@ -219,7 +243,9 @@ async def test_delayed_instrumented_task_e2e(publisher_client: PublisherClient):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
+async def test_parallel_delayed_tasks(
+    publisher_client: PublisherClient, relay_client: RelayClient
+):
     """Tests multiple variable tasks executing in parallel and
     verifies that they were all executed within a shorter time than
     if they were executed sequentially."""
@@ -248,9 +274,7 @@ async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
         start_gathering = time.time()
         gather_tasks: list[Coroutine[Any, Any, Optional[Task]]] = []
         for task in tasks:
-            gather_tasks.append(
-                publisher_client.get_task(task.id, retry_until_complete=True)
-            )
+            gather_tasks.append(get_completed_task(relay_client, task.id))
         await gather(*gather_tasks)
         time_taken = time.time() - start_gathering
 
@@ -262,7 +286,9 @@ async def test_parallel_delayed_tasks(publisher_client: PublisherClient):
 @pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.timeout(15)
-async def test_error_task_e2e(publisher_client: PublisherClient):
+async def test_error_task_e2e(
+    publisher_client: PublisherClient, relay_client: RelayClient
+):
     """Tests a task that fails immediately and checks that the
     serialized exception is properly returned."""
 
@@ -276,9 +302,7 @@ async def test_error_task_e2e(publisher_client: PublisherClient):
             input_data="",
         )
 
-        task_status = await publisher_client.get_task(
-            task.id, retry_until_complete=True
-        )
+        task_status = await get_completed_task(relay_client, task.id)
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
@@ -293,16 +317,18 @@ async def test_error_task_e2e(publisher_client: PublisherClient):
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
-async def test_task_not_found(publisher_client: PublisherClient):
+async def test_task_not_found(relay_client: RelayClient):
     """Tests that requesting a non-existent task returns None."""
-    task_status = await publisher_client.get_task(uuid4())
+    task_status = await relay_client.get_task(uuid4())
     assert task_status is None, "Task status is not None"
 
 
 @pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.priority
-async def test_priority_task(publisher_client: PublisherClient):
+async def test_priority_task(
+    publisher_client: PublisherClient, relay_client: RelayClient
+):
     """Tests that tasks are completed in the correct order when
     they have different priorities."""
 
@@ -340,9 +366,7 @@ async def test_priority_task(publisher_client: PublisherClient):
         await sleep(TOTAL_TASKS * 0.1 + 5)
         print("Gathering results..")
         for task in incomplete_tasks:
-            complete_task = await publisher_client.get_task(
-                task.id, retry_until_complete=True
-            )
+            complete_task = await get_completed_task(relay_client, task.id)
             completed_tasks.append(complete_task)  # type: ignore
 
         priority_completed_at: dict[int, datetime] = {}
@@ -374,6 +398,7 @@ async def test_priority_task(publisher_client: PublisherClient):
 @pytest.mark.workers
 async def test_multiple_workers_execute_tasks_in_parallel(
     publisher_client: PublisherClient,
+    relay_client: RelayClient,
 ):
     """Tests that tasks are executed in parallel when there are multiple workers."""
 
@@ -418,9 +443,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
     start_gathering = time.time()
     gather_tasks: list[Coroutine[Any, Any, Optional[Task]]] = []
     for task in incomplete_tasks:
-        gather_tasks.append(
-            publisher_client.get_task(task.id, retry_until_complete=True)
-        )
+        gather_tasks.append(get_completed_task(relay_client, task.id))
     await gather(*gather_tasks)
     time_taken = time.time() - start_gathering
 

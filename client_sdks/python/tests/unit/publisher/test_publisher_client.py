@@ -11,8 +11,6 @@ from uuid import uuid4
 
 import pytest
 from tacoq.core.infra.broker import PublisherBrokerClient
-from tacoq.core.infra.relay import RelayClient
-from tacoq.core.models import Task, TaskStatus
 from tacoq.publisher import PublisherClient
 
 # =========================================
@@ -52,41 +50,4 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     # Verify broker client calls
     publisher_client._broker_client.publish_task.assert_called_once_with(  # type: ignore
         task,
-    )
-
-
-# =========================================
-# Task Retrieval Tests
-# =========================================
-
-
-@pytest.mark.asyncio
-@pytest.mark.unit
-async def test_get_task_success(
-    publisher_client: PublisherClient,
-):
-    """Test retrieving a task successfully.
-
-    Here we mock the manager client because the actual task retrieval
-    behaviour is already tested in the manager client tests.
-    """
-
-    task_id = uuid4()
-    expected_task = Task(
-        id=task_id,
-        task_kind="test_task",
-        worker_kind="test_kind",
-        input_data=json.dumps({"test": "data"}),
-        priority=0,
-        status=TaskStatus.PENDING,
-    )
-
-    publisher_client._relay_client = mock.create_autospec(RelayClient, instance=True)
-    publisher_client._relay_client.get_task.return_value = expected_task  # type: ignore
-
-    task = await publisher_client.get_task(task_id)
-    assert task == expected_task
-    publisher_client._relay_client.get_task.assert_called_once_with(  # type: ignore
-        task_id,
-        override_retry_options=None,
     )
