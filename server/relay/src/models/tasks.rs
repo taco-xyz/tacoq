@@ -7,6 +7,7 @@ use opentelemetry::Context;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use sqlx::postgres::types::PgInterval;
 use sqlx::FromRow;
 use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
@@ -132,8 +133,10 @@ pub struct Task {
     pub started_at: Option<DateTime<Utc>>,
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
     pub completed_at: Option<DateTime<Utc>>,
+
     #[serde(skip)]
     pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
+    pub ttl_duration: Option<Duration>, // We do not need to save this in the DB but it's important for the TTL calculation
 
     // Metadata
     #[serde(deserialize_with = "deserialize_timestamp")]
@@ -161,6 +164,7 @@ impl Task {
             started_at: None,
             completed_at: None,
             ttl: None,
+            ttl_duration: None,
             otel_ctx_carrier: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -197,6 +201,11 @@ impl Task {
         self
     }
 
+    pub fn with_ttl_duration(mut self, ttl_duration: Duration) -> Self {
+        self.ttl_duration = Some(ttl_duration);
+        self
+    }
+
     /// Sets the assigned worker
     pub fn assigned_to(mut self, worker_id: Uuid) -> Self {
         self.assigned_to = Some(worker_id);
@@ -224,7 +233,13 @@ impl Task {
             }
             TaskStatus::Completed => {
                 self.completed_at = Some(Utc::now());
-                self.ttl = Some(Utc::now() + Duration::days(7));
+
+                // When setting to completed we set the TTL to 7 days if ttl_duration is not set
+                if let Some(duration) = self.ttl_duration {
+                    self.ttl = Some(Utc::now() + duration);
+                } else {
+                    self.ttl = Some(Utc::now() + Duration::days(7));
+                }
             }
         }
         self.updated_at = Utc::now();
