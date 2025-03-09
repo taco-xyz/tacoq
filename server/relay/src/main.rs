@@ -8,12 +8,17 @@ mod models;
 mod repo;
 mod server;
 mod testing;
+// mod traces;
 
 use brokers::setup_consumer_broker;
+use init_tracing_opentelemetry::tracing_subscriber_ext::{
+    build_level_filter_layer, build_otel_layer,
+};
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
 use tracing::{error, info, info_span, warn};
+use tracing_subscriber::{layer::SubscriberExt, Layer};
 
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
@@ -44,8 +49,43 @@ struct AppComponents {
 }
 
 /// Initializes the tracing system
+/// Initializes the unified tracing system with both local console output and OpenTelemetry
 fn init_tracing() -> Result<impl Drop, Box<dyn std::error::Error>> {
-    Ok(init_tracing_opentelemetry::tracing_subscriber_ext::init_subscribers()?)
+    let logger_text: Box<dyn Layer<_> + Send + Sync + 'static> = if cfg!(debug_assertions) {
+        // TODO: check if we need more infmormation in these logs
+        // Development environment - human-readable logs with detailed context
+        Box::new(
+            tracing_subscriber::fmt::layer()
+                .pretty()
+                .with_line_number(true)
+                .with_file(true)
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_target(true)
+                .with_timer(tracing_subscriber::fmt::time::uptime())
+                .with_ansi(true),
+        )
+    } else {
+        // Production environment - structured JSON logs for machine processing
+        Box::new(
+            tracing_subscriber::fmt::layer()
+                .json()
+                .with_current_span(true)
+                .with_span_list(true)
+                .flatten_event(true) // Better for log aggregation systems
+                .with_timer(tracing_subscriber::fmt::time::SystemTime),
+        )
+    };
+
+    let (layer, guard) = build_otel_layer()?;
+
+    let subscriber = tracing_subscriber::registry()
+        .with(layer)
+        .with(build_level_filter_layer("")?)
+        .with(logger_text);
+    tracing::subscriber::set_global_default(subscriber)?;
+
+    Ok(guard)
 }
 
 /// Creates database connection pools

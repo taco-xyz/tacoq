@@ -17,9 +17,10 @@ impl Config {
         load_env();
 
         Config {
-            broker_addr: std::env::var("TACOQ_BROKER_ADDR").expect("Missing broker address"),
+            broker_addr: std::env::var("TACOQ_BROKER_ADDR")
+                .expect("Environment variable TACOQ_BROKER_ADDR is missing"),
             db_reader_url: std::env::var("TACOQ_DATABASE_READER_URL")
-                .expect("Missing database reader URL"),
+                .expect("Environment variable TACOQ_DATABASE_READER_URL is missing"),
         }
     }
 }
