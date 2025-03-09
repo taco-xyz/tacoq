@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                worker_kind_name AS \"worker_kind!\", \n                assigned_to, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
+  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                assigned_to, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -45,36 +45,41 @@
       },
       {
         "ordinal": 8,
+        "name": "ttl_duration",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
         "name": "worker_kind!",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "assigned_to",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "priority",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "otel_ctx_carrier",
         "type_info": "Jsonb"
       }
@@ -93,6 +98,7 @@
       true,
       true,
       true,
+      true,
       false,
       true,
       false,
@@ -102,5 +108,5 @@
       true
     ]
   },
-  "hash": "278fc6e83527883e4c4d95978032422b4c306fe6075e42235e805ceefc42dd74"
+  "hash": "9fa4bc75695487ad11c654a156b7d340401f7da38361207b444b4c0ce0e6be32"
 }
