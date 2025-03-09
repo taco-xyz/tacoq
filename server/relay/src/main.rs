@@ -17,7 +17,7 @@ use init_tracing_opentelemetry::tracing_subscriber_ext::{
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
 use tokio::sync::oneshot;
-use tracing::{error, info, info_span, warn};
+use tracing::{debug, error, info, info_span, warn};
 use tracing_subscriber::{layer::SubscriberExt, Layer};
 
 use axum::Router;
@@ -48,6 +48,8 @@ struct AppComponents {
     task_cleanup_job: Arc<TaskCleanupJob>,
 }
 
+/// Initializes the tracing system
+/// Initializes the unified tracing system with both local console output and OpenTelemetry
 /// Initializes the tracing system
 /// Initializes the unified tracing system with both local console output and OpenTelemetry
 fn init_tracing() -> Result<impl Drop, Box<dyn std::error::Error>> {
@@ -94,7 +96,21 @@ fn init_tracing() -> Result<impl Drop, Box<dyn std::error::Error>> {
 ///
 /// * `config` - The configuration for the database
 async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
-    PgPool::connect(&config.db_reader_url).await
+    info!(
+        db_url_length = config.db_reader_url.len(),
+        "Connecting to database"
+    );
+
+    match PgPool::connect(&config.db_reader_url).await {
+        Ok(pool) => {
+            info!("Successfully connected to database");
+            Ok(pool)
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to connect to database");
+            Err(e)
+        }
+    }
 }
 
 /// Creates all repositories needed for the application
@@ -105,11 +121,19 @@ async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
 fn create_repositories(
     pool: &PgPool,
 ) -> (PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository) {
+    debug!("Creating repository core");
     let core = PgRepositoryCore::new(pool.clone());
+
+    debug!("Creating task repository");
     let task_repository = PgTaskRepository::new(core.clone());
+
+    debug!("Creating worker kind repository");
     let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+
+    debug!("Creating worker repository");
     let worker_repository = PgWorkerRepository::new(core.clone());
 
+    debug!("All repositories created successfully");
     (task_repository, worker_kind_repository, worker_repository)
 }
 
@@ -119,9 +143,11 @@ fn create_repositories(
 ///
 /// * `db_pools` - The database connection pools
 async fn setup_app_state(db_pools: &PgPool) -> AppState {
+    debug!("Setting up application state");
     let (task_repository, worker_kind_repository, worker_repository) =
         create_repositories(db_pools);
 
+    info!("Application state initialized successfully");
     AppState {
         task_repository,
         worker_kind_repository,
@@ -137,16 +163,19 @@ async fn setup_app_state(db_pools: &PgPool) -> AppState {
 ///
 /// * `db_pools` - The database connection pools
 async fn setup_app(db_pools: &PgPool) -> Router {
+    debug!("Beginning app setup");
     let app_state = setup_app_state(db_pools).await;
     info!("App state created");
 
     // Create base router with routes and state
+    debug!("Creating router with OpenTelemetry layers");
     let router = Router::new()
         .merge(api::routes())
         .with_state(app_state)
         .layer(OtelInResponseLayer)
         .layer(OtelAxumLayer::default());
 
+    info!("Router setup complete with tracing enabled");
     router
 }
 
@@ -154,15 +183,20 @@ async fn setup_app(db_pools: &PgPool) -> Router {
 ///
 /// Returns a channel receiver that will be notified when shutdown is requested
 async fn setup_shutdown_signal() -> oneshot::Receiver<()> {
+    debug!("Setting up shutdown signal handler");
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
     tokio::spawn(async move {
+        debug!("Waiting for shutdown signal");
         if tokio::signal::ctrl_c().await.is_ok() {
-            info!("Shutdown signal received");
-            let _ = shutdown_tx.send(());
+            info!("Shutdown signal (Ctrl+C) received");
+            if let Err(_) = shutdown_tx.send(()) {
+                error!("Failed to send shutdown signal");
+            }
         }
     });
 
+    info!("Shutdown signal handler initialized");
     shutdown_rx
 }
 
@@ -172,37 +206,85 @@ async fn setup_shutdown_signal() -> oneshot::Receiver<()> {
 ///
 /// * `config` - The application configuration
 async fn initialize_system(config: &Config) -> Result<AppComponents, Box<dyn std::error::Error>> {
+    debug!("Initializing system components");
     let shutdown = Arc::new(AtomicBool::new(false));
 
     // Setup database connection
-    let db_pools = setup_db_pools(config).await?;
+    let db_pools = match setup_db_pools(config).await {
+        Ok(pools) => pools,
+        Err(e) => {
+            error!(error = %e, "Database connection setup failed");
+            return Err(Box::new(e));
+        }
+    };
     info!("Database connection pools created");
 
     // Setup message broker
+    debug!(
+        broker_addr = %config.broker_addr,
+        queue = %RELAY_QUEUE,
+        "Setting up message broker consumer"
+    );
     let new_task_consumer =
-        setup_consumer_broker::<Task>(&config.broker_addr, RELAY_QUEUE, shutdown.clone()).await?;
-    info!("Brokers initialized");
+        match setup_consumer_broker::<Task>(&config.broker_addr, RELAY_QUEUE, shutdown.clone())
+            .await
+        {
+            Ok(consumer) => {
+                info!("Message broker consumer initialized successfully");
+                consumer
+            }
+            Err(e) => {
+                error!(
+                    error = %e,
+                    broker_addr = %config.broker_addr,
+                    queue = %RELAY_QUEUE,
+                    "Failed to setup message broker consumer"
+                );
+                return Err(e);
+            }
+        };
 
     // Setup axum app and state
+    debug!("Setting up web application");
     let app = setup_app(&db_pools).await;
 
     // Create repositories
+    debug!("Creating repositories for components");
     let (task_repo, worker_kind_repo, worker_repo) = create_repositories(&db_pools);
 
     // Initialize controller and job
-    let task_controller = Arc::new(
-        task::TaskController::new(new_task_consumer, worker_repo, worker_kind_repo, task_repo)
-            .await?,
-    );
+    debug!("Creating task controller");
+    let task_controller = match task::TaskController::new(
+        new_task_consumer,
+        worker_repo,
+        worker_kind_repo,
+        task_repo,
+    )
+    .await
+    {
+        Ok(controller) => {
+            info!("Task controller initialized successfully");
+            Arc::new(controller)
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to initialize task controller");
+            return Err(e);
+        }
+    };
 
+    debug!("Creating task cleanup job with 5-minute interval");
     let task_cleanup_job = Arc::new(TaskCleanupJob::new(
         PgTaskRepository::new(PgRepositoryCore::new(db_pools.clone())),
         300, // Every 5 minutes
     ));
+    info!("Task cleanup job created with 300-second interval");
 
     // Create server
+    debug!("Creating HTTP server on port 3000");
     let server = Server::new(app, 3000);
+    info!(port = 3000, "HTTP server created");
 
+    info!("All system components initialized successfully");
     Ok(AppComponents {
         server,
         task_controller,
@@ -226,10 +308,16 @@ async fn start_background_tasks(
     tokio::task::JoinHandle<()>,
     Arc<task::TaskController>,
 ) {
+    debug!("Starting background tasks");
+
     // Start task cleanup job
+    info!("Starting task cleanup job");
     let task_cleanup_handle = tokio::spawn(async move {
+        debug!("Task cleanup job started");
         if let Err(e) = components.task_cleanup_job.run().await {
-            error!("Task cleanup job failed: {:?}", e);
+            error!(error = %e, "Task cleanup job failed");
+        } else {
+            info!("Task cleanup job completed successfully");
         }
     });
 
@@ -237,19 +325,28 @@ async fn start_background_tasks(
     let task_controller_shutdown = components.task_controller.clone();
 
     // Start task controller
+    info!("Starting task controller");
     let task_handle = tokio::spawn(async move {
+        debug!("Task controller started");
         if let Err(e) = components.task_controller.run().await {
-            error!("Task input controller failed: {:?}", e);
+            error!(error = %e, "Task input controller failed");
+        } else {
+            info!("Task controller completed successfully");
         }
     });
 
     // Start server
+    info!("Starting HTTP server");
     let server_handle = tokio::spawn(async move {
+        debug!("HTTP server started");
         if let Err(e) = components.server.run(shutdown_rx).await {
-            error!("Server error: {:?}", e);
+            error!(error = %e, "Server error");
+        } else {
+            info!("HTTP server shut down gracefully");
         }
     });
 
+    info!("All background tasks started");
     (
         task_cleanup_handle,
         task_handle,
@@ -264,58 +361,79 @@ async fn start_background_tasks(
 ///
 /// * `task_controller` - The task controller to shut down
 async fn perform_shutdown(task_controller: Arc<task::TaskController>) {
-    info!("Starting graceful shutdown");
+    info!("Starting graceful shutdown procedure");
 
-    if let Err(e) = task_controller.shutdown().await {
-        error!("Failed to shutdown task input controller: {:?}", e);
+    debug!("Shutting down task controller");
+    match task_controller.shutdown().await {
+        Ok(_) => info!("Task controller shut down successfully"),
+        Err(e) => error!(error = %e, "Failed to shutdown task input controller"),
     }
 
-    info!("Cleanup complete");
+    info!("All components shut down, cleanup complete");
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize configuration
+    debug!("Loading application configuration");
     let config = Config::new();
+    info!("Configuration loaded successfully");
 
     // Setup tracing
-    let _guard = init_tracing()?;
+    debug!("Initializing tracing system");
+    let _guard = match init_tracing() {
+        Ok(guard) => {
+            info!("Tracing initialized successfully");
+            guard
+        }
+        Err(e) => {
+            eprintln!("Failed to initialize tracing: {:?}", e);
+            return Err(e);
+        }
+    };
 
-    let span = info_span!("manager_startup").entered();
+    let span = info_span!("manager_startup", service = "relay").entered();
+    info!("Starting Relay service");
 
     // Initialize system components
+    debug!("Initializing system components");
     let components = match initialize_system(&config).await {
         Ok(components) => components,
         Err(e) => {
-            error!("Failed to initialize system: {:?}", e);
+            error!(error = %e, "Failed to initialize system");
             return Err(e);
         }
     };
 
     // Setup shutdown signal
+    debug!("Setting up shutdown signal handler");
     let shutdown_rx = setup_shutdown_signal().await;
 
     // Start all background tasks
+    info!("Starting all background tasks and services");
     let (task_cleanup_handle, task_handle, server_handle, task_controller_shutdown) =
         start_background_tasks(components, shutdown_rx).await;
 
+    info!("Relay service startup complete, now running");
     span.exit();
 
     // Wait for any task to complete, which signals shutdown
     tokio::select! {
-        _ = task_cleanup_handle => {
-            warn!("Task cleanup job shutdown unexpectedly");
+        result = task_cleanup_handle => {
+            warn!(task = "task_cleanup", result = ?result, "Task cleanup job shutdown unexpectedly");
         },
-        _ = task_handle => {
-            warn!("Task controller shutdown unexpectedly");
+        result = task_handle => {
+            warn!(task = "task_controller", result = ?result, "Task controller shutdown unexpectedly");
         },
-        _ = server_handle => {
-            warn!("Server shutdown unexpectedly");
+        result = server_handle => {
+            warn!(task = "http_server", result = ?result, "Server shutdown unexpectedly");
         },
     }
 
     // Perform graceful shutdown
+    info!("Beginning shutdown sequence");
     perform_shutdown(task_controller_shutdown).await;
+    info!("Relay service shut down successfully");
 
     Ok(())
 }
