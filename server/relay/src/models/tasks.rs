@@ -7,7 +7,6 @@ use opentelemetry::Context;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use sqlx::postgres::types::PgInterval;
 use sqlx::FromRow;
 use strum_macros::{Display, EnumString};
 use utoipa::ToSchema;
@@ -136,7 +135,7 @@ pub struct Task {
 
     #[serde(skip)]
     pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
-    pub ttl_duration: Option<Duration>, // We do not need to save this in the DB but it's important for the TTL calculation
+    pub ttl_duration: Option<i64>, // We do not need to save this in the DB but it's important for the TTL calculation
 
     // Metadata
     #[serde(deserialize_with = "deserialize_timestamp")]
@@ -202,7 +201,7 @@ impl Task {
     }
 
     pub fn with_ttl_duration(mut self, ttl_duration: Duration) -> Self {
-        self.ttl_duration = Some(ttl_duration);
+        self.ttl_duration = Some(ttl_duration.num_seconds());
         self
     }
 
@@ -236,7 +235,7 @@ impl Task {
 
                 // When setting to completed we set the TTL to 7 days if ttl_duration is not set
                 if let Some(duration) = self.ttl_duration {
-                    self.ttl = Some(Utc::now() + duration);
+                    self.ttl = Some(Utc::now() + Duration::seconds(duration));
                 } else {
                     self.ttl = Some(Utc::now() + Duration::days(7));
                 }
@@ -304,5 +303,33 @@ fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
             Ok(otel_cx)
         }
         _ => Err(Error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_task_without_ttl_duration() {
+        let mut task = Task::new("test", "test", 0);
+        task.set_status(TaskStatus::Completed);
+        assert_eq!(task.ttl.is_some(), true);
+        // TTL should be 7 days from now
+        assert_eq!(task.ttl.unwrap() > Utc::now(), true);
+
+        let expected_ttl = Utc::now() + Duration::days(7);
+        assert!((task.ttl.unwrap() - expected_ttl).num_seconds() <= 1);
+    }
+
+    #[test]
+    fn test_update_task_with_ttl_duration() {
+        let mut task = Task::new("test", "test", 0);
+        task.ttl_duration = Some(5 * 24 * 60 * 60);
+        task.set_status(TaskStatus::Completed);
+        assert_eq!(task.ttl.is_some(), true);
+
+        let expected_ttl = Utc::now() + Duration::seconds(5 * 24 * 60 * 60);
+        assert!((task.ttl.unwrap() - expected_ttl).num_seconds() <= 1);
     }
 }

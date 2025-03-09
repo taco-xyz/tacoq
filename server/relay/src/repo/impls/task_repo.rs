@@ -26,7 +26,7 @@ impl PgTaskRepository {
             INSERT INTO tasks (
                 id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, ttl_duration, assigned_to,
                 is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
@@ -50,6 +50,7 @@ impl PgTaskRepository {
                 started_at, 
                 completed_at, 
                 ttl, 
+                ttl_duration,
                 worker_kind_name AS "worker_kind!", 
                 assigned_to, 
                 created_at, 
