@@ -235,9 +235,16 @@ class WorkerApplication(BaseModel):
             result: Optional[TaskOutput] = None
             is_error: bool = False
 
+            # Send task processing event
+            task.status = TaskStatus.PROCESSING
+            task.started_at = datetime.now()
+
+            # Submit task processing event via broker
+            with tracer.start_as_current_span("publish_task_processing"):
+                await self._broker_client.publish_task_result(task=task)
+
             # Start timer
-            started_at = datetime.now()
-            parent_span.set_attribute("task.started_at", started_at.isoformat())
+            parent_span.set_attribute("task.started_at", task.started_at.isoformat())
 
             with tracer.start_as_current_span(
                 "task_execution",
@@ -272,7 +279,6 @@ class WorkerApplication(BaseModel):
             # Update task
             task.output_data = result
             task.is_error = is_error
-            task.started_at = started_at
             task.completed_at = completed_at
             task.status = TaskStatus.COMPLETED
 
