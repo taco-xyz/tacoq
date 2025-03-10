@@ -61,16 +61,14 @@ CREATE TABLE
         executed_by UUID REFERENCES workers (id),
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         -- Task status
-        ttl_duration BIGINT,
+        ttl_duration BIGINT NOT NULL,
         started_at TIMESTAMP
         WITH
             TIME ZONE,
-            completed_at TIMESTAMP
-        WITH
-            TIME ZONE,
-            ttl TIMESTAMP
-        WITH
-            TIME ZONE,
+            completed_at TIMESTAMP,
+            --     ttl TIMESTAMP
+            -- WITH
+            --     TIME ZONE,
             -- Timestamps
             created_at TIMESTAMP
         WITH
@@ -80,4 +78,6 @@ CREATE TABLE
             TIME ZONE NOT NULL DEFAULT NOW ()
     );
 
-CREATE INDEX tasks_ttl_idx ON tasks (ttl);
+CREATE INDEX tasks_ttl_idx ON tasks (
+    (completed_at + interval '1 second' * ttl_duration)
+);

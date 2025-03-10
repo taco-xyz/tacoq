@@ -25,14 +25,13 @@ impl PgTaskRepository {
             Task,
             r#"
             INSERT INTO tasks (
-                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, ttl_duration, executed_by,
+                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl_duration, executed_by,
                 is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
                 completed_at = EXCLUDED.completed_at,
-                ttl = EXCLUDED.ttl,
                 ttl_duration = EXCLUDED.ttl_duration,
                 executed_by = EXCLUDED.executed_by,
                 is_error = EXCLUDED.is_error,
@@ -49,7 +48,6 @@ impl PgTaskRepository {
                 is_error, 
                 started_at, 
                 completed_at, 
-                ttl, 
                 ttl_duration,
                 worker_kind_name AS "worker_kind!", 
                 executed_by, 
@@ -65,7 +63,6 @@ impl PgTaskRepository {
             t.input_data,
             t.started_at,
             t.completed_at,
-            t.ttl,
             t.ttl_duration,
             t.executed_by,
             t.is_error,
@@ -99,7 +96,6 @@ impl PgTaskRepository {
                 is_error, 
                 started_at, 
                 completed_at, 
-                ttl, 
                 ttl_duration,
                 worker_kind_name AS "worker_kind!", 
                 executed_by, 
@@ -236,11 +232,12 @@ impl TaskRepository for PgTaskRepository {
     #[instrument(skip(self))]
     async fn delete_expired_tasks(&self) -> Result<u64, sqlx::Error> {
         info!("Cleaning up expired tasks");
-        let now = chrono::Utc::now();
+        let now = chrono::Utc::now().naive_utc();
 
         let result = match sqlx::query!(
             r#"DELETE FROM tasks
-                WHERE ttl IS NOT NULL AND ttl < $1
+                WHERE completed_at IS NOT NULL AND completed_at + interval '1 second' * ttl_duration < $1
+                RETURNING id
             "#,
             now,
         )
