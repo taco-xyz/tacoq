@@ -302,13 +302,6 @@ class WorkerBrokerClient(BaseBrokerClient):
         - task: The task to publish the result of.
         """
 
-        # Check if the task has a result attached
-
-        if task.output_data is None:
-            raise ValueError(
-                "Tried to publish task result, but task has no result attached. How did it get to this point?"
-            )
-
         if self._task_exchange is None:
             raise ExchangeNotDeclaredError(
                 "Tried to publish task result, but exchange was not declared."
