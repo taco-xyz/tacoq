@@ -1,4 +1,5 @@
 use axum::{routing::get, Json, Router};
+use tracing::{debug, instrument};
 use utoipa::OpenApi;
 
 use crate::AppState;
@@ -8,6 +9,7 @@ use crate::AppState;
 struct ApiDoc;
 
 pub fn routes() -> Router<AppState> {
+    debug!("Setting up OpenAPI documentation routes");
     Router::new().route("/openapi.json", get(openapi))
 }
 
@@ -18,6 +20,8 @@ pub fn routes() -> Router<AppState> {
         (status = 200, description = "JSON file", body = ())
     )
 )]
+#[instrument]
 async fn openapi() -> Json<utoipa::openapi::OpenApi> {
+    debug!("Generating OpenAPI documentation");
     Json(ApiDoc::openapi())
 }
