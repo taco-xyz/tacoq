@@ -8,6 +8,7 @@ import asyncio
 import json
 from datetime import datetime
 from typing import Awaitable, Callable, Dict, Optional
+from venv import create
 
 from aio_pika.abc import (
     AbstractIncomingMessage,
@@ -240,8 +241,7 @@ class WorkerApplication(BaseModel):
             task.started_at = datetime.now()
 
             # Submit task processing event via broker
-            with tracer.start_as_current_span("publish_task_processing"):
-                await self._broker_client.publish_task_result(task=task)
+            asyncio.create_task(self._broker_client.publish_task_result(task=task))
 
             # Start timer
             parent_span.set_attribute("task.started_at", task.started_at.isoformat())
