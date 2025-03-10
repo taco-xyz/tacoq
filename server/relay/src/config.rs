@@ -2,8 +2,8 @@ use dotenv::dotenv;
 use tracing::{debug, error, info, warn};
 
 pub struct Config {
-    pub broker_addr: String,
-    pub db_reader_url: String,
+    pub broker_url: String,
+    pub db_url: String,
 }
 
 fn load_env() {
@@ -24,32 +24,29 @@ impl Config {
         load_env();
         info!("Initializing application configuration");
 
-        let broker_addr = match std::env::var("TACOQ_BROKER_ADDR") {
+        let broker_url = match std::env::var("BROKER_URL") {
             Ok(val) => {
-                debug!(broker_addr = %val, "Loaded broker address");
+                debug!(broker_url = %val, "Loaded broker address");
                 val
             }
             Err(e) => {
-                error!(error = %e, "Failed to load TACOQ_BROKER_ADDR environment variable");
-                panic!("Environment variable TACOQ_BROKER_ADDR is missing");
+                error!(error = %e, "Failed to load BROKER_URL environment variable");
+                panic!("Environment variable BROKER_URL is missing");
             }
         };
 
-        let db_reader_url = match std::env::var("TACOQ_DATABASE_READER_URL") {
+        let db_url = match std::env::var("DATABASE_URL") {
             Ok(val) => {
                 debug!(db_url_length = val.len(), "Loaded database reader URL");
                 val
             }
             Err(e) => {
-                error!(error = %e, "Failed to load TACOQ_DATABASE_READER_URL environment variable");
-                panic!("Environment variable TACOQ_DATABASE_READER_URL is missing");
+                error!(error = %e, "Failed to load DATABASE_URL environment variable");
+                panic!("Environment variable DATABASE_URL is missing");
             }
         };
 
         info!("Application configuration initialized successfully");
-        Config {
-            broker_addr,
-            db_reader_url,
-        }
+        Config { broker_url, db_url }
     }
 }

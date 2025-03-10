@@ -5,7 +5,7 @@ volumes:
 services:
   # Main App
 
-  tacoq:
+  relay:
     build: .
     ports:
       - "3000:3000"

@@ -64,7 +64,7 @@ services:
       retries: 5
     environment:
       DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_BROKER_ADDR: amqp://user:password@localhost:5672
+      BROKER_URL: amqp://user:password@localhost:5672
 
   # ================================================
   # Broker
