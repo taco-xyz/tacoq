@@ -132,15 +132,17 @@ pub struct Task {
     // Relations
     #[sqlx(rename = "worker_kind_name")]
     pub worker_kind: String,
-    pub assigned_to: Option<Uuid>, // worker that it is assigned to
+    pub executed_by: Option<Uuid>, // worker that it is assigned to
 
     // Task status
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
     pub started_at: Option<DateTime<Utc>>,
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
     pub completed_at: Option<DateTime<Utc>>,
+
     #[serde(skip)]
     pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
+    pub ttl_duration: Option<i64>, // We do not need to save this in the DB but it's important for the TTL calculation
 
     // Metadata
     #[serde(deserialize_with = "deserialize_timestamp")]
@@ -164,10 +166,11 @@ impl Task {
             status: TaskStatus::Pending,
             priority,
             worker_kind: worker_kind_name.to_string(),
-            assigned_to: None,
+            executed_by: None,
             started_at: None,
             completed_at: None,
             ttl: None,
+            ttl_duration: None,
             otel_ctx_carrier: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -204,9 +207,14 @@ impl Task {
         self
     }
 
+    pub fn with_ttl_duration(mut self, ttl_duration: Duration) -> Self {
+        self.ttl_duration = Some(ttl_duration.num_seconds());
+        self
+    }
+
     /// Sets the assigned worker
-    pub fn assigned_to(mut self, worker_id: Uuid) -> Self {
-        self.assigned_to = Some(worker_id);
+    pub fn executed_by(mut self, worker_id: Uuid) -> Self {
+        self.executed_by = Some(worker_id);
         self
     }
 
@@ -222,7 +230,7 @@ impl Task {
                 self.started_at = None;
                 self.completed_at = None;
                 self.ttl = None;
-                self.assigned_to = None;
+                self.executed_by = None;
             }
             TaskStatus::Processing => {
                 self.started_at = Some(Utc::now());
@@ -231,7 +239,13 @@ impl Task {
             }
             TaskStatus::Completed => {
                 self.completed_at = Some(Utc::now());
-                self.ttl = Some(Utc::now() + Duration::days(7));
+
+                // When setting to completed we set the TTL to 7 days if ttl_duration is not set
+                if let Some(duration) = self.ttl_duration {
+                    self.ttl = Some(Utc::now() + Duration::seconds(duration));
+                } else {
+                    self.ttl = Some(Utc::now() + Duration::days(7));
+                }
             }
         }
         self.updated_at = Utc::now();
@@ -296,5 +310,36 @@ fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
             Ok(otel_cx)
         }
         _ => Err(Error::ContextExtractionError),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_task_without_ttl_duration() {
+        let mut task = Task::new("test", "test", 0);
+        task.set_status(TaskStatus::Completed);
+
+        assert!(task.ttl.is_some());
+
+        // TTL should be default value of 7 days
+        let expected_ttl = Utc::now() + Duration::days(7);
+        assert!((task.ttl.unwrap() - expected_ttl).num_seconds() <= 1);
+    }
+
+    #[test]
+    fn test_update_task_with_ttl_duration() {
+        let mut task = Task::new("test", "test", 0);
+        task.ttl_duration = Some(5 * 24 * 60 * 60);
+        task.set_status(TaskStatus::Completed);
+        assert!(
+            task.ttl.is_some(),
+            "TTL should be set when TTL duration is provided"
+        );
+
+        let expected_ttl = Utc::now() + Duration::seconds(5 * 24 * 60 * 60);
+        assert!((task.ttl.unwrap() - expected_ttl).num_seconds() <= 1);
     }
 }
