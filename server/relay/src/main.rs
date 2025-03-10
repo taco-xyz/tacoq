@@ -97,11 +97,11 @@ fn init_tracing() -> Result<impl Drop, Box<dyn std::error::Error>> {
 /// * `config` - The configuration for the database
 async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
     info!(
-        db_url_length = config.db_reader_url.len(),
+        db_url_length = config.db_url.len(),
         "Connecting to database"
     );
 
-    match PgPool::connect(&config.db_reader_url).await {
+    match PgPool::connect(&config.db_url).await {
         Ok(pool) => {
             info!("Successfully connected to database");
             Ok(pool)
@@ -221,28 +221,31 @@ async fn initialize_system(config: &Config) -> Result<AppComponents, Box<dyn std
 
     // Setup message broker
     debug!(
-        broker_addr = %config.broker_addr,
+        broker_url = %config.broker_url,
         queue = %RELAY_QUEUE,
         "Setting up message broker consumer"
     );
-    let new_task_consumer =
-        match setup_consumer_broker::<Task>(&config.broker_addr, RELAY_QUEUE, shutdown.clone())
-            .await
-        {
-            Ok(consumer) => {
-                info!("Message broker consumer initialized successfully");
-                consumer
-            }
-            Err(e) => {
-                error!(
-                    error = %e,
-                    broker_addr = %config.broker_addr,
-                    queue = %RELAY_QUEUE,
-                    "Failed to setup message broker consumer"
-                );
-                return Err(e);
-            }
-        };
+    let new_task_consumer = match setup_consumer_broker::<Task>(
+        &config.broker_url,
+        RELAY_QUEUE,
+        shutdown.clone(),
+    )
+    .await
+    {
+        Ok(consumer) => {
+            info!("Message broker consumer initialized successfully");
+            consumer
+        }
+        Err(e) => {
+            error!(
+                error = %e,
+                broker_url = %config.broker_url,
+                queue = %RELAY_QUEUE,
+                "Failed to setup message broker consumer"
+            );
+            return Err(e);
+        }
+    };
 
     // Setup axum app and state
     debug!("Setting up web application");
