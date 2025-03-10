@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, Local, NaiveDateTime};
 use opentelemetry::propagation::{Extractor, TextMapPropagator};
 use opentelemetry::Context;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
@@ -42,7 +42,7 @@ where
     }
 }
 
-fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -50,17 +50,17 @@ where
 
     // Try parsing with different formats
     if let Ok(dt) = DateTime::parse_from_rfc3339(&s) {
-        return Ok(dt.with_timezone(&Utc));
+        return Ok(dt.naive_local());
     }
 
     // Try parsing microseconds format like "2025-02-14T13:35:07.365122"
     if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%.f%:z") {
-        return Ok(dt.with_timezone(&Utc));
+        return Ok(dt.naive_local());
     }
 
     // Try parsing without fractional seconds
     if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%:z") {
-        return Ok(dt.with_timezone(&Utc));
+        return Ok(dt.naive_local());
     }
 
     Err(serde::de::Error::custom(format!(
@@ -71,7 +71,7 @@ where
 
 fn deserialize_timestamp_optional<'de, D>(
     deserializer: D,
-) -> Result<Option<DateTime<Utc>>, D::Error>
+) -> Result<Option<NaiveDateTime>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -136,17 +136,17 @@ pub struct Task {
 
     // Task status
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
-    pub started_at: Option<DateTime<Utc>>,
-    // #[serde(deserialize_with = "deserialize_timestamp_optional")]
+    pub started_at: Option<NaiveDateTime>,
+    #[serde(deserialize_with = "deserialize_timestamp_optional")]
     pub completed_at: Option<NaiveDateTime>,
 
     pub ttl_duration: i64, // in seconds
 
     // Metadata
     #[serde(deserialize_with = "deserialize_timestamp")]
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
     #[serde(skip)]
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: NaiveDateTime,
 
     // OpenTelemetry context carrier
     pub otel_ctx_carrier: Option<JsonValue>,
@@ -174,8 +174,8 @@ impl Task {
             completed_at: None,
             ttl_duration,
             otel_ctx_carrier: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: Local::now().naive_local(),
+            updated_at: Local::now().naive_local(),
         }
     }
 
@@ -235,7 +235,8 @@ impl Task {
 
     pub fn is_expired(&self) -> bool {
         self.completed_at.is_some()
-            && self.started_at.unwrap() + Duration::seconds(self.ttl_duration) < Utc::now()
+            && self.started_at.unwrap() + Duration::seconds(self.ttl_duration)
+                < Local::now().naive_local()
     }
 }
 

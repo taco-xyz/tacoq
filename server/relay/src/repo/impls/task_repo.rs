@@ -237,7 +237,6 @@ impl TaskRepository for PgTaskRepository {
         let result = match sqlx::query!(
             r#"DELETE FROM tasks
                 WHERE completed_at IS NOT NULL AND completed_at + interval '1 second' * ttl_duration < $1
-                RETURNING id
             "#,
             now,
         )
