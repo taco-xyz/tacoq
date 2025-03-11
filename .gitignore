@@ -6,8 +6,13 @@
 # Python related files
 .venv
 .pytest_cache
+.ruff_cache
+
+# Rust Files
+**/target
 
 # General files
 .env
 .env.local
+.benchmarks/
 __pycache__/
