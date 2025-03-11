@@ -8,8 +8,7 @@ FROM chef AS planner
 WORKDIR /app
 
 # Copy workspace files first
-COPY Cargo.toml Cargo.lock ./
-COPY server/relay ./server/relay
+COPY . .
 
 # Create recipe
 RUN cargo chef prepare --recipe-path recipe.json
@@ -28,8 +27,7 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Copy the whole workspace structure
-COPY Cargo.toml Cargo.lock ./
-COPY server/relay ./server/relay
+COPY . .
 
 # Build the specific service
 ENV SQLX_OFFLINE=true
