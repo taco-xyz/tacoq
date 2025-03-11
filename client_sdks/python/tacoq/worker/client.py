@@ -8,7 +8,6 @@ import asyncio
 import json
 from datetime import datetime
 from typing import Awaitable, Callable, Dict, Optional
-from venv import create
 
 from aio_pika.abc import (
     AbstractIncomingMessage,
