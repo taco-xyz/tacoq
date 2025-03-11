@@ -24,25 +24,25 @@ impl Config {
         load_env();
         info!("Initializing application configuration");
 
-        let broker_url = match std::env::var("BROKER_URL") {
+        let broker_url = match std::env::var("TACOQ_BROKER_URL") {
             Ok(val) => {
                 debug!(broker_url = %val, "Loaded broker address");
                 val
             }
             Err(e) => {
-                error!(error = %e, "Failed to load BROKER_URL environment variable");
-                panic!("Environment variable BROKER_URL is missing");
+                error!(error = %e, "Failed to load TACOQ_BROKER_URL environment variable");
+                panic!("Environment variable TACOQ_BROKER_URL is missing");
             }
         };
 
-        let db_url = match std::env::var("DATABASE_URL") {
+        let db_url = match std::env::var("TACOQ_DATABASE_URL") {
             Ok(val) => {
                 debug!(db_url_length = val.len(), "Loaded database reader URL");
                 val
             }
             Err(e) => {
-                error!(error = %e, "Failed to load DATABASE_URL environment variable");
-                panic!("Environment variable DATABASE_URL is missing");
+                error!(error = %e, "Failed to load TACOQ_DATABASE_URL environment variable");
+                panic!("Environment variable TACOQ_DATABASE_URL is missing");
             }
         };
 

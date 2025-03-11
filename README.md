@@ -63,8 +63,8 @@ services:
       timeout: 5s
       retries: 5
     environment:
-      DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
-      BROKER_URL: amqp://user:password@localhost:5672
+      TACOQ_DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_BROKER_URL: amqp://user:password@localhost:5672
 
   # ================================================
   # Broker
