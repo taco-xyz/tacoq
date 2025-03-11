@@ -10,5 +10,4 @@
 # General files
 .env
 .env.local
-.env.docker
 __pycache__/
