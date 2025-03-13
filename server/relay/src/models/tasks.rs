@@ -235,7 +235,7 @@ impl Task {
 
     pub fn is_expired(&self) -> bool {
         self.completed_at.is_some()
-            && self.started_at.unwrap() + Duration::seconds(self.ttl_duration)
+            && self.completed_at.unwrap() + Duration::seconds(self.ttl_duration)
                 < Local::now().naive_local()
     }
 }

@@ -258,7 +258,7 @@ impl TaskRepository for PgTaskRepository {
 
 #[cfg(test)]
 mod tests {
-    use sqlx::types::chrono::Utc;
+    use chrono::Local;
     use sqlx::PgPool;
     use uuid::Uuid;
 
@@ -274,7 +274,7 @@ mod tests {
 
     /// Creates a test task
     fn get_test_task() -> Task {
-        Task::new("TaskKindName", "WorkerKindName", 0)
+        Task::new("TaskKindName", "WorkerKindName", 0, 0)
             .with_input_data(vec![1, 2, 3])
             .with_output_data(vec![4, 5, 6])
             .with_error(false)
@@ -320,22 +320,26 @@ mod tests {
 
         // Simulate that the task is now in progress and try to update it
         let mut task = task.clone();
-        task.started_at = Some(Utc::now());
+
+        task.status = TaskStatus::Processing;
+
         let updated = repo.update_task(&task).await.unwrap();
         assert_eq!(updated.id, task.id, "Updated Task ID should match");
-        assert!(
-            updated.started_at.is_some(),
-            "Task was created with started_at = true, so it should be in progress",
+        assert_eq!(
+            updated.status,
+            TaskStatus::Processing,
+            "Task was set to Processing, so it should be in progress",
         );
 
         // Now attempt to set it to pending again and check if it does anything
         let mut task = task.clone();
-        task.started_at = None;
+        task.status = TaskStatus::Pending;
         let updated = repo.update_task(&task).await.unwrap();
         assert_eq!(updated.id, task.id, "Updated Task ID should match");
-        assert!(
-            updated.started_at.is_some(),
-            "Task was updated with started_at = None, but the update should not go through"
+        assert_eq!(
+            updated.status,
+            TaskStatus::Processing,
+            "Task was already updated to Processing, so status should not change back Pending"
         );
     }
 
@@ -376,7 +380,10 @@ mod tests {
         let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
 
         let mut task = get_test_task();
-        task.ttl = Some(Utc::now() - chrono::Duration::days(1));
+
+        // Set completed at one day ago
+        task.completed_at = Some(Local::now().naive_local() - chrono::Duration::days(1));
+
         worker_kind_repo
             .get_or_create_worker_kind(&task.worker_kind)
             .await

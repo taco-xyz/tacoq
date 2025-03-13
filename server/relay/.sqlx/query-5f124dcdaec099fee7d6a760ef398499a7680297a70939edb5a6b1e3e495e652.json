@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                executed_by, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
+  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                executed_by, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -31,55 +31,50 @@
       {
         "ordinal": 5,
         "name": "started_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 6,
         "name": "completed_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 7,
-        "name": "ttl",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 8,
         "name": "ttl_duration",
         "type_info": "Int8"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "worker_kind!",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "executed_by",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 12,
-        "name": "updated_at",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 13,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 14,
+        "ordinal": 13,
         "name": "priority",
         "type_info": "Int4"
       },
       {
-        "ordinal": 15,
+        "ordinal": 14,
         "name": "otel_ctx_carrier",
         "type_info": "Jsonb"
       }
@@ -97,8 +92,7 @@
       false,
       true,
       true,
-      true,
-      true,
+      false,
       false,
       true,
       false,
@@ -108,5 +102,5 @@
       true
     ]
   },
-  "hash": "76d197a96bf6ad64f870223f25024b1dc4e379cf200838ae445e8b78dbe12dc5"
+  "hash": "5f124dcdaec099fee7d6a760ef398499a7680297a70939edb5a6b1e3e495e652"
 }

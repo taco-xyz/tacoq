@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM tasks\n                WHERE completed_at IS NOT NULL AND completed_at + interval '1 second' * ttl_duration < $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "12bcc154551da923916731a64b54f6d98085d154de19a66c566b003b58496ddc"
+}

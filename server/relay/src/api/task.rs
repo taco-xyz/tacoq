@@ -70,7 +70,8 @@ async fn get_task_by_id(
         if task.is_expired() {
             info!(
                 task_id = %id,
-                ttl = ?task.ttl,
+                ttl_duration = ?task.ttl_duration,
+                completed_at = ?task.completed_at,
                 "Task is expired, deleting"
             );
 
@@ -138,6 +139,7 @@ async fn get_task_by_id(
 mod test {
     use crate::models::{Task, TaskStatus};
     use axum::http::StatusCode;
+    use chrono::Local;
     use sqlx::PgPool;
     use uuid::Uuid;
 
@@ -156,7 +158,7 @@ mod test {
     }
 
     fn get_test_task() -> Task {
-        Task::new("TaskKindName", "WorkerKindName", 0)
+        Task::new("TaskKindName", "WorkerKindName", 0, 0)
             .with_input_data(vec![1, 2, 3])
             .with_output_data(vec![4, 5, 6])
             .with_error(false)
@@ -204,7 +206,7 @@ mod test {
 
         let mut test_task = get_test_task();
         test_task.status = TaskStatus::Completed;
-        test_task.ttl = Some(chrono::Utc::now() - chrono::Duration::days(1));
+        test_task.completed_at = Some(Local::now().naive_local() - chrono::Duration::days(1));
 
         worker_kind_repository
             .get_or_create_worker_kind(&test_task.worker_kind)
