@@ -13,13 +13,34 @@ import { TooltipProvider } from "@/app/components/sidebar/context/TooltipContext
 import { PageTreeProvider } from "@/contexts/PageTreeContext";
 import { PageNavigationProvider } from "@/app/components/sidebar/context/PageNavigationContext";
 
+// Fonts Imports
+import { Geist, Geist_Mono } from "next/font/google";
+
+// Utils Imports
+import clsx from "clsx";
+
+// Fonts
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={clsx(geistSans.variable, geistMono.variable, "dark")}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
