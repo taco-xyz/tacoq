@@ -19,11 +19,12 @@ interface HeadingProps {
   id: string;
   Level: HeadingTypes;
   children: React.ReactNode;
+  className: string;
 }
 
 const headingStyles = {
   [HeadingTypes.H1]:
-    "text-4xl font-bold tracking-tight dark:text-white text-zinc-700 text-start",
+    "text-4xl font-semibold tracking-tight dark:text-white text-zinc-700 text-start",
   [HeadingTypes.H2]:
     "text-3xl font-semibold tracking-tight dark:text-white text-zinc-700 text-start",
   [HeadingTypes.H3]:
@@ -36,7 +37,7 @@ const headingStyles = {
     "text-base font-[450] tracking-normal dark:text-zinc-300 text-zinc-600 text-start",
 };
 
-export default function Heading({ id, Level, children }: HeadingProps) {
+export default function Heading({ id, Level, children, className }: HeadingProps) {
   const router = useRouter();
 
   // Clicking on a heading title will scroll to it
@@ -64,7 +65,8 @@ export default function Heading({ id, Level, children }: HeadingProps) {
         id={id}
         className={clsx(
           headingStyles[Level],
-          "transition-colors duration-150 ease-in-out scroll-mt-[94px]" // 94px scroll offset to account for the topbar
+          "transition-colors duration-150 ease-in-out scroll-mt-[94px]", // 94px scroll offset to account for the topbar
+          className
         )}
       >
         {children}
