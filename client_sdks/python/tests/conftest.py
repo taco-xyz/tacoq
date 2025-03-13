@@ -11,7 +11,7 @@ from opentelemetry.sdk.trace.export import (
 )
 from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
 from tacoq.core.infra.broker import BrokerConfig
-from tacoq.core.infra.relay import RelayClient, RelayConfig
+from tacoq.relay import RelayClient, RelayConfig
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.publisher import PublisherClient
 from tacoq.worker import WorkerApplicationConfig
@@ -76,7 +76,7 @@ def create_test_span():
 
 
 ## ==============================
-## Manager Fixtures
+## Relay Fixtures
 ## ==============================
 
 
@@ -86,9 +86,10 @@ def relay_config() -> RelayConfig:
     return RelayConfig(url=RELAY_TEST_URL)
 
 
-@pytest.fixture(scope="session")
-def relay_client(relay_config: RelayConfig) -> RelayClient:
-    return RelayClient(config=relay_config)
+@pytest.fixture
+async def relay_client(relay_config: RelayConfig) -> AsyncGenerator[RelayClient, None]:
+    async with RelayClient(config=relay_config) as client:
+        yield client
 
 
 @pytest.fixture
@@ -116,14 +117,11 @@ def broker_config() -> BrokerConfig:
 
 @pytest.fixture
 async def publisher_client(
-    relay_config: RelayConfig,
     broker_config: BrokerConfig,
 ) -> AsyncGenerator[PublisherClient, None]:
     """Fixture that provides a configured PublisherClient instance."""
 
-    async with PublisherClient(
-        relay_config=relay_config, broker_config=broker_config
-    ) as client:
+    async with PublisherClient(broker_config=broker_config) as client:
         yield client
 
 
@@ -144,7 +142,6 @@ def worker_config(
     return WorkerApplicationConfig(
         kind=WORKER_KIND_NAME,
         name=WORKER_NAME,
-        relay_config=relay_config,
         broker_config=broker_config,
         broker_prefetch_count=broker_prefetch_count,
     )

@@ -5,10 +5,8 @@ volumes:
 services:
   # Main App
 
-  tacoq:
-    build:
-      context: .
-      dockerfile: server/relay/Dockerfile
+  tacoq-relay:
+    build: ../server/relay
     ports:
       - "3000:3000"
     depends_on:
@@ -21,8 +19,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    env_file:
-      - server/relay/.env.docker
+    environment:
+      TACOQ_DATABASE_URL: postgresql://user:password@postgres:5432/tacoq
+      TACOQ_BROKER_URL: amqp://user:password@rabbitmq:5672
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+      OTEL_SERVICE_NAME: tacoq.relay
 
   # Queue
 
