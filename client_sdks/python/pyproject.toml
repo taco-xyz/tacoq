@@ -1,7 +1,7 @@
 [project]
 name = "tacoq"
-version = "0.1.0"
-description = "Python SDK to interact with the TacoQ Service API"
+version = "0.2.2"
+description = "Python SDK to interact with the TacoQ task queue."
 readme = "README.md"
 authors = [
     { name="Manuel Costa" },
@@ -16,19 +16,34 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "aio-pika>=9.5.3",
+    "aiohttp-retry>=2.9.1",
     "aiohttp>=3.11.8",
-    "aioredis>=2.0.1",
+    "aioresponses>=0.7.8",
     "click>=8.1.7",
+    "opentelemetry-api>=1.30.0",
+    "pydantic>=2.10.5",
+    "pytest-timeout>=2.3.1",
     "uuid>=1.30",
     "watchfiles>=1.0.3",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["."]
 markers = [
-    "bench: benchmark a function",
+    "target: current target test. Used locally.",
+    "unit: unit tests",
+    "service: tests that interact with external services",
+    "e2e: end-to-end tests",
+    "priority: tests that test priority",
+    "workers: tests that test multiple workers",
+    "one: run this test by itself. Used for quick test targeting.",
 ]
+filterwarnings = [
+    "ignore:Unused async fixture loop scope:pytest.PytestWarning"
+]
+
 
 [build-system]
 requires = ["setuptools"]
@@ -36,12 +51,13 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3.4",
-    "pytest-asyncio>=0.24.0",
-    "pytest-benchmark>=5.1.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.25.3",
     "pytest-xdist>=3.6.1",
+    "opentelemetry-sdk>=1.30.0",
+    "opentelemetry-exporter-otlp>=1.30.0",
 ]
 
 [project.scripts]
-tacoq = "cli.cli:cli"
+tacoq = "tacoq.worker.cli.cli:cli"
 

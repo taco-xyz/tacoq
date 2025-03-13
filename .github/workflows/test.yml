@@ -5,9 +5,7 @@ on:
     branches:
       - main
 
-
 jobs:
-
   # =================================================
   # Build & Image Upload
   # =================================================
@@ -25,10 +23,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: server/services/manager/Dockerfile
+          file: server/relay/Dockerfile
           target: builder
           outputs: type=docker,dest=/tmp/app-image.tar
-          tags: tacoq-manager:latest
+          tags: tacoq-relay:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -82,7 +80,7 @@ jobs:
         run: |
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
-            tacoq-manager cargo test --release --all-features
+            tacoq-relay cargo test --release --all-features
 
   # =================================================
   # SDK Tests

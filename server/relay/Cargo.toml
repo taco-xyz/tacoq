@@ -1,0 +1,46 @@
+[package]
+name = "relay"
+version = "0.2.0"
+edition = "2021"
+description = "The relay is a monolithic service that handles communication with the database, distributing tasks among workers, and communicating with the database."
+
+[dependencies]
+async-trait = "0.1.83"
+dotenv = "0.15.0"
+futures = "0.3.31"
+tracing = "0.1.40"
+tokio = { version = "1.41.1", features = ["full"] }
+axum = { version = "0.8.1", features = ["macros", "tracing"] }
+uuid = { version = "1.11.0", features = ["serde", "v4"] }
+sqlx = { version = "0.8.2", features = [
+    "runtime-tokio",
+    "postgres",
+    "uuid",
+    "json",
+    "chrono",
+] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+utoipa = { version = "5.3.1", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-axum = "0.2.0"
+time = { version = "0.3.36", features = ["serde"] }
+axum-tracing-opentelemetry = "0.26.1"
+init-tracing-opentelemetry = { version = "0.27.1", features = [
+  "otlp",
+  "tracing_subscriber_ext",
+] }
+mockall = "0.13.1"
+chrono = { version = "0.4.39", features = ["serde"] }
+base64 = "0.22.1"
+opentelemetry = "0.28.0"
+opentelemetry_sdk = "0.28.0"
+tracing-opentelemetry = "0.29.0"
+strum_macros = "0.27.1"
+lapin = "2.5.0"
+strum = { version = "0.27.1", features = ["derive"] }
+thiserror = "2.0.12"
+
+[dev-dependencies]
+ctor = "0.4.0"
+axum-test = "17.0.1"

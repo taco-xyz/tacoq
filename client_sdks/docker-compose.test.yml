@@ -1,14 +1,13 @@
 services:
   tacoq:
-    image: tacoq-manager:latest
-    entrypoint: [/app/target/release/manager]
+    image: tacoq-relay:latest
+    entrypoint: [/app/target/release/relay]
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres:5432/tacoq
-      - TACOQ_BROKER_ADDR=amqp://user:password@rabbitmq:5672
-      - TACOQ_DATABASE_READER_URL=postgresql://user:password@postgres:5432/tacoq
-      - TACOQ_DATABASE_WRITER_URL=postgresql://user:password@postgres:5432/tacoq
+      - TACOQ_DATABASE_URL=postgresql://user:password@postgres:5432/tacoq
+      - DATABASE_URL=postgresql://user:password@postgres:5432/tacoq # FIXME: Necessary for SQLX migrations 
+      - TACOQ_BROKER_URL=amqp://user:password@rabbitmq:5672
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s

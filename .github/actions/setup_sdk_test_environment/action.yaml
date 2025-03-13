@@ -1,11 +1,11 @@
-name: 'Setup Test Environment'
-description: 'Sets up the test environment with Docker and database'
+name: "Setup Test Environment"
+description: "Sets up the test environment with Docker and database"
 
 inputs:
   artifact-path:
-    description: 'Path to the Docker image artifact'
+    description: "Path to the Docker image artifact"
     required: true
-    default: '/tmp'
+    default: "/tmp"
 
 runs:
   using: "composite"
@@ -33,5 +33,5 @@ runs:
         docker compose -f docker-compose.test.yml exec tacoq /bin/bash -c "
           cargo install sqlx-cli --no-default-features --features postgres &&
           cargo sqlx database create &&
-          cargo sqlx migrate run --source ./server/libs/db-common/migrations
+          cargo sqlx migrate run --source ./server/relay/migrations
         "
