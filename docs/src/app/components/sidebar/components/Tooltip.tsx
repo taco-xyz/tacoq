@@ -112,7 +112,7 @@ export default function Tooltip() {
         {/* Hot-key Info */}
         <div className="flex flex-row items-center justify-start px-2.5 py-2.5 border-t-[1.5px] dark:border-white/10 border-zinc-100 w-full overflow-hidden">
           <div className="flex flex-row items-center gap-x-1.5 pr-10">
-            <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer p-1 rounded-md whitespace-nowrap font-semibold text-xs">
+            <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer p-1 rounded-md">
               <ArrowUpIcon className="size-3" />
 
               <ArrowDownIcon className="size-3" />
@@ -131,10 +131,10 @@ export default function Tooltip() {
             <div
               className={clsx(
                 "flex flex-row items-center gap-x-1.5 transition-all duration-200 ease-in-out",
-                content.isFolder ? " w-[187px] pr-10" : "w-0"
+                content.isFolder ? " w-[191px] pr-10" : "w-0"
               )}
             >
-              <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer p-1 rounded-md whitespace-nowrap font-semibold text-xs">
+              <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer p-1 rounded-md whitespace-nowrap">
                 <ArrowLeftIcon className="size-3" />
 
                 <ArrowRightIcon className="size-3" />
@@ -142,7 +142,7 @@ export default function Tooltip() {
               <p className="text-xs font-normal text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                 or
               </p>
-              <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer py-0.5 px-1.5 rounded-md whitespace-nowrap font-semibold text-xs">
+              <div className="dark:text-white/70 flex items-center font-mono justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer py-0.5 px-1.5 rounded-md whitespace-nowrap font-medium text-xs">
                 Space
               </div>
               <p className="text-xs font-normal text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
@@ -160,10 +160,10 @@ export default function Tooltip() {
             <div
               className={clsx(
                 "flex flex-row items-center gap-x-1.5 transition-all duration-200 ease-in-out",
-                content.isUrl ? "w-[91px] pr-10" : "w-0"
+                content.isUrl ? "w-[142px] pr-10" : "w-0"
               )}
             >
-              <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer py-0.5 px-1.5 rounded-md whitespace-nowrap font-semibold text-xs">
+              <div className="dark:text-white/70 flex items-center font-mono justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer py-0.5 px-1.5 rounded-md whitespace-nowrap font-medium text-xs">
                 Enter
               </div>
               <p className="text-xs font-normal text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
