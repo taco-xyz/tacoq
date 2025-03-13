@@ -8,7 +8,11 @@ import React, {
   useState,
   useRef,
   useEffect,
+  useLayoutEffect,
+  useMemo,
 } from "react";
+
+// Context Imports
 import { usePageNavigation } from "./PageNavigationContext";
 import { usePageTree } from "../../../../contexts/PageTreeContext";
 
@@ -26,7 +30,11 @@ export interface TooltipContent {
 
 export interface TooltipAppearance {
   /** Vertical position relative to parent container */
-  topPosition: number;
+  topPosition: number | null;
+  /** Wether the tooltip should be positioned at the top or bottom of the tooltip*/
+  arrowPosition: "top" | "bottom" | null;
+  /** Horizontal position relative to parent container */
+  leftPosition: number | null;
   /** Whether the tooltip should be visible */
   visible: boolean;
   /** Direction of the tooltip animation */
@@ -52,10 +60,6 @@ export interface TooltipProps {
 export interface TooltipContextType {
   /** Current tooltip appearance properties */
   tooltipProps: TooltipProps;
-  /** Reference to the parent element for tooltip positioning */
-  tooltipParentRef: React.RefObject<HTMLDivElement | null>;
-  /** Reference to the target element for tooltip positioning */
-  tooltipTargetRef: React.RefObject<HTMLDivElement | null>;
   /** Reference to the content container element for dynamic height transition*/
   contentContainerRef: React.RefObject<HTMLDivElement | null>;
   /** Reference to the current content container element for dynamic height transition*/
@@ -78,31 +82,42 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  */
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
   // Extract the page tree context
-  const { getPageByTitle } = usePageTree();
+  const { getPageByTitle, visiblePagesTitles } = usePageTree();
 
   // Extract the page navigation context
-  const { focusedPageTitle } = usePageNavigation();
+  const { focusedPageTitle, sidebarContainerRef, currentFocusedPageRef } =
+    usePageNavigation();
 
-  // Initial tooltip state
-  const [tooltipProps, setTooltipProps] = useState<TooltipProps>({
-    content: {
+  // State to manage the tooltip content, including both current and previous content
+  const [contentState, setContentState] = useState<{
+    current: TooltipContent;
+    previous?: TooltipContent;
+  }>({
+    current: {
       title: "",
       isUrl: false,
       isFolder: false,
     },
-    appearance: {
-      topPosition: 0,
-      visible: false,
-      animationDirection: null,
-    },
-
   });
 
-  // Ref for managing tooltip parent
-  const tooltipParentRef = useRef<HTMLDivElement | null>(null);
+  // State to manage the tooltip appearance
+  const [appearanceState, setAppearanceState] = useState<TooltipAppearance>({
+    leftPosition: null,
+    topPosition: null,
+    arrowPosition: null,
+    visible: false,
+    animationDirection: null,
+  });
 
-  // Ref for managing tooltip target element
-  const tooltipTargetRef = useRef<HTMLDivElement | null>(null);
+  // Combine the content and appearance state into a single object
+  const tooltipProps = useMemo(
+    () => ({
+      content: contentState.current,
+      previousContent: contentState.previous,
+      appearance: appearanceState,
+    }),
+    [contentState, appearanceState]
+  );
 
   // Ref for managing hide animation timeout
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,56 +128,60 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
   // Ref for managing current content container element
   const currentContentContainerRef = useRef<HTMLDivElement>(null);
 
-  const showTooltip = useCallback(
-    ({ newContent }: { newContent: TooltipContent }) => {
-      // Cancel any pending hide animations
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-
-      // Calculate and update tooltip position
-      if (tooltipParentRef.current && tooltipTargetRef.current) {
-        const parentRect = tooltipParentRef.current.getBoundingClientRect();
-        const targetRect = tooltipTargetRef.current.getBoundingClientRect();
-        const newRelativeTop = targetRect.top - parentRect.top;
-
-        setTooltipProps((prev) => ({
-          previousContent: prev.content,
-          content: newContent,
-          appearance: {
-            topPosition: newRelativeTop,
-            visible: true,
-            animationDirection:
-              newRelativeTop === prev.appearance.topPosition
-                ? null
-                : newRelativeTop > prev.appearance.topPosition
-                ? "down"
-                : "up",
-          },
-        }));
-      }
-    },
-    []
-  );
+  const showTooltip = useCallback((newContent: TooltipContent) => {
+    // Cancel any existing hide animations
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+    // Set the new content and make the tooltip visible
+    setContentState((prev) => ({
+      previous: prev.current,
+      current: newContent,
+    }));
+    setAppearanceState((prev) => ({
+      ...prev,
+      visible: true,
+    }));
+  }, []);
 
   const hideTooltip = useCallback(() => {
     // Cancel any existing hide animations
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
     }
-
-    // Start new hide animation
+    // Hide tooltip after a delay
     hideTimeoutRef.current = setTimeout(() => {
-      setTooltipProps((prev) => ({
-        content: prev.content,
-        previousContent: prev.previousContent,
-        appearance: {
-          ...prev.appearance,
-          visible: false,
-        },
+      // Hide tooltip
+      setAppearanceState((prev) => ({
+        ...prev,
+        visible: false,
       }));
     }, 150);
   }, []);
+
+  const hideTooltipInstantly = useCallback(() => {
+    // Cancel any existing hide animations
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+    // Hide tooltip immediately
+    setAppearanceState((prev) => ({
+      ...prev,
+      visible: false,
+    }));
+  }, []);
+
+  // Hide the tooltip when scrolling the whole page or wheelling the sidebar container to avoid weird overlapping behavior
+  useEffect(() => {
+    const sidebarRef = sidebarContainerRef.current;
+    sidebarRef?.addEventListener("wheel", hideTooltipInstantly);
+
+    window.addEventListener("scroll", hideTooltipInstantly);
+    return () => {
+      sidebarRef?.removeEventListener("wheel", hideTooltipInstantly);
+      window.removeEventListener("scroll", hideTooltipInstantly);
+    };
+  }, [hideTooltipInstantly, sidebarContainerRef]);
 
   // Transform the tooltip when the focused page changes
   useEffect(() => {
@@ -178,39 +197,101 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     }
 
     showTooltip({
-      newContent: {
-        title: focusedPage.metadata.title,
-        description: focusedPage.metadata.description,
-        isUrl: focusedPage.url !== undefined,
-        isFolder: focusedPage.children !== undefined,
-      },
-
+      title: focusedPage.metadata.title,
+      description: focusedPage.metadata.description,
+      isUrl: focusedPage.url !== undefined,
+      isFolder: focusedPage.children !== undefined,
     });
   }, [focusedPageTitle, showTooltip, hideTooltip, getPageByTitle]);
 
-  // Update parent container height when child content changes
-  useEffect(() => {
+  // Update tooltip appearance when it's content changes or when it's set to visible
+  useLayoutEffect(() => {
     if (!currentContentContainerRef.current) return;
 
-    // Observe changes in height of the current content
+    // Create a resize observer to monitor the height of the tooltip content
     const resizeObserver = new ResizeObserver((entries) => {
-      if (!contentContainerRef.current) return;
+      // Return if any of the dependencies are not available or if the tooltip is not visible
+      if (
+        !currentFocusedPageRef.current ||
+        !sidebarContainerRef.current ||
+        !contentContainerRef.current ||
+        !appearanceState.visible
+      ) {
+        return;
+      }
+
       for (const entry of entries) {
-        // Update the height of the parent container to match the current content
-        contentContainerRef.current.style.height = `${entry.contentRect.height}px`;
+        // Measure the new height of the tooltip content and update it to ensure a smooth height transition
+        const height = entry.contentRect.height;
+        contentContainerRef.current.style.height = `${height}px`;
+
+        // Get the position of the target page element and the sidebar container element
+        const targetRect =
+          currentFocusedPageRef.current.getBoundingClientRect();
+        const sidebarRect = sidebarContainerRef.current.getBoundingClientRect();
+
+        // Calculate the whole height of the tooltip including the fixed height content (Hot-keys)
+        const tooltipFixedContentHeight = 60;
+        const tooltipHeight = height + tooltipFixedContentHeight;
+
+        // Calculate if sidebar overflow happens if the tooltip is positioned relative to the top of the target element
+        const wouldOverflow =
+          targetRect.top + tooltipHeight >= sidebarRect.bottom;
+
+        // Calculate the new top position of the tooltip
+        const newTopPosition = wouldOverflow
+          ? targetRect.bottom - tooltipHeight + 1
+          : targetRect.top + 1;
+
+        const getAnimationDirection = (
+          currentTitle: string,
+          previousTitle?: string
+        ) => {
+          //If there's no previous top position we're focusing for the first time on the tooltip
+          if (!previousTitle || currentTitle === previousTitle) return null;
+
+          // Fetch the index of the current and previous focused page
+          const currentIndex = visiblePagesTitles.indexOf(currentTitle);
+          const previousIndex = visiblePagesTitles.indexOf(previousTitle);
+
+          // If the current index is greater than the previous index, the tooltip should animate down
+          if (currentIndex > previousIndex) return "down";
+          //If the new top position is above the previous top position, the tooltip should animate up
+          return "up";
+        };
+
+        // Update positioning in state
+        setAppearanceState((prev) => ({
+          ...prev,
+          // If the tooltip would overflow, position it at the bottom of the target element, otherwise position it at the top
+          topPosition: newTopPosition,
+          // If the tooltip would overflow, position the arrow at the bottom of the tooltip, otherwise position it at the top
+          arrowPosition: wouldOverflow ? "bottom" : "top",
+          // Position the tooltip to the right of the target element with a small offset
+          leftPosition: targetRect.right + 16,
+          // Set the direction of the tooltip animation
+          animationDirection: getAnimationDirection(
+            contentState.current.title,
+            contentState.previous?.title
+          ),
+        }));
       }
     });
 
     resizeObserver.observe(currentContentContainerRef.current);
     return () => resizeObserver.disconnect();
-  }, [tooltipProps.content]);
+  }, [
+    contentState,
+    appearanceState.visible,
+    currentFocusedPageRef,
+    sidebarContainerRef,
+    visiblePagesTitles,
+  ]);
 
   return (
     <TooltipContext.Provider
       value={{
         tooltipProps,
-        tooltipParentRef,
-        tooltipTargetRef,
         contentContainerRef,
         currentContentContainerRef,
       }}

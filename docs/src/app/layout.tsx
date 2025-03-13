@@ -4,8 +4,8 @@ import "./globals.css";
 // Components Imports
 import { TopBar } from "./components/topbar/TopBar";
 import { Footer } from "./components/Footer";
-import SideBar from "./components/sidebar/SideBar";
-import DocsPageLayout from "./components/DocsPageLayout";
+import DesktopSideBar from "./components/sidebar/DesktopSideBar";
+import DocsPageLayout from "./components/docs-page-layout/DocsPageLayout";
 import PageLinksBar from "./components/PageLinksBar";
 
 // Context imports
@@ -34,26 +34,31 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="flex pt-[76px] pb-[68px] items-center text-zinc-700 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
+      <body className="flex items-center text-zinc-700 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
         <PageTreeProvider>
-          <div className="fixed top-0 w-full z-10">
+          {/* Topbar */}
+          <div className="sticky top-0 w-full z-10">
             <TopBar />
           </div>
-          <div className="flex flex-row items-start justify-between gap-x-20 w-full max-w-(--breakpoint-2xl) relative py-8 px-8 ">
-            <div className="flex h-[700px] flex-col w-64 sticky top-[108px] z-1">
+          <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative md:py-8 px-8 ">
+            {/* Sidebar - height is calculated to account for the topbar and bottom padding */}
+            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
               <PageNavigationProvider>
                 <TooltipProvider>
-                  <SideBar />
+                  <DesktopSideBar className="py-6" />
                 </TooltipProvider>
               </PageNavigationProvider>
             </div>
-            <div className="z-0 w-full flex-1">
+            {/* Page */}
+            <div className="z-0 w-full flex-1 py-6">
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
-            <div className="flex h-[500px] flex-col w-64 sticky top-[108px] z-1">
-              <PageLinksBar />
+            {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}
+            <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden">
+              <PageLinksBar className="py-6" />
             </div>
           </div>
+          {/* Footer */}
           <div className="absolute top-full w-full">
             <Footer />
           </div>
