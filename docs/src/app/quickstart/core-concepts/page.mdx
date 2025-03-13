@@ -32,7 +32,6 @@ The message broker carries task assignments, updates, and results across the
 entire TacoQ system. The broker is also responsible for routing the tasks to the
 correct set of workers based on its properties. 
 
-> [!NOTE]
 > TacoQ uses [RabbitMQ](https://www.rabbitmq.com/) as its message broker.
 
 ## Workers
@@ -40,7 +39,6 @@ correct set of workers based on its properties.
 Workers receive task assignments from the message broker, execute them, and then
 send the result back through the message broker so they can be stored in the database.
 
-> [!NOTE]
 > TacoQ uses [Postgres](https://www.postgresql.org/) as its database.
 
 ## Publishers

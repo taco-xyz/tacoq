@@ -48,10 +48,8 @@ services:
       timeout: 5s
       retries: 5
     environment:
-      DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_DATABASE_READER_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_DATABASE_WRITER_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_BROKER_ADDR: amqp://user:password@localhost:5672
+      TACOQ_DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
+      TACOQ_BROKER_URL: amqp://user:password@localhost:5672
 
   # ================================================
   # Broker
@@ -96,10 +94,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
 ```
 
-Now, just run `docker compose up` to start the services.
+Run `docker compose up` to start the services and we're ready to go!
 
 # Client
 
@@ -110,6 +107,13 @@ execute tasks. Let's start by installing the TacoQ Python SDK:
 
 ```bash
 pip install tacoq
+```
+
+or, for UV users:
+
+```bash
+uv init
+uv add tacoq
 ```
 
 The worker must know how to contact the relay and the message broker, so we must
@@ -133,7 +137,6 @@ worker_config = WorkerApplicationConfig(
 worker_app = WorkerApplication(config=worker_config)
 ```
 
-> [!NOTE]
 > Note that the worker field `kind` is set to `"worker_waiter_kind"`. This 
 > field will be used by the publisher to know which set of workers to send 
 > the task to. We recommend using environment variables to align these values.
@@ -167,7 +170,6 @@ async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
     )
 ```
 
-> [!NOTE]
 > Note the task field `kind` is set to `"task_wait_n_seconds"`. You can 
 > think about it the following way:
 > - Worker Kind: Helps the publisher know which set of workers to send the task to.
@@ -191,23 +193,19 @@ for it to take care of!
 
 ## Publisher
 
-We'll start by setting up the publisher and its configuration:
-
-- It must know how to communicate with the message broker so that it can publish
-  tasks to the worker.
-- It must know how to communicate with the relay so that it can retrieve the
-  results of the task after it has been completed and sent to the relay.
+We'll start by setting up the publisher and its configuration. The publisher's
+one and only responsability is to publish tasks via the message broker so that
+the relay and the worker can take care of the rest.
 
 ```python
-from tacoq import PublisherClient, BrokerConfig, RelayConfig, Task
+from tacoq import PublisherClient, BrokerConfig
 
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
-relay_config = RelayConfig(url="http://localhost:3000")
-publisher = PublisherClient(broker_config=broker_config, relay_config=relay_config)
+publisher = PublisherClient(broker_config=broker_config)
 ```
 
 With the publisher application created, we don't need to run an entrypoint.
-Instead, we will simply use the publisher to publish or retrieve a task.
+Instead, we will simply use the publisher to publish the task.
 
 Let's publish a new task, wait for it to complete, and then retrieve the results:
 
@@ -225,10 +223,32 @@ task = await publisher.publish_task(
     input_data=task_input,
 )
 
+# The task's ID is important for later!
+task_id = task.id
+
+```
+
+Our task has now been published and is being worked on. But how do we retrieve
+the task's status and results?
+
+## RelayClient
+
+When the worker is done with the task, it sends the results to the relay, who
+saves them in the database. The relay can be queried via REST for the task's
+current state.
+
+To communicate with the relay, we can use the `RelayClient` class:
+
+```python
+from tacoq import RelayClient
+
+# The relay's URL is passed as an argument to the constructor.
+relay_client = RelayClient(url="http://localhost:3000")
+
 # We can now fetch retrieve the task's status and results. You can optionally
 # set `retry_until_complete` to `True` to have the publisher retry the request
 # until the task has been completed by the worker.
-completed_task = await publisher.get_task(task.id, retry_until_complete=True)
+completed_task = await relay_client.get_task(task_id)
 
 # Let's load the results into a dictionary and print them.
 result = json.loads(completed_task.results)
@@ -237,6 +257,6 @@ print(result)
 # Hurray!
 ```
 
-Congratulations! You've just published and retrieved a task using TacoQ. You
-can keep learning more about TacoQ in the [Technical Reference](/technical-reference)
+Congratulations! You've just published, executed, and retrieved a task using
+TacoQ. You can keep learning more about TacoQ in the [Technical Reference](/technical-reference)
 section.
