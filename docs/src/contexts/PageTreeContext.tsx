@@ -303,6 +303,8 @@ interface PageTreeContextType {
   anchors: Anchor[];
   /** Footer content */
   footerContent: FooterContent;
+  /** Array of pages that are the breadcrumbs for the current page */
+  breadcrumbs: Page[];
 }
 
 const PageTreeContext = createContext<PageTreeContextType | null>(null);
@@ -441,6 +443,21 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  /**
+   * Memoized breadcrumbs for the current page
+   */
+  const breadcrumbs = useMemo(() => {
+    // Find the parent titles of the current page
+    const parentTitles = findPageAndParents(pages, pathname);
+    // Find the pages that match the parent titles
+    return (
+      parentTitles
+        .map((title) => findPageByTitle(pages, title))
+        // Filter out any null values
+        .filter((page): page is Page => !!page)
+    );
+  }, [pathname]);
+
   return (
     <PageTreeContext.Provider
       value={{
@@ -453,6 +470,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         pages,
         anchors,
         footerContent,
+        breadcrumbs,
       }}
     >
       {children}

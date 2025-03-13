@@ -15,9 +15,16 @@ import clsx from "clsx";
 import { useTooltip } from "@/app/components/sidebar/context/TooltipContext";
 
 export default function Tooltip() {
+  // Extract the tooltip context
   const {
     tooltipProps: {
-      appearance: { topPosition, visible, animationDirection },
+      appearance: {
+        topPosition,
+        arrowPosition,
+        leftPosition,
+        visible,
+        animationDirection,
+      },
       content,
       previousContent,
     },
@@ -28,19 +35,25 @@ export default function Tooltip() {
   return (
     <div
       className={clsx(
-        "absolute dark:bg-zinc-900 bg-white rounded-md flex w-fit flex-col items-center justify-center min-w-72 ring-1 ring-zinc-200 dark:ring-white/10 shadow-sm shadow-zinc-900/10 dark:shadow-white/5",
+        "fixed dark:bg-zinc-900 z-50 bg-white rounded-md flex w-fit flex-col items-center justify-center min-w-72 ring-1 ring-zinc-200 dark:ring-white/10 shadow-sm shadow-zinc-900/10 dark:shadow-white/5",
         "transition-all duration-100 ease-in-out",
         visible
           ? "opacity-100 pointer-events-auto"
           : "opacity-0 pointer-events-none"
       )}
       style={{
-        top: topPosition,
-        left: "105%",
+        top: topPosition ?? undefined,
+        left: leftPosition ?? undefined,
       }}
     >
       {/* Tooltip arrow */}
-      <div className="absolute -left-[6px] top-[10px] dark:bg-zinc-900 bg-white rounded-[1.5px] rounded-r-none rounded-t-none size-2.5 rotate-45 origin-center border-l-[1.5px] border-b-[1.5px] border-zinc-200 dark:border-white/5" />
+      <div
+        className="absolute -left-[5.5px] dark:bg-zinc-900 bg-white rounded-[1.5px] rounded-r-none rounded-t-none size-2.5 rotate-45 origin-center border-l-[1.5px] border-b-[1.5px] border-zinc-200 dark:border-white/5"
+        style={{
+          top: arrowPosition === "top" ? "8px" : undefined,
+          bottom: arrowPosition === "bottom" ? "8px" : undefined,
+        }}
+      />
 
       {/* Tooltip content */}
       <div className="flex flex-col w-full">
