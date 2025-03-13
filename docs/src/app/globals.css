@@ -5,6 +5,9 @@
 
 /* Custom animations */
 @theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
   --animate-slide-in-down: slide-in-down 0.25s ease-in-out forwards;
   --animate-slide-in-up: slide-in-up 0.25s ease-in-out forwards;
   --animate-slide-out-down: slide-out-down 0.25s ease-in-out;

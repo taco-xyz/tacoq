@@ -85,7 +85,7 @@ export function Footer() {
 
       {/* Copyright */}
       <div className="flex flex-row items-center justify-center w-full max-w-(--breakpoint-2xl) py-8 px-8">
-        <p className="text-zinc-400 dark:text-white/40 text-xs">
+        <p className="text-zinc-400 dark:text-white/40 text-xs font-mono">
           &copy; {new Date().getFullYear()} Taco. All rights reserved.
         </p>
       </div>
