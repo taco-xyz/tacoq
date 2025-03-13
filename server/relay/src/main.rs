@@ -101,14 +101,27 @@ async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
         "Connecting to database"
     );
 
-    match PgPool::connect(&config.db_url).await {
+    let pool = match PgPool::connect(&config.db_url).await {
         Ok(pool) => {
             info!("Successfully connected to database");
-            Ok(pool)
+            pool
         }
         Err(e) => {
             error!(error = %e, "Failed to connect to database");
-            Err(e)
+            return Err(e);
+        }
+    };
+
+    // Run migrations on the database
+    debug!("Running database migrations");
+    match sqlx::migrate!("./migrations").run(&pool).await {
+        Ok(_) => {
+            info!("Database migrations completed successfully");
+            Ok(pool)
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to run database migrations");
+            Err(e.into())
         }
     }
 }
