@@ -69,7 +69,7 @@ export default function SearchDialog() {
             />
             <button
               onClick={closeSearch}
-              className="dark:text-white/70 text-zinc-500 transition-all custom-tab-outline-offset-2 hover:text-zinc-700 dark:bg-zinc-950/80 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/5 dark:hover:ring-white/10 dark:hover:text-white/90 bg-zinc-200/40 dark:hover:bg-zinc-950 hover:bg-zinc-200/60 ease-in-out duration-150 cursor-pointer px-2 py-1 rounded-md whitespace-nowrap font-semibold text-xs"
+              className="dark:text-white/70 text-zinc-500 transition-all custom-tab-outline-offset-2 hover:text-zinc-700 dark:bg-zinc-950/80 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/5 dark:hover:ring-white/10 dark:hover:text-white/90 bg-zinc-200/40 dark:hover:bg-zinc-950 hover:bg-zinc-200/60 ease-in-out duration-150 cursor-pointer px-2 py-1 rounded-md whitespace-nowrap font-semibold text-xs font-mono"
             >
               <p className="sm:block hidden">Esc</p>
               <p className="sm:hidden">Close</p>
