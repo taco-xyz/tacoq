@@ -25,14 +25,22 @@ import {
   CreditCardIcon,
 } from "@heroicons/react/24/solid";
 import {
-  ArrowUpTrayIcon,
   BoltIcon,
   CodeBracketIcon,
-  Cog6ToothIcon,
   ComputerDesktopIcon,
   LinkIcon,
-  PencilIcon,
   RocketLaunchIcon,
+  AcademicCapIcon,
+  ArrowDownTrayIcon,
+  BookOpenIcon,
+  BuildingLibraryIcon,
+  CpuChipIcon,
+  AdjustmentsVerticalIcon,
+  ArrowUpIcon,
+  ChevronDoubleRightIcon,
+  PencilSquareIcon,
+  PresentationChartLineIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
 // Custom Icons Imports
@@ -57,29 +65,118 @@ const anchors: Anchor[] = [
 ];
 
 const pages: Page[] = [
+  // Quickstart
   {
     metadata: {
-      title: "Getting Started",
-      description: "Start building your app with the following steps.",
+      title: "Quickstart",
+      description: "Get started using TacoQ",
       sidebar: {
-        title: "Getting Started",
-        Icon: BoltIcon,
+        title: "Quickstart",
+        Icon: RocketLaunchIcon,
       },
     },
     children: [
       {
-        url: "/getting-started/quickstart",
+        url: "/quickstart/core-concepts",
         metadata: {
-          title: "Quickstart",
+          title: "Core Concepts",
           description:
-            "Start building your app with the following steps. Follow these tutorials to get started and you'll be up and running in no time.",
+            "Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.",
           badge: {
-            text: "Getting Started",
+            text: "Quickstart",
           },
-
           sidebar: {
-            title: "Quickstart",
-            Icon: RocketLaunchIcon,
+            title: "Core Concepts",
+            Icon: AcademicCapIcon,
+          },
+        },
+      },
+      {
+        url: "/quickstart/setup",
+        metadata: {
+          title: "Setup",
+          description:
+            "Get TacoQ up and running on your project using Docker and the Python SDK.",
+          badge: {
+            text: "Quickstart",
+          },
+          sidebar: {
+            title: "Setup",
+            Icon: ArrowDownTrayIcon,
+          },
+        },
+      },
+    ],
+  },
+  // Technical Reference
+  {
+    metadata: {
+      title: "Technical Reference",
+      description: "Learn about the technical details of TacoQ.",
+      sidebar: {
+        title: "Technical Reference",
+        Icon: BookOpenIcon,
+      },
+    },
+    children: [
+      {
+        url: "/technical-reference/system-architecture",
+        metadata: {
+          title: "System Architecture",
+          description:
+            "Learn how services interact with each other and why they are structured the way they are.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "System Architecture",
+            Icon: BuildingLibraryIcon,
+          },
+        },
+        content: [
+          { type: HeadingTypes.H1, name: "Interactive Map" },
+          { type: HeadingTypes.H1, name: "System Services" },
+          { type: HeadingTypes.H2, name: "Broker" },
+          { type: HeadingTypes.H3, name: "RabbitMQ Implementation Details" },
+          { type: HeadingTypes.H2, name: "Database" },
+          { type: HeadingTypes.H2, name: "Relay" },
+          { type: HeadingTypes.H3, name: "Task Update Consumer" },
+          { type: HeadingTypes.H3, name: "Data Retrieval" },
+          { type: HeadingTypes.H3, name: "Cleanup" },
+          { type: HeadingTypes.H3, name: "Replication" },
+          { type: HeadingTypes.H3, name: "Rust Implementation Details" },
+          { type: HeadingTypes.H1, name: "User Services" },
+          { type: HeadingTypes.H2, name: "Worker" },
+          { type: HeadingTypes.H2, name: "Publisher" },
+        ],
+      },
+      {
+        url: "/technical-reference/benchmarking",
+        metadata: {
+          title: "Benchmarks",
+          description:
+            "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "Benchmarks",
+            Icon: ChartBarIcon,
+          },
+        },
+      },
+      {
+        url: "/technical-reference/relay-endpoints",
+        metadata: {
+          title: "Relay Endpoints",
+          description:
+            "Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "Relay Endpoints",
+            Icon: CpuChipIcon,
           },
         },
         content: [
@@ -92,147 +189,135 @@ const pages: Page[] = [
         ],
       },
       {
-        url: "/getting-started/editing",
         metadata: {
-          title: "Editing",
-          description: "Edit your content with the web app or local editor.",
+          title: "SDKs",
+          description: "Reference for each of the available SDKs.",
           badge: {
-            text: "Getting Started",
+            text: "Technical Reference",
           },
           sidebar: {
-            title: "Editing",
-            Icon: PencilIcon,
+            title: "SDKs",
+            Icon: ComputerDesktopIcon,
           },
         },
-        content: [
-          { type: HeadingTypes.H1, name: "Editing Your Documentation" },
-          { type: HeadingTypes.H2, name: "Available Editors" },
-          { type: HeadingTypes.H2, name: "File Structure" },
-          { type: HeadingTypes.H2, name: "Best Practices" },
-        ],
         children: [
           {
-            url: "/getting-started/editing/local",
+            url: "/technical-reference/sdks/python",
             metadata: {
-              title: "Local Development",
-              description: "Edit your content with the local editor.",
+              title: "Python SDK",
+              description: "Reference for the Python SDK.",
               badge: {
-                text: "Getting Started",
+                text: "Technical Reference",
               },
               sidebar: {
-                title: "Local Development",
+                title: "Python SDK",
                 Icon: CodeBracketIcon,
               },
             },
-            content: [
-              { type: HeadingTypes.H1, name: "Local Development Setup" },
-              { type: HeadingTypes.H2, name: "Prerequisites" },
-              { type: HeadingTypes.H2, name: "Editor Configuration" },
-              { type: HeadingTypes.H3, name: "VS Code Setup" },
-              { type: HeadingTypes.H3, name: "Extensions" },
-              { type: HeadingTypes.H2, name: "Development Workflow" },
-            ],
-          },
-          {
-            url: "/getting-started/editing/web",
-            metadata: {
-              title: "Web Editor",
-              description: "Edit your content with the web app.",
-              badge: {
-                text: "Getting Started",
-              },
-              sidebar: {
-                title: "Web Editor",
-                Icon: ComputerDesktopIcon,
-              },
-            },
-            content: [
-              { type: HeadingTypes.H1, name: "Web Editor Guide" },
-              { type: HeadingTypes.H2, name: "Getting Started" },
-              { type: HeadingTypes.H2, name: "Interface Overview" },
-              { type: HeadingTypes.H3, name: "Toolbar" },
-              { type: HeadingTypes.H3, name: "Preview Panel" },
-              { type: HeadingTypes.H2, name: "Collaboration Features" },
-            ],
           },
         ],
       },
       {
-        url: "/getting-started/settings",
+        url: "/technical-reference/versioning",
         metadata: {
-          title: "Global Settings",
-          description: "Edit your global settings.",
+          title: "Versioning",
+          description:
+            "Learn how TacoQ handles versioning for images and libraries.",
           badge: {
-            text: "Getting Started",
+            text: "Technical Reference",
           },
           sidebar: {
-            title: "Global Settings",
-            Icon: Cog6ToothIcon,
-          },
-        },
-      },
-      {
-        url: "/getting-started/navigation",
-        metadata: {
-          title: "Navigation",
-          description: "You can customize the navigation of your docs.",
-          badge: {
-            text: "Getting Started",
-          },
-          sidebar: {
-            title: "Navigation",
-            Icon: LinkIcon,
-          },
-        },
-      },
-      {
-        url: "/getting-started/migration",
-        metadata: {
-          title: "Migration",
-          description: "Migrate your docs to Mintlify.",
-          badge: {
-            text: "Getting Started",
-          },
-          sidebar: {
-            title: "Migration",
-            Icon: ArrowUpTrayIcon,
+            title: "Versioning",
+            Icon: AdjustmentsVerticalIcon,
           },
         },
       },
     ],
   },
+  // Guides
   {
     metadata: {
-      title: "Writing Content",
-      badge: {
-        text: "Writing Content",
-        Icon: BoltIcon,
+      title: "Guides",
+      description: "Learn how to perform common tasks using TacoQ.",
+      sidebar: {
+        title: "Guides",
+        Icon: PencilSquareIcon,
       },
-      description: "Start writing your content with the following steps.",
     },
     children: [
       {
-        url: "/writing/page-titles",
+        url: "/guides/task-versioning",
         metadata: {
-          title: "Page Titles",
+          title: "Serialization & Versioning",
+          description:
+            "Learn how to serialize your tasks' input and output data as well as version your tasks.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Task Serialization & Versioning",
+            Icon: ArrowUpIcon,
+          },
         },
       },
       {
-        url: "/writing/metadata",
+        url: "/guides/same-app-worker-pattern",
         metadata: {
-          title: "Metadata",
+          title: "Same-app Worker Pattern",
+          description:
+            "Learn how to set up a worker and publisher in the same application to make your life easier.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Same-app Worker Pattern",
+            Icon: ChevronDoubleRightIcon,
+          },
         },
       },
       {
-        url: "/writing/headers-and-text",
+        url: "/guides/maximizing-performance",
         metadata: {
-          title: "Headers and Text",
+          title: "Maximizing Performance",
+          description:
+            "Understand how to get the best performance out of TacoQ.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Maximizing Performance",
+            Icon: BoltIcon,
+          },
         },
       },
       {
-        url: "/writing/tables",
+        url: "/guides/horizontal-scaling",
         metadata: {
-          title: "Tables",
+          title: "Scaling TacoQ",
+          description:
+            "Learn how to scale your TacoQ application horizontally on the cloud with multiple workers, auto-scaling, distributed Postgres, replicated relays, and more.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "Horizontal Scaling",
+            Icon: PresentationChartLineIcon,
+          },
+        },
+      },
+      {
+        url: "/guides/api-integration",
+        metadata: {
+          title: "API Integration",
+          description:
+            "Learn how to publish and fetch tasks without an SDK by using the relay endpoints.",
+          badge: {
+            text: "Guides",
+          },
+          sidebar: {
+            title: "API Integration",
+            Icon: LinkIcon,
+          },
         },
       },
     ],
@@ -303,6 +388,8 @@ interface PageTreeContextType {
   anchors: Anchor[];
   /** Footer content */
   footerContent: FooterContent;
+  /** Array of pages that are the breadcrumbs for the current page */
+  breadcrumbs: Page[];
 }
 
 const PageTreeContext = createContext<PageTreeContextType | null>(null);
@@ -441,6 +528,21 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  /**
+   * Memoized breadcrumbs for the current page
+   */
+  const breadcrumbs = useMemo(() => {
+    // Find the parent titles of the current page
+    const parentTitles = findPageAndParents(pages, pathname);
+    // Find the pages that match the parent titles
+    return (
+      parentTitles
+        .map((title) => findPageByTitle(pages, title))
+        // Filter out any null values
+        .filter((page): page is Page => !!page)
+    );
+  }, [pathname]);
+
   return (
     <PageTreeContext.Provider
       value={{
@@ -453,6 +555,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         pages,
         anchors,
         footerContent,
+        breadcrumbs,
       }}
     >
       {children}

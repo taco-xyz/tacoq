@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 // React Imports
 import { useCallback } from "react";
@@ -27,13 +27,13 @@ export default function ThemeToggle() {
         onClick={changeToLightTheme}
         className="dark:hover:text-white/80 hidden dark:block text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
       >
-        <MoonIcon className="w-5 h-5" />
+        <MoonIcon className="size-5" />
       </button>
       <button
         className="dark:hover:text-white/80 dark:hidden text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
         onClick={changeToDarkTheme}
       >
-        <SunIcon className="w-5 h-5" />
+        <SunIcon className="size-5" />
       </button>
     </>
   );

@@ -9,6 +9,7 @@ import {
   useEffect,
   useRef,
   RefObject,
+  useLayoutEffect,
 } from "react";
 
 // Next Imports
@@ -31,8 +32,12 @@ interface PageNavigationContextType {
   endHoverFocus: () => void;
   /** Title of currently focused page, or null if none focused */
   focusedPageTitle: string | null;
-  /** Ref to the page container element */
+  /** Ref to the page container element, to unfocus the page navigation when clicking outside of it's container */
   pageContainerRef: RefObject<HTMLDivElement | null>;
+  /** Ref to the sidebar container element, to avoid focusing pages that are hidden by this element's scroll */
+  sidebarContainerRef: RefObject<HTMLDivElement | null>;
+  /** Ref to the current focused page element*/
+  currentFocusedPageRef: RefObject<HTMLDivElement | null>;
 }
 
 const PageNavigationContext = createContext<PageNavigationContextType | null>(
@@ -47,6 +52,10 @@ export function PageNavigationProvider({
   const router = useRouter();
 
   const pageContainerRef = useRef<HTMLDivElement>(null);
+
+  const sidebarContainerRef = useRef<HTMLDivElement>(null);
+
+  const currentFocusedPageRef = useRef<HTMLDivElement>(null);
 
   // Extract page tree context
   const {
@@ -96,9 +105,12 @@ export function PageNavigationProvider({
    */
   const startKeyboardFocus = useCallback(() => {
     if (!focusedPageTitle && visiblePagesTitles.length > 0) {
+      // Get the current page index
       const currentPageIndex = currentPageTitle
         ? visiblePagesTitles.indexOf(currentPageTitle)
         : -1;
+
+      // Set the focused page to the current page or the first available page
       setFocusedPageTitle(
         currentPageIndex >= 0 ? currentPageTitle : visiblePagesTitles[0]
       );
@@ -154,18 +166,24 @@ export function PageNavigationProvider({
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
+          // Check if the current page is not the last page
           if (currentIndex < visiblePagesTitles.length - 1) {
+            // Set the focused page to the next page
             setFocusedPageTitle(visiblePagesTitles[currentIndex + 1]);
           } else {
+            // Set the focused page to the first page
             setFocusedPageTitle(visiblePagesTitles[0]);
           }
           break;
 
         case "ArrowUp":
           e.preventDefault();
+          // Check if the current page is not the first page
           if (currentIndex > 0) {
+            // Set the focused page to the previous page
             setFocusedPageTitle(visiblePagesTitles[currentIndex - 1]);
           } else {
+            // Set the focused page to the last page
             setFocusedPageTitle(
               visiblePagesTitles[visiblePagesTitles.length - 1]
             );
@@ -223,6 +241,37 @@ export function PageNavigationProvider({
     ]
   );
 
+  // Scroll to current focused page if it's hidden by the sidebar scroll
+  useLayoutEffect(() => {
+    if (
+      !focusedPageTitle ||
+      !currentFocusedPageRef.current ||
+      !sidebarContainerRef.current
+    )
+      return;
+
+    // Get the current focused page element and the sidebar container element
+    const pageElement = currentFocusedPageRef.current;
+    const sidebarElement = sidebarContainerRef.current;
+
+    const pageRect = pageElement.getBoundingClientRect();
+    const sidebarRect = sidebarElement.getBoundingClientRect();
+
+    // Check if page is below the sidebar container
+    if (pageRect.bottom > sidebarRect.bottom) {
+      sidebarElement.scrollBy({
+        top: pageRect.bottom - sidebarRect.bottom + 18, // Overscroll slightly
+      });
+    }
+
+    // Check if page is above the sidebar container
+    if (pageRect.top < sidebarRect.top) {
+      sidebarElement.scrollBy({
+        top: pageRect.top - sidebarRect.top - 18, // Overscroll slightly
+      });
+    }
+  }, [focusedPageTitle]);
+
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("mousedown", handleClickOutside);
@@ -241,6 +290,8 @@ export function PageNavigationProvider({
         endHoverFocus,
         focusedPageTitle,
         pageContainerRef,
+        sidebarContainerRef,
+        currentFocusedPageRef,
       }}
     >
       {children}

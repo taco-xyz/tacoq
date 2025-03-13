@@ -11,7 +11,7 @@ export default function Logo() {
       href="/"
       className="flex flex-row items-center space-x-0.5 cursor-pointer custom-tab-outline-offset-6 rounded-sm transition-all ease-in-out duration-150"
     >
-      <div className="size-[27px] shadow-xl rounded-sm dark:shadow-white/30 shadow-zinc-400/20 dark:bg-white bg-zinc-400 transition-all ease-in-out duration-150">
+      <div className="sm:size-[27px] size-[24px] sm:shadow-xl shadow-lg rounded-sm dark:shadow-white/30 shadow-zinc-400/20 dark:bg-white bg-zinc-400 transition-all ease-in-out duration-150">
         <svg
           width="100"
           height="100"
@@ -25,7 +25,7 @@ export default function Logo() {
           />
         </svg>
       </div>
-      <p className="dark:text-white text-zinc-700 font-black font-mono text-3xl transition-all ease-in-out duration-150">
+      <p className="dark:text-white text-zinc-700 font-black font-mono sm:text-3xl text-2xl transition-all ease-in-out duration-150 leading-none">
         .doc
       </p>
     </Link>

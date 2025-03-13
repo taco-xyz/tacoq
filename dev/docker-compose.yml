@@ -1,0 +1,93 @@
+volumes:
+  rabbitmq_data: {}
+  postgres_data: {}
+
+services:
+  # Main App
+
+  tacoq-relay:
+    build: ../server/relay
+    ports:
+      - "3000:3000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      TACOQ_DATABASE_URL: postgresql://user:password@postgres:5432/tacoq
+      TACOQ_BROKER_URL: amqp://user:password@rabbitmq:5672
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: grpc
+      OTEL_TRACES_SAMPLER: always_on
+      OTEL_SERVICE_NAME: tacoq.relay
+
+  # Queue
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Storage
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tacoq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d tacoq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Observability
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - type: bind
+        source: ./config/tempo.yaml
+        target: /etc/tempo.yaml
+        read_only: true
+    ports:
+      - "3200" # Collection
+      - "4317:4317" # OTLP gRPC - We keep these ports open so that we can run the app outside the container
+      - "4318:4318" # OTLP HTTP
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - type: bind
+        source: ./config/grafana-datasources.yaml
+        target: /etc/grafana/provisioning/datasources/datasources.yaml
+        read_only: true
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - "3001:3000" # Grafana UI
