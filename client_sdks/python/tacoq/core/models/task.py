@@ -111,7 +111,7 @@ class Task(BaseModel):
     [Priority Queues](https://www.rabbitmq.com/priority.html).
     """
 
-    ttl_duration: Optional[int] = Field(default=None)
+    ttl_duration: int = Field(default=60 * 60 * 24 * 7)  # 7 days
     """ The duration of how long the task should live after it has been completed"""
 
     # Telemetry

@@ -63,7 +63,7 @@ class PublisherClient(BaseModel):
         input_data: TaskInput = "",
         task_id: Optional[UUID] = None,
         priority: int = 0,
-        ttl_duration: Optional[int] = None,
+        ttl_duration: int = 60 * 60 * 24 * 7,
         otel_ctx_carrier: Optional[Dict[str, str]] = None,
     ) -> Task:
         """Publish a task to the broker.
@@ -74,7 +74,7 @@ class PublisherClient(BaseModel):
         - input_data: The data to publish.
         - task_id: The ID of the task. If not provided, a new UUID will be generated.
         - priority: The priority of the task.
-        - ttl_duration: For how long the task should live after its done.
+        - ttl_duration: For how long the task should live after its done. Default value of 7 days.
         - otel_ctx_carrier: The OpenTelemetry context carrier to be added to the task. This will track the entire task's lifecycle. If none is provided, a new one will be created. If one is provided, the context is expected to already be injected.
 
         ### Returns
