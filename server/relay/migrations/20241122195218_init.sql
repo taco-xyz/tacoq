@@ -58,25 +58,16 @@ CREATE TABLE
         -- OpenTelemetry context carrier
         otel_ctx_carrier JSONB,
         -- Relations
-        assigned_to UUID REFERENCES workers (id),
+        executed_by UUID REFERENCES workers (id),
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         -- Task status
-        started_at TIMESTAMP
-        WITH
-            TIME ZONE,
-            completed_at TIMESTAMP
-        WITH
-            TIME ZONE,
-            ttl TIMESTAMP
-        WITH
-            TIME ZONE,
-            -- Timestamps
-            created_at TIMESTAMP
-        WITH
-            TIME ZONE NOT NULL DEFAULT NOW (),
-            updated_at TIMESTAMP
-        WITH
-            TIME ZONE NOT NULL DEFAULT NOW ()
+        ttl_duration BIGINT NOT NULL,
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW (),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW ()
     );
 
-CREATE INDEX tasks_ttl_idx ON tasks (ttl);
+CREATE INDEX tasks_ttl_idx ON tasks (
+    (completed_at + interval '1 second' * ttl_duration)
+);

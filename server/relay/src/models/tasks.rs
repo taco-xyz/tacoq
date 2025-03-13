@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, Local, NaiveDateTime};
 use opentelemetry::propagation::{Extractor, TextMapPropagator};
 use opentelemetry::Context;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
@@ -42,7 +42,7 @@ where
     }
 }
 
-fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -50,17 +50,17 @@ where
 
     // Try parsing with different formats
     if let Ok(dt) = DateTime::parse_from_rfc3339(&s) {
-        return Ok(dt.with_timezone(&Utc));
+        return Ok(dt.naive_local());
     }
 
     // Try parsing microseconds format like "2025-02-14T13:35:07.365122"
     if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%.f%:z") {
-        return Ok(dt.with_timezone(&Utc));
+        return Ok(dt.naive_local());
     }
 
     // Try parsing without fractional seconds
     if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%:z") {
-        return Ok(dt.with_timezone(&Utc));
+        return Ok(dt.naive_local());
     }
 
     Err(serde::de::Error::custom(format!(
@@ -71,7 +71,7 @@ where
 
 fn deserialize_timestamp_optional<'de, D>(
     deserializer: D,
-) -> Result<Option<DateTime<Utc>>, D::Error>
+) -> Result<Option<NaiveDateTime>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -132,21 +132,21 @@ pub struct Task {
     // Relations
     #[sqlx(rename = "worker_kind_name")]
     pub worker_kind: String,
-    pub assigned_to: Option<Uuid>, // worker that it is assigned to
+    pub executed_by: Option<Uuid>, // worker that it is assigned to
 
     // Task status
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
-    pub started_at: Option<DateTime<Utc>>,
+    pub started_at: Option<NaiveDateTime>,
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
-    pub completed_at: Option<DateTime<Utc>>,
-    #[serde(skip)]
-    pub ttl: Option<DateTime<Utc>>, // Time to live only enabled after it has been completed
+    pub completed_at: Option<NaiveDateTime>,
+
+    pub ttl_duration: i64, // in seconds
 
     // Metadata
     #[serde(deserialize_with = "deserialize_timestamp")]
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
     #[serde(skip)]
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: NaiveDateTime,
 
     // OpenTelemetry context carrier
     pub otel_ctx_carrier: Option<JsonValue>,
@@ -154,7 +154,12 @@ pub struct Task {
 
 impl Task {
     /// Creates a new task with minimal required parameters
-    pub fn new(task_kind_name: &str, worker_kind_name: &str, priority: i32) -> Self {
+    pub fn new(
+        task_kind_name: &str,
+        worker_kind_name: &str,
+        priority: i32,
+        ttl_duration: i64,
+    ) -> Self {
         Task {
             id: Uuid::new_v4(),
             task_kind: task_kind_name.to_string(),
@@ -164,13 +169,13 @@ impl Task {
             status: TaskStatus::Pending,
             priority,
             worker_kind: worker_kind_name.to_string(),
-            assigned_to: None,
+            executed_by: None,
             started_at: None,
             completed_at: None,
-            ttl: None,
+            ttl_duration,
             otel_ctx_carrier: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: Local::now().naive_local(),
+            updated_at: Local::now().naive_local(),
         }
     }
 
@@ -205,8 +210,8 @@ impl Task {
     }
 
     /// Sets the assigned worker
-    pub fn assigned_to(mut self, worker_id: Uuid) -> Self {
-        self.assigned_to = Some(worker_id);
+    pub fn executed_by(mut self, worker_id: Uuid) -> Self {
+        self.executed_by = Some(worker_id);
         self
     }
 
@@ -216,36 +221,8 @@ impl Task {
         self
     }
 
-    pub fn set_status(&mut self, status: TaskStatus) {
-        match status {
-            TaskStatus::Pending => {
-                self.started_at = None;
-                self.completed_at = None;
-                self.ttl = None;
-                self.assigned_to = None;
-            }
-            TaskStatus::Processing => {
-                self.started_at = Some(Utc::now());
-                self.completed_at = None;
-                self.ttl = None;
-            }
-            TaskStatus::Completed => {
-                self.completed_at = Some(Utc::now());
-                self.ttl = Some(Utc::now() + Duration::days(7));
-            }
-        }
-        self.updated_at = Utc::now();
-        self.status = status;
-    }
-
     pub fn status(&self) -> TaskStatus {
-        if self.completed_at.is_some() {
-            TaskStatus::Completed
-        } else if self.started_at.is_some() {
-            TaskStatus::Processing
-        } else {
-            TaskStatus::Pending
-        }
+        self.status.clone()
     }
 
     pub fn context(&self) -> Context {
@@ -257,10 +234,9 @@ impl Task {
     }
 
     pub fn is_expired(&self) -> bool {
-        match self.ttl {
-            Some(ttl) => ttl < Utc::now(),
-            None => false,
-        }
+        self.completed_at.is_some()
+            && self.completed_at.unwrap() + Duration::seconds(self.ttl_duration)
+                < Local::now().naive_local()
     }
 }
 

@@ -25,15 +25,15 @@ impl PgTaskRepository {
             Task,
             r#"
             INSERT INTO tasks (
-                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl, assigned_to,
+                id, task_kind_name, worker_kind_name, input_data, started_at, completed_at, ttl_duration, executed_by,
                 is_error, output_data, created_at, updated_at, status, priority, otel_ctx_carrier
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (id) DO UPDATE SET
                 input_data = EXCLUDED.input_data,
                 started_at = EXCLUDED.started_at,
                 completed_at = EXCLUDED.completed_at,
-                ttl = EXCLUDED.ttl,
-                assigned_to = EXCLUDED.assigned_to,
+                ttl_duration = EXCLUDED.ttl_duration,
+                executed_by = EXCLUDED.executed_by,
                 is_error = EXCLUDED.is_error,
                 output_data = EXCLUDED.output_data,
                 status = EXCLUDED.status,
@@ -45,16 +45,16 @@ impl PgTaskRepository {
                 task_kind_name AS "task_kind!", 
                 input_data, 
                 output_data, 
-                is_error,
-                status,
-                priority, 
+                is_error, 
                 started_at, 
                 completed_at, 
-                ttl, 
+                ttl_duration,
                 worker_kind_name AS "worker_kind!", 
-                assigned_to, 
+                executed_by, 
                 created_at, 
                 updated_at,
+                status,
+                priority,
                 otel_ctx_carrier
             "#,
             t.id,
@@ -63,8 +63,8 @@ impl PgTaskRepository {
             t.input_data,
             t.started_at,
             t.completed_at,
-            t.ttl,
-            t.assigned_to,
+            t.ttl_duration,
+            t.executed_by,
             t.is_error,
             t.output_data,
             t.created_at,
@@ -96,9 +96,9 @@ impl PgTaskRepository {
                 is_error, 
                 started_at, 
                 completed_at, 
-                ttl, 
+                ttl_duration,
                 worker_kind_name AS "worker_kind!", 
-                assigned_to, 
+                executed_by, 
                 created_at, 
                 updated_at,
                 status,
@@ -232,11 +232,11 @@ impl TaskRepository for PgTaskRepository {
     #[instrument(skip(self))]
     async fn delete_expired_tasks(&self) -> Result<u64, sqlx::Error> {
         info!("Cleaning up expired tasks");
-        let now = chrono::Utc::now();
+        let now = chrono::Utc::now().naive_utc();
 
         let result = match sqlx::query!(
             r#"DELETE FROM tasks
-                WHERE ttl IS NOT NULL AND ttl < $1
+                WHERE completed_at IS NOT NULL AND completed_at + interval '1 second' * ttl_duration < $1
             "#,
             now,
         )
@@ -258,7 +258,7 @@ impl TaskRepository for PgTaskRepository {
 
 #[cfg(test)]
 mod tests {
-    use sqlx::types::chrono::Utc;
+    use chrono::Local;
     use sqlx::PgPool;
     use uuid::Uuid;
 
@@ -274,7 +274,7 @@ mod tests {
 
     /// Creates a test task
     fn get_test_task() -> Task {
-        Task::new("TaskKindName", "WorkerKindName", 0)
+        Task::new("TaskKindName", "WorkerKindName", 0, 0)
             .with_input_data(vec![1, 2, 3])
             .with_output_data(vec![4, 5, 6])
             .with_error(false)
@@ -320,22 +320,26 @@ mod tests {
 
         // Simulate that the task is now in progress and try to update it
         let mut task = task.clone();
-        task.started_at = Some(Utc::now());
+
+        task.status = TaskStatus::Processing;
+
         let updated = repo.update_task(&task).await.unwrap();
         assert_eq!(updated.id, task.id, "Updated Task ID should match");
-        assert!(
-            updated.started_at.is_some(),
-            "Task was created with started_at = true, so it should be in progress",
+        assert_eq!(
+            updated.status,
+            TaskStatus::Processing,
+            "Task was set to Processing, so it should be in progress",
         );
 
         // Now attempt to set it to pending again and check if it does anything
         let mut task = task.clone();
-        task.started_at = None;
+        task.status = TaskStatus::Pending;
         let updated = repo.update_task(&task).await.unwrap();
         assert_eq!(updated.id, task.id, "Updated Task ID should match");
-        assert!(
-            updated.started_at.is_some(),
-            "Task was updated with started_at = None, but the update should not go through"
+        assert_eq!(
+            updated.status,
+            TaskStatus::Processing,
+            "Task was already updated to Processing, so status should not change back Pending"
         );
     }
 
@@ -376,7 +380,10 @@ mod tests {
         let worker_kind_repo = PgWorkerKindRepository::new(PgRepositoryCore::new(pool.clone()));
 
         let mut task = get_test_task();
-        task.ttl = Some(Utc::now() - chrono::Duration::days(1));
+
+        // Set completed at one day ago
+        task.completed_at = Some(Local::now().naive_local() - chrono::Duration::days(1));
+
         worker_kind_repo
             .get_or_create_worker_kind(&task.worker_kind)
             .await
