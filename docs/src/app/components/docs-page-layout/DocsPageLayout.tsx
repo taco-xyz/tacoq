@@ -23,9 +23,9 @@ export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
     return <div className="flex flex-col gap-y-4 w-full">{children}</div>;
 
   return (
-    <div className="flex flex-col gap-y-8 w-full flex-1">
+    <div className="flex flex-col gap-y-4 w-full flex-1">
       {/* Header */}
-      <div className="flex flex-col items-start justify-start gap-y-6 border-b border-zinc-200 dark:border-zinc-800 pb-9 transition-colors duration-150 ease-in-out">
+      <div className="flex flex-col items-start justify-start gap-y-5 border-b border-zinc-200 dark:border-zinc-800 pb-9 transition-colors duration-150 ease-in-out">
         <div className="flex flex-col items-start justify-start gap-y-3">
           {currentPage.metadata.badge ? (
             <div className="flex flex-row items-center w-fit justify-center gap-x-2 font-mono uppercase text-xs font-semibold text-zinc-500 dark:text-zinc-400 transition-colors duration-150 ease-in-out">
