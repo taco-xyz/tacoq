@@ -101,9 +101,9 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
         </div>
       </div>
       {/* Top gradient overlay */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-all duration-150 ease-in-out" />
+      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
       {/* Bottom gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none transition-all duration-150 ease-in-out" />
+      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
     </div>
   );
 }
