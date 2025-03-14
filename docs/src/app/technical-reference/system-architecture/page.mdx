@@ -1,0 +1,144 @@
+
+import { LightBulbIcon } from "@heroicons/react/24/outline";
+
+# Interactive Map
+
+Explore the following diagram to see how services interact with each other, or
+read a straight-forward explanation of the system below.
+
+<div className="bg-white w-full h-96 rounded-lg p-4 border-2 border-gray-200">
+</div>
+
+---
+
+# System Services
+
+These are services that are part of the TacoQ core system. The user doesn't 
+use these directly in their code and they exist purely to transport and store
+task data.
+
+## Broker
+
+The broker, implemented in RabbitMQ, is responsible for transporting task objects
+between services. This works by having a central exchange that routes **all task
+objects to the relay** and new tasks to be executed to the **appropriate worker**. 
+More on this in the [Broker](/technical-reference/#h2-worker) section.
+
+> [!NOTE]
+> We **do not plan on supporting additional brokers in the near future**, though we
+> are open to making the broker an abstract class and accepting contributions for
+> other message brokers if there is enough demand.
+>
+> The reason behind this is that other brokers (Redis, Kafka, etc...) do not 
+> support core features like routing and priorities, which we heavily rely on.
+
+### RabbitMQ Implementation Details
+
+The basic structure of the broker infrastructure is as follows:
+
+- A `task_exchange` exchange to which new tasks are published
+- One queue per worker kind - the `task_exchange` filters new tasks to be routed
+  to the appropriate queue. More on worker kinds in the 
+  [Worker](/technical-reference/#h2-worker) section.
+- The relay queue. All tasks that go through the `task_exchange` are routed to 
+  the relay queue, but new task results are published directly to the queue 
+  rather than the exchange as they don't need to be used in the workers.
+
+Queues and exchanges are not customizable because RabbitMQ doesn't like it
+when different services expect different queue and exchange configurations.
+Therefore:
+
+- All queues and exchanges are **durable**.
+- All queues and exchanges are **do not auto-delete**.
+- All queues have a default `{"x-max-priority": 255}` to allow for maximum 
+  flexibility in task priority and to have the priority feature available by
+  default.
+
+## Database
+
+The latest state of each task is stored in the database by the relay. The database is 
+implemented in Postgres and managed via Rust's SQLX by the relay.
+
+## Relay
+
+The relay, as the name implies, is responsible for relaying information 
+between the core services and the user's application. It is implemented in Rust
+and has the following capabilities:
+
+### 1. Task Update Consumer
+
+The relay consumes task updates from the broker and stores them in the database as they come in.
+
+### 2. Data Retrieval
+
+The relay also serves a **REST API** for retrieving task data from the database. 
+You can read the API swagger definition in [Relay Endpoints](/technical-reference/relay-endpoints). 
+
+### 3. Cleanup
+
+The relay will run a cron job to delete tasks that have been in the database for
+longer than a set period of time specified by the user.
+
+### 4. Replication
+
+The relay is stateless and can be scaled horizontally if you need to
+load balance requests between multiple relays or increase the consuming
+rate of tasks.
+
+### Bonus: Rust Implementation Details
+
+The relay is implemented in Rust with the following specs:
+- The API is an Axum app
+- The database is managed via SQLX
+- The task update consumer is a background task running in parallel with the API
+- The cleanup is a background task running as a cronjob. We've decided to not
+make it a Postgres job so that we can support additional datastores in the future.
+
+---
+
+# User Services
+
+These are set up by the user himself and can safely go online and offline as 
+needed.
+
+## Worker
+
+The worker is responsible for executing tasks. Each worker has a `worker_kind`
+and multiple `task_kind`'s that it is capable of executing.
+
+<div className="bg-blue-300/10 text-blue-300 rounded-lg p-4 border-2 border-blue-300/20 flex flex-row items-start gap-2">
+    <LightBulbIcon className="size-20 h-fit"/>
+    <span className="text-blue-200">
+        Why are worker kinds a thing?
+        
+        It is not uncommon for task queues to all share the same queue. If you were to
+        have two different workers with different task capabilities, they would often
+        consume tasks they are unable to execute, NACK them, and send the task to the
+        back of the queue. This could happen repeatedly and cause the task to never be
+        executed.
+
+        Another possible implementation would be to have one queue per task kind, which
+        would allow workers to only consume the queues they know they are able to 
+        execute. This would, however, require the worker to have a strategy for 
+        determining which queue to prioritize consuming, which would increase complexity.
+
+        The drawbacks to the current approach are:
+        1. Additional setup parameter that must be known pre-runtime.
+        2. There cannot be two different worker kinds with the shared task kind 
+        capabilities. The user must always choose which worker kind to route a task to.
+
+        Given these extremely specific drawbacks which apply to almost no one and can
+        easily be worked around, we've decided to use worker kinds to route tasks.
+    </span>
+</div>
+
+## Publisher
+
+A task publisher serves two purposes:
+
+1. Publish a task for the workers to work on. This task is published to the 
+task exchange on the broker, which is then routed to the relay and to the worker.
+2. Retrieve task results by querying the relay's API, which queries the database.
+
+The publisher doesn't need to be its own service, anything can be a 
+publisher - a FastAPI app, a CLI, even a worker.

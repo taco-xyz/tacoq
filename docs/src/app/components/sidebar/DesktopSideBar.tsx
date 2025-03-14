@@ -7,7 +7,7 @@ import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigati
 // Components Imports
 import Tooltip from "@/app/components/sidebar/components/Tooltip";
 import PageComponent from "@/app/components/sidebar/components/page/DesktopPage";
-import AnchorComponent from "@/app/components/sidebar/components/Anchor";
+// import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
 // Utils Imports
 import clsx from "clsx";
@@ -19,7 +19,7 @@ interface DesktopSideBarProps {
 
 export default function DesktopSideBar({ className }: DesktopSideBarProps) {
   // Extract the page tree context
-  const { pages, anchors } = usePageTree();
+  const { pages } = usePageTree();
 
   // Extract the page navigation context
   const {
@@ -39,11 +39,11 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
           className
         )}
       >
-        <nav className="flex flex-col gap-y-3.5">
+        {/* <nav className="flex flex-col gap-y-3.5">
           {anchors.map((anchor) => (
             <AnchorComponent key={anchor.title} {...anchor} />
           ))}
-        </nav>
+        </nav> */}
 
         <div ref={pageContainerRef} className="flex flex-col gap-y-3">
           <div className="relative h-7">
