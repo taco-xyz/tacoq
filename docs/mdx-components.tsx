@@ -7,7 +7,7 @@ import type { MDXComponents } from "mdx/types";
 import { HeadingTypes, getHeaderId } from "@/types/page/Heading";
 
 // Components Imports
-import Heading from "@/app/components/heading/Heading";
+import Heading from "@/components/mdx/heading/Heading";
 
 // Utils Imports
 import clsx from "clsx";
@@ -123,7 +123,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     code: ({ children, className }) => (
       <code
         className={clsx(
-          "font-mono rounded-[5px] px-1.5 py-0.5 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-white font-medium transition-colors duration-150 ease-in-out",
+          "font-mono text-sm text-zinc-700 dark:text-white font-medium transition-all duration-150 ease-in-out",
+          // Code block
+          "[pre_&]:py-4 [pre_&]:px-0 [pre_&]:bg-transparent",
+          // Inline code
+          "py-0.5 px-1.5 rounded-[5px] bg-zinc-100 dark:bg-zinc-800 [&:not(pre_code)]:whitespace-nowrap",
           className
         )}
       >
@@ -204,6 +208,17 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       >
         {children}
       </ul>
+    ),
+
+    pre: ({ children, className }) => (
+      <pre
+        className={clsx(
+          className,
+          "bg-zinc-50 dark:bg-zinc-900 ring-1 ring-zinc-200 dark:ring-zinc-800 overflow-x-auto rounded-2xl"
+        )}
+      >
+        {children}
+      </pre>
     ),
   };
 }

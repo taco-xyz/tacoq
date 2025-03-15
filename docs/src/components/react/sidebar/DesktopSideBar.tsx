@@ -2,11 +2,11 @@
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
-import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigationContext";
+import { usePageNavigation } from "@/components/react/sidebar/context/PageNavigationContext";
 
 // Components Imports
-import Tooltip from "@/app/components/sidebar/components/Tooltip";
-import PageComponent from "@/app/components/sidebar/components/page/DesktopPage";
+import Tooltip from "@/components/react/sidebar/components/Tooltip";
+import PageComponent from "@/components/react/sidebar/components/page/DesktopPage";
 // import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
 // Utils Imports
