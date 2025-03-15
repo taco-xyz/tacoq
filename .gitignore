@@ -16,3 +16,4 @@
 .env.local
 .benchmarks/
 __pycache__/
+/client_sdks/python/tacoq.egg-info
