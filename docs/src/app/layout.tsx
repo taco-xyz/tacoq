@@ -2,16 +2,16 @@
 import "./globals.css";
 
 // Components Imports
-import { TopBar } from "./components/topbar/TopBar";
-import { Footer } from "./components/Footer";
-import DesktopSideBar from "./components/sidebar/DesktopSideBar";
-import DocsPageLayout from "./components/docs-page-layout/DocsPageLayout";
-import PageLinksBar from "./components/PageLinksBar";
+import { TopBar } from "../components/react/topbar/TopBar";
+import { Footer } from "../components/react/Footer";
+import DesktopSideBar from "../components/react/sidebar/DesktopSideBar";
+import DocsPageLayout from "../components/react/docs-page-layout/DocsPageLayout";
+import PageLinksBar from "../components/react/PageLinksBar";
 
 // Context imports
-import { TooltipProvider } from "@/app/components/sidebar/context/TooltipContext";
+import { TooltipProvider } from "@/components/react/sidebar/context/TooltipContext";
 import { PageTreeProvider } from "@/contexts/PageTreeContext";
-import { PageNavigationProvider } from "@/app/components/sidebar/context/PageNavigationContext";
+import { PageNavigationProvider } from "@/components/react/sidebar/context/PageNavigationContext";
 
 // Fonts Imports
 import { Geist, Geist_Mono } from "next/font/google";

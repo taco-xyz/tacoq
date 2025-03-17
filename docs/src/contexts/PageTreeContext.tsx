@@ -44,7 +44,11 @@ import {
 } from "@heroicons/react/24/outline";
 
 // Custom Icons Imports
-import { GithubIcon, XIcon, DiscordIcon } from "@/app/components/icons/social";
+import {
+  GithubIcon,
+  XIcon,
+  DiscordIcon,
+} from "@/components/react/icons/social";
 
 const anchors: Anchor[] = [
   {

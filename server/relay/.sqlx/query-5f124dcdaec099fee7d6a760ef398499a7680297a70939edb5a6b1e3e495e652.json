@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl, \n                worker_kind_name AS \"worker_kind!\", \n                assigned_to, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
+  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                executed_by, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -31,17 +31,17 @@
       {
         "ordinal": 5,
         "name": "started_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 6,
         "name": "completed_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 7,
-        "name": "ttl",
-        "type_info": "Timestamptz"
+        "name": "ttl_duration",
+        "type_info": "Int8"
       },
       {
         "ordinal": 8,
@@ -50,18 +50,18 @@
       },
       {
         "ordinal": 9,
-        "name": "assigned_to",
+        "name": "executed_by",
         "type_info": "Uuid"
       },
       {
         "ordinal": 10,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 11,
         "name": "updated_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamp"
       },
       {
         "ordinal": 12,
@@ -92,7 +92,7 @@
       false,
       true,
       true,
-      true,
+      false,
       false,
       true,
       false,
@@ -102,5 +102,5 @@
       true
     ]
   },
-  "hash": "278fc6e83527883e4c4d95978032422b4c306fe6075e42235e805ceefc42dd74"
+  "hash": "5f124dcdaec099fee7d6a760ef398499a7680297a70939edb5a6b1e3e495e652"
 }

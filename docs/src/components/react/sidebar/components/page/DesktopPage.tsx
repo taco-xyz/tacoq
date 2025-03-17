@@ -14,7 +14,7 @@ import clsx from "clsx";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
-import { usePageNavigation } from "@/app/components/sidebar/context/PageNavigationContext";
+import { usePageNavigation } from "@/components/react/sidebar/context/PageNavigationContext";
 
 // Types Imports
 import type { Page } from "@/types/page/Page";
