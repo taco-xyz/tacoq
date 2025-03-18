@@ -16,7 +16,7 @@ export default function NotFound() {
           Error 404
         </div>
 
-        <h1 className="text-4xl font-semibold tracking-tight dark:text-white text-zinc-700 transition-colors duration-150 ease-in-out">
+        <h1 className="text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 transition-colors duration-150 ease-in-out">
           Page Not Found
         </h1>
       </div>
@@ -27,7 +27,7 @@ export default function NotFound() {
 
       <button
         onClick={() => router.back()}
-        className=" text-zinc-600 hover:bg-zinc-800/5 dark:hover:bg-white/5 hover:dark:text-white hover:text-zinc-700 py-1 px-1.5 dark:text-zinc-300 transition-all duration-150 ease-in-out flex flex-row items-center gap-x-2 rounded-lg custom-tab-outline-offset-4 cursor-pointer"
+        className=" text-zinc-600 hover:bg-zinc-800/5 dark:hover:bg-white/5 hover:dark:text-white hover:text-zinc-800 py-1 px-1.5 dark:text-zinc-300 transition-all duration-150 ease-in-out flex flex-row items-center gap-x-2 rounded-lg custom-tab-outline-offset-4 cursor-pointer"
       >
         <ArrowLeftIcon className="size-3.5" />{" "}
         <p className="text-sm font-medium">Go back</p>

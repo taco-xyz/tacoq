@@ -77,7 +77,7 @@ export default function Tooltip() {
                   animationDirection === "up" && "animate-slide-in-down"
                 )}
               >
-                <span className="text-xs font-medium text-zinc-700 w-full dark:text-white whitespace-nowrap">
+                <span className="text-xs font-medium text-zinc-800 w-full dark:text-white whitespace-nowrap">
                   {content.title}
                 </span>
                 <span className="text-xs font-normal text-zinc-500 w-full dark:text-zinc-400">
@@ -98,7 +98,7 @@ export default function Tooltip() {
                   "opacity-0"
                 )}
               >
-                <span className="text-xs font-medium text-zinc-700 dark:text-white whitespace-nowrap">
+                <span className="text-xs font-medium text-zinc-800 dark:text-white whitespace-nowrap">
                   {previousContent?.title}
                 </span>
                 <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
