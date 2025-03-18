@@ -30,8 +30,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Metadata
 export const metadata = {
-  metadataBase: new URL("https://www.tacodivision.com/  "),
+  metadataBase: new URL("https://www.tacodivision.com"),
   title: {
     template: "%s | TacoQ Documentation",
     default: "TacoQ | Multi-Language Distributed Task Queue",
@@ -65,7 +66,7 @@ export const metadata = {
       "Modern distributed task queue with multi-language support, built-in observability, and low latency.",
     images: [
       {
-        url: "/TacoQBannerLight.svg",
+        url: "/TacoQBannerLight.png",
         width: 1000,
         height: 300,
         alt: "TacoQ Banner",
@@ -76,7 +77,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "TacoQ Documentation",
     description: "Modern distributed task queue with multi-language support",
-    images: ["/TacoQBannerLight.svg"],
+    images: ["/TacoQBannerLight.png"],
   },
   robots: {
     index: true,
