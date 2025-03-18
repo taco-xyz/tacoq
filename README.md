@@ -1,4 +1,6 @@
-![banner.png](banner.png)
+<p align="center">
+  <img src="banner.png" alt="banner">
+</p>
 
 # TacoQ
 
