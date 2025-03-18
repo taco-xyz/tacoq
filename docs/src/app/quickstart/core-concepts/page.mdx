@@ -48,13 +48,11 @@ send the result back through the message broker so they can be stored in the dat
 
 ## Publishers
 
-Publishers are services that publish tasks to the message broker. They can then
-query the TacoQ's REST API to retrieve the results and current status of the task.
+Publishers are services that publish tasks to the message broker.
 
 <Tip>
   The publisher does not need to be a dedicated application. Instead, any
-  service can embed the publisher in its code to publish and retrieve tasks
-  (even workers!).
+  service can embed the publisher in its code to publish tasks. (even workers!).
 </Tip>
 
 ## Relay
