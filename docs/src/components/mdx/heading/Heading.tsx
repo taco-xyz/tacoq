@@ -24,17 +24,17 @@ interface HeadingProps {
 
 const headingStyles = {
   [HeadingTypes.H1]:
-    "text-4xl font-semibold tracking-tight dark:text-white text-zinc-700 text-start mt-4",
+    "text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-4",
   [HeadingTypes.H2]:
-    "text-3xl font-semibold tracking-tight dark:text-white text-zinc-700 text-start mt-3",
+    "text-3xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-3",
   [HeadingTypes.H3]:
-    "text-2xl font-medium tracking-tight dark:text-white text-zinc-700 text-start mt-2",
+    "text-2xl font-medium tracking-tight dark:text-white text-zinc-800 text-start mt-2",
   [HeadingTypes.H4]:
-    "text-xl font-medium tracking-normal dark:text-white text-zinc-700 text-start mt-1",
+    "text-xl font-medium tracking-normal dark:text-white text-zinc-800 text-start mt-1",
   [HeadingTypes.H5]:
-    "text-lg font-[450] tracking-normal dark:text-zinc-300 text-zinc-600 text-start mt-0.5",
+    "text-lg font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start mt-0.5",
   [HeadingTypes.H6]:
-    "text-base font-[450] tracking-normal dark:text-zinc-300 text-zinc-600 text-start",
+    "text-base font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start",
 };
 
 export default function Heading({ id, Level, children, className }: HeadingProps) {

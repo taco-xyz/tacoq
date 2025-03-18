@@ -44,7 +44,7 @@ export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
               </div>
             )
           )}
-          <h1 className="text-4xl font-semibold tracking-tight dark:text-white text-zinc-700 transition-colors duration-150 ease-in-out">
+          <h1 className="text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 transition-colors duration-150 ease-in-out">
             {currentPage.metadata.title}
           </h1>
         </div>

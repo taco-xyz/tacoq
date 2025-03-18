@@ -145,13 +145,13 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
                 key={index}
                 onClick={() => handleClick(headingId)}
                 className={clsx(
-                  "text-left hover:text-zinc-700 dark:hover:text-white transition-all rounded-sm duration-150 ease-in-out whitespace-nowrap cursor-pointer custom-tab-outline-offset-2",
+                  "text-left hover:text-zinc-800 dark:hover:text-white transition-all rounded-sm duration-150 ease-in-out whitespace-nowrap cursor-pointer custom-tab-outline-offset-2",
 
                   heading.type === HeadingTypes.H1 && "pl-0",
                   heading.type === HeadingTypes.H2 && "pl-4",
                   heading.type === HeadingTypes.H3 && "pl-8",
                   isActive
-                    ? "font-medium text-zinc-700 dark:text-white"
+                    ? "font-medium text-zinc-800 dark:text-white"
                     : "font-normal text-zinc-500 dark:text-zinc-300"
                 )}
               >
