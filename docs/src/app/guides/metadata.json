@@ -1,5 +1,6 @@
 {
   "title": "Guides",
   "description": "Learn how to perform common tasks using TacoQ.",
-  "icon": "PencilSquareIcon"
+  "icon": "PencilSquareIcon",
+  "index": 1
 } 

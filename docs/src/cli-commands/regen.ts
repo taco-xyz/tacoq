@@ -1,87 +1,11 @@
 // Types ---------------------------------
-
-/**
- * Represents the metadata for a page in JSON format.
- * @property {string} title - The title of the page
- * @property {string} description - A brief description of the page content
- * @property {string} icon - The icon identifier for the page
- */
-type MetadataJson = {
-  title: string;
-  description: string;
-  icon: string;
-};
-
-/**
- * The type of heading for a content row.
- *
- * Represents HTML heading levels h1-h6.
- *
- * @example
- * ```md
- * # Heading 1     -> HeadingType.H1
- * ## Heading 2    -> HeadingType.H2
- * ### Heading 3   -> HeadingType.H3
- * ```
- */
-enum HeadingType {
-  H1 = "h1",
-  H2 = "h2",
-  H3 = "h3",
-  H4 = "h4",
-  H5 = "h5",
-  H6 = "h6",
-}
-
-/**
- * Represents a single heading row in a page's content.
- *
- * @property {string} title - The text content of the heading
- * @property {HeadingType} type - The heading level (h1-h6)
- *
- * @example
- * Given MDX:
- * ```mdx
- * ### My Section Title
- * ```
- *
- * Becomes:
- * ```ts
- * {
- *   title: "My Section Title",
- *   type: HeadingType.H3
- * }
- * ```
- */
-type ContentRow = {
-  title: string;
-  type: HeadingType;
-};
-
-/**
- * Represents an entry in the documentation structure.
- * An entry can be either a page (with URL) or a folder (with children).
- *
- * @property {string} [url] - The URL path of the page, if it's a page
- * @property {MetadataJson} metadata - The metadata for the entry
- * @property {string} [rawContent] - The raw content of the page, if it's a page
- * @property {ContentRow[]} [contentRows] - The content rows of the page, if it's a page
- * @property {Entry[]} [children] - The child entries, if it's a folder
- */
-type Entry = {
-  url?: string;
-  metadata: MetadataJson;
-  rawContent?: string;
-  contentRows?: ContentRow[];
-  children?: Entry[];
-};
-
-/**
- * Represents the entire page tree structure
- */
-type PageTree = {
-  children: Entry[];
-};
+import type {
+  MetadataJson,
+  HeadingType,
+  ContentRow,
+  Page,
+  PageTree,
+} from "@/types/page/PageTree";
 
 // Imports ---------------------------------
 import fs from "fs";
@@ -103,29 +27,23 @@ const APP_DIR = path.join(__dirname, "..", "app");
  */
 function extractHeadings(content: string): ContentRow[] {
   const rows: ContentRow[] = [];
-  let inCodeBlock = false;
-  // Normalize line endings and split
   const lines = content.replace(/\r\n/g, "\n").split("\n");
+  let inCodeBlock = false;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Skip code blocks
-    if (line.trim().startsWith("```")) {
+  for (const line of lines) {
+    if (line.startsWith("```")) {
       inCodeBlock = !inCodeBlock;
       continue;
     }
 
     if (inCodeBlock) continue;
 
-    // Match headings at start of line (after any whitespace)
     const match = line.match(/^(\s*)(#{1,6})\s+(.+)$/);
     if (match) {
-      const level = match[2].length;
-      const title = match[3].trim();
+      const [, , level, title] = match;
       rows.push({
         title,
-        type: `h${level}` as HeadingType,
+        type: level as HeadingType,
       });
     }
   }
@@ -171,8 +89,8 @@ function scanDirectory(
   dirPath: string,
   isRoot: boolean = false,
   depth: number = 0
-): Entry[] {
-  const entries: Entry[] = [];
+): Page[] {
+  const entries: Page[] = [];
   const dirEntries = fs.readdirSync(dirPath, { withFileTypes: true });
   const indent = "  ".repeat(depth);
 
@@ -197,7 +115,7 @@ function scanDirectory(
   }
 
   // Scan subdirectories first
-  const children: Entry[] = [];
+  const children: Page[] = [];
   for (const entry of dirEntries) {
     if (entry.isDirectory()) {
       const fullPath = path.join(dirPath, entry.name);
@@ -205,12 +123,14 @@ function scanDirectory(
     }
   }
 
-  // If this is the root directory, just return the children
+  // If this is the root directory, just return the children sorted by index
   if (isRoot) {
     console.log(
       chalk.green(`\n✨ Found ${children.length} top-level sections`)
     );
-    return children;
+    return children.sort(
+      (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0)
+    );
   }
 
   // If we have children, add them as a folder entry
@@ -220,8 +140,11 @@ function scanDirectory(
         title: path.basename(dirPath),
         description: "",
         icon: "",
+        index: 0,
       },
-      children,
+      children: children.sort(
+        (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0)
+      ),
     });
   }
 
@@ -260,6 +183,7 @@ function scanDirectory(
             title: entry.name.replace(/\.mdx$/, ""),
             description: "",
             icon: "",
+            index: 999, // Put additional MDX files at the end
           },
           rawContent: content,
           contentRows: extractHeadings(content),
@@ -268,7 +192,10 @@ function scanDirectory(
     }
   }
 
-  return entries;
+  // Sort entries by index before returning
+  return entries.sort(
+    (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0)
+  );
 }
 
 /**
@@ -276,7 +203,7 @@ function scanDirectory(
  * @param entries - Array of entries to print
  * @param depth - Current depth for indentation
  */
-function printSummaryTree(entries: Entry[], depth: number = 0): void {
+function printSummaryTree(entries: Page[], depth: number = 0): void {
   const indent = "  ".repeat(depth);
   for (const entry of entries) {
     const icon = entry.children ? "📚" : "📄";

@@ -1,5 +1,6 @@
 {
   "title": "Benchmarks",
   "description": "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
-  "icon": "ChartBarIcon"
+  "icon": "ChartBarIcon",
+  "index": 2
 } 
