@@ -1,6 +1,7 @@
 import os
 from time import sleep
 from typing import AsyncGenerator
+import asyncio
 import pytest
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -94,9 +95,8 @@ async def relay_client(relay_config: RelayConfig) -> AsyncGenerator[RelayClient,
 
 @pytest.fixture
 async def mock_relay_client() -> AsyncGenerator[RelayClient, None]:
-    client = RelayClient(config=RelayConfig(url="http://test"))
-    yield client
-    await client.disconnect()
+    async with RelayClient(config=RelayConfig(url="http://test")) as client:
+        yield client
 
 
 ## ==============================
@@ -145,3 +145,20 @@ def worker_config(
         broker_config=broker_config,
         broker_prefetch_count=broker_prefetch_count,
     )
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_leftover_tasks():
+    """Fixture that cleans up leftover tasks."""
+    yield
+
+    # Collect all leftover tasks
+    leftover = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+
+    # Clean up leftover tasks
+    print(f"Cleaning up {len(leftover)} leftover tasks")
+    for t in leftover:
+        t.cancel()
+
+    # Then give them time to shut down
+    await asyncio.gather(*leftover, return_exceptions=True)
