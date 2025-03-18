@@ -32,31 +32,41 @@ interface CardProps {
 
 const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
   const Icon = icon ? getIcon(icon) : null;
+
   const content = (
-    <div
-      className={clsx(
-        "rounded-lg relative group h-full ring-1 ring-inset dark:ring-zinc-800 ring-zinc-300 p-6 dark:shadow-none shadow-2xl shadow-zinc-600/3",
-        href &&
-          "hover:ring-zinc-400 dark:hover:ring-zinc-400 cursor-pointer hover:ring-2 transition-all duration-100 ease-in-out"
-      )}
-    >
-      {href && (
-        <ArrowUpRightIcon className="size-4 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-400 dark:text-zinc-600" />
-      )}
-      {Icon && (
-        <Icon className="size-6 mb-3 dark:text-zinc-400 text-zinc-500" />
-      )}
-      <h3 className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
-        {title}
-      </h3>
-      <p className="text-sm mt-1 dark:text-zinc-400 text-zinc-600">
-        {description}
-      </p>
+    <div className="w-full h-full ring-1 group rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/1 dark:shadow-black/5 transition-all duration-150 ease-in-out ring-inset hover:translate-y-[-2px]">
+      <div
+        className={clsx(
+          "rounded-[11px] relative group h-full ring-1 ring-inset ring-zinc-300 dark:ring-zinc-800 p-6 shadow-2xl shadow-zinc-600/3 dark:shadow-black/5",
+          href &&
+            "cursor-pointer transition-all duration-100 ease-in-out group-hover:translate-y-[-3px] group-hover:shadow-zinc-600/10 dark:group-hover:shadow-black/40"
+        )}
+      >
+        {href && (
+          <ArrowUpRightIcon className="size-4 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-400 dark:text-zinc-600" />
+        )}
+        {Icon && (
+          <Icon className="size-6 mb-3 dark:text-zinc-400 text-zinc-500" />
+        )}
+        <h3 className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
+          {title}
+        </h3>
+        <p className="text-sm mt-1 dark:text-zinc-400 text-zinc-600">
+          {description}
+        </p>
+      </div>
     </div>
   );
 
   if (href) {
-    return <Link href={href}>{content}</Link>;
+    return (
+      <Link
+        href={href}
+        className="custom-tab-outline-offset-2 rounded-2xl transition-all duration-150 ease-in-out"
+      >
+        {content}
+      </Link>
+    );
   }
 
   return content;

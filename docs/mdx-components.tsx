@@ -107,16 +107,13 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // IMAGE ---------------------------------------------------------------
     img: ({ src, alt, className }) => (
-      <span className="w-full h-auto aspect-video ring-inset flex my-2 ring-1 rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/3 dark:shadow-black/5 transition-all duration-150 ease-in-out">
-        <span className="w-full h-full relative">
+      <span className="w-full h-auto aspect-video ring-inset flex my-2 ring-1 rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/1 dark:shadow-black/5 transition-all duration-150 ease-in-out">
+        <span className="w-full h-full relative rounded-[11px] border-1 border-zinc-200 dark:border-zinc-800/70 transition-all duration-150 ease-in-out overflow-hidden">
           <Image
             src={src}
             alt={alt}
             fill
-            className={clsx(
-              "rounded-[13px] object-cover object-center",
-              className
-            )}
+            className={clsx("object-cover object-center", className)}
             quality={100}
           />
         </span>
@@ -197,7 +194,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <Link
         href={href}
         className={clsx(
-          "dark:text-white text-zinc-800 font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-colors ease-in-out duration-150",
+          "dark:text-white text-zinc-800 custom-tab-outline-offset-2 font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-[outline] ease-in-out duration-150",
           "[blockquote_&]:text-inherit [blockquote_&]:border-inherit",
           className
         )}

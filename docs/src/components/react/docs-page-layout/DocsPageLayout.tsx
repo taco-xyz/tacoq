@@ -56,41 +56,44 @@ export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
           </h5>
         )}
       </div>
+
       <div className="flex flex-col gap-y-4 w-full">
         {/* Content */}
         {children}
       </div>
 
-      <div className="flex flex-row items-center w-full justify-between gap-x-4 mt-8 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="flex-1">
+      <div className="flex sm:flex-row flex-col items-center w-full justify-between gap-x-4 mt-8 border-t border-zinc-200 dark:border-zinc-800">
+       
           {previousPage?.url && (
-            <Link href={previousPage.url} className="w-fit group">
-              <div className="rounded-lg relative p-6">
-                <ChevronLeftIcon className="size-4 absolute left-2 group-hover:left-1 top-1/2 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out" />
-                <div className="pl-6">
-                  <div className="text-sm dark:text-zinc-400 text-zinc-600">
-                    Previous
-                  </div>
-                  <div className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
-                    {previousPage.metadata.title}
-                  </div>
+            <Link
+              href={previousPage.url}
+              className="w-full sm:w-fit group rounded-2xl relative p-6  custom-tab-outline-offset-2 transition-all duration-150 ease-in-out"
+            >
+              <ChevronLeftIcon className="size-4 absolute left-2 group-hover:left-1 top-1/2 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out" />
+              <div className="pl-6">
+                <div className="text-sm dark:text-zinc-400 text-zinc-600">
+                  Previous
+                </div>
+                <div className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
+                  {previousPage.metadata.title}
                 </div>
               </div>
             </Link>
           )}
-        </div>
-        <div className="flex-1 flex justify-end">
+        
+        <div className="flex-1 flex justify-end w-full">
           {nextPage?.url && (
-            <Link href={nextPage.url} className="w-fit group">
-              <div className="rounded-lg relative p-6">
-                <ChevronRightIcon className="size-4 absolute right-2 group-hover:right-1 top-1/2 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out" />
-                <div className="pr-6 text-right">
-                  <div className="text-sm dark:text-zinc-400 text-zinc-600">
-                    Next
-                  </div>
-                  <div className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
-                    {nextPage.metadata.title}
-                  </div>
+            <Link
+              href={nextPage.url}
+              className="w-full sm:w-fit group rounded-2xl relative p-6  custom-tab-outline-offset-2 transition-all duration-150 ease-in-out"
+            >
+              <ChevronRightIcon className="size-4 absolute right-2 group-hover:right-1 top-1/2 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out" />
+              <div className="pr-6 text-right">
+                <div className="text-sm dark:text-zinc-400 text-zinc-600">
+                  Next
+                </div>
+                <div className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
+                  {nextPage.metadata.title}
                 </div>
               </div>
             </Link>

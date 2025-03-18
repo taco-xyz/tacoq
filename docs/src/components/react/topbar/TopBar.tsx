@@ -61,7 +61,7 @@ export function TopBar() {
             </div>
 
             {/* Theme Toggle and GitHub Link */}
-            <div className="lg:flex hidden flex-row items-center gap-x-8">
+            <div className="lg:flex w-[100px] hidden flex-row items-center justify-end gap-x-8">
               <ThemeToggle />
               <GitHubLink />
             </div>

@@ -4,7 +4,7 @@
 import Link from "next/link";
 
 // Components Imports
-import Logo from "./Logo";
+import { DivisionLogo } from "./Logo";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
@@ -24,8 +24,8 @@ export function Footer() {
             "flex flex-row w-full gap-x-20 justify-between items-center "
           )}
         >
-          {/* Logo */}
-          <Logo />
+          {/* Company Logo */}
+          <DivisionLogo />
 
           {/* Social Links Desktop */}
           <div className="md:flex flex-row space-x-4 items-center hidden">
@@ -86,7 +86,7 @@ export function Footer() {
       {/* Copyright */}
       <div className="flex flex-row items-center justify-center w-full max-w-(--breakpoint-2xl) py-8 px-8">
         <p className="text-zinc-400 dark:text-white/40 text-xs font-mono">
-          &copy; {new Date().getFullYear()} Taco. All rights reserved.
+          &copy; {new Date().getFullYear()} Taco Division. All rights reserved.
         </p>
       </div>
     </div>
