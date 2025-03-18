@@ -1,3 +1,5 @@
+![banner.png](banner.png)
+
 # TacoQ
 
 ![Git Tag](https://img.shields.io/github/v/tag/taco-xyz/tacoq)
@@ -17,10 +19,10 @@ TacoQ is a multi-language distributed task queue with built-in observability, lo
 - ⚙️ Distributed and **horizontally scalable**.
 
 > [!TIP]
-> 🚨 **Not a workflow engine** 🚨 TacoQ is a distributed task queue, not an 
-> orchestrator like [Hatchet](https://hatchet.run/) or 
-> [Windmill](https://www.windmill.dev/). While we plan to build TacoFlow (a 
-> workflow orchestration engine), TacoQ will remain lightweight, standalone, 
+> 🚨 **Not a workflow engine** 🚨 TacoQ is a distributed task queue, not an
+> orchestrator like [Hatchet](https://hatchet.run/) or
+> [Windmill](https://www.windmill.dev/). While we plan to build TacoFlow (a
+> workflow orchestration engine), TacoQ will remain lightweight, standalone,
 > and easy to contribute to.
 
 # Quick Start
@@ -39,7 +41,6 @@ volumes:
   postgres_data: {}
 
 services:
-
   # ================================================
   # TacoQ Relay
   # The relay has two functions:
@@ -109,7 +110,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
 ```
 
 ## Client Setup
@@ -199,7 +199,7 @@ from tacoq import PublisherClient, BrokerConfig, Task
 # =============================
 
 
-# These settings are based on the broker configurations in the 
+# These settings are based on the broker configurations in the
 # docker-compose.yml files.
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 publisher = PublisherClient(broker_config=broker_config)
@@ -208,7 +208,7 @@ publisher = PublisherClient(broker_config=broker_config)
 # Task Publishing
 # =============================
 
-# These must be consistent with the worker app. Consider using a .env file 
+# These must be consistent with the worker app. Consider using a .env file
 # to coordinate these.
 WORKER_KIND_NAME = "worker_waiter_kind"
 TASK_KIND_NAME = "task_wait_n_seconds"
@@ -251,7 +251,7 @@ relay_client = RelayClient(config=relay_config)
 
 # You must use the ID generated at time of publishing to retrieve it later
 async def fetch_task(task_id: UUID) -> Task:
-  updated_task = await relay_client.get_task(task_id) 
+  updated_task = await relay_client.get_task(task_id)
 
   return updated_task
 
@@ -259,7 +259,7 @@ async def fetch_task(task_id: UUID) -> Task:
 
 > [!WARNING]
 > Until TacoQ reaches a stable 1.0 and for the time being, it is recommended you
-> keep your clients and images always in the same version and never perform a 
+> keep your clients and images always in the same version and never perform a
 > migration with tasks in your database or your queue. This will be improved in
 > the coming months.
 
@@ -273,7 +273,7 @@ View more in-depth examples in [`/examples`](https://github.com/taco-xyz/tacoq/t
 
 - **Improve error handling**, tracing, logging, and metrics.
 - Build a **proper documentation** and website.
-- Create an *all-in-one* Docker image to simplify user onboarding.
+- Create an _all-in-one_ Docker image to simplify user onboarding.
 - Add SDK support for **Rust**.
 
 ### Coming Up (Q2 2025)
