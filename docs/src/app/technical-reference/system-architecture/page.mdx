@@ -1,16 +1,6 @@
 
 import { LightBulbIcon } from "@heroicons/react/24/outline";
 
-# Interactive Map
-
-Explore the following diagram to see how services interact with each other, or
-read a straight-forward explanation of the system below.
-
-<div className="bg-white w-full h-96 rounded-lg p-4 border-2 border-gray-200">
-</div>
-
----
-
 # System Services
 
 These are services that are part of the TacoQ core system. The user doesn't 
@@ -19,45 +9,73 @@ task data.
 
 ## Broker
 
-The broker, implemented in RabbitMQ, is responsible for transporting task objects
-between services. This works by having a central exchange that routes **all task
-objects to the relay** and new tasks to be executed to the **appropriate worker**. 
-More on this in the [Broker](/technical-reference/#h2-worker) section.
+### Broker Responsabilities
 
-> [!NOTE]
-> We **do not plan on supporting additional brokers in the near future**, though we
-> are open to making the broker an abstract class and accepting contributions for
-> other message brokers if there is enough demand.
->
-> The reason behind this is that other brokers (Redis, Kafka, etc...) do not 
-> support core features like routing and priorities, which we heavily rely on.
+The broker is responsible for transporting task objects between services. This
+works by having a central exchange that routes **all task objects to the 
+relay** and new tasks to be executed to the **appropriate worker**. 
 
 ### RabbitMQ Implementation Details
 
-The basic structure of the broker infrastructure is as follows:
+The broker is implemented in RabbitMQ. Its structure is as follows:
 
-- A `task_exchange` exchange to which new tasks are published
-- One queue per worker kind - the `task_exchange` filters new tasks to be routed
-  to the appropriate queue. More on worker kinds in the 
-  [Worker](/technical-reference/#h2-worker) section.
-- The relay queue. All tasks that go through the `task_exchange` are routed to 
-  the relay queue, but new task results are published directly to the queue 
-  rather than the exchange as they don't need to be used in the workers.
+- The `relay_queue`, which is consumed by the Relay to continuously update the
+  task database. When a worker starts or finishes executing a task, they send
+  an update directly to this queue.
+- One queue per worker kind. More on worker kinds in the
+  [Worker](/technical-reference/system-architecture/#h2-worker) section.
+- A `task_exchange` exchange to which new tasks are published, being routed to
+  the appropriate worker queue based on their routing key (which is dictated
+  by the worker kind in the task object).
 
 Queues and exchanges are not customizable because RabbitMQ doesn't like it
-when different services expect different queue and exchange configurations.
-Therefore:
+when different services declare different queue and exchange configurations
+(it crashes). Therefore:
 
-- All queues and exchanges are **durable**.
-- All queues and exchanges are **do not auto-delete**.
+- All queues and exchanges are [durable](https://www.rabbitmq.com/docs/queues#durability) - 
+  they will survive a RabbitMQ server restart. 
+- All queues and exchanges are [do not auto-delete](https://www.rabbitmq.com/docs/queues#properties) - 
+  they will not be deleted when the last consumer disconnects.
 - All queues have a default `{"x-max-priority": 255}` to allow for maximum 
-  flexibility in task priority and to have the priority feature available by
-  default.
+  flexibility in [task priority](https://www.rabbitmq.com/docs/priority) and to
+  have the priority feature available by default.
+
+<Note>
+  We **do not plan on supporting additional brokers in the near future**, 
+  but we are open to making the broker an abstract class and accepting 
+  contributions for other message brokers if there is enough demand.
+
+  This is because we rely on RabbitMQ's routing and priorities features, which
+  are not always present in other brokers.
+</Note>
 
 ## Database
 
-The latest state of each task is stored in the database by the relay. The database is 
-implemented in Postgres and managed via Rust's SQLX by the relay.
+The latest state of each task is stored in the database. The database is 
+implemented in Postgres and managed via Rust's [sqlx](https://docs.rs/sqlx/latest/sqlx/)
+library by the relay.
+
+<Note>
+  Some Postgres-backed task queues like [Hatchet](https://hatchet.run/) store 
+  every event and use triggers to keep a materialized view with the latest state 
+  of each task up to date. 
+
+  We do not do this for a few reasons:
+  - As the Hatchet team has noted, it is no easy feat to get the triggers 
+    right.
+  - Unlike Hatchet, we are only a task queue, not a workflow orchestrator -
+    it is not as important for us to store information about every step of a
+    workflow.
+  - We already support OTEL tracing. We believe this is enough to get 
+    observability into the system. The task also has information about the
+    timeline of its execution.
+</Note> 
+
+<Note>
+  We use some Postgres-specific features like `LISTEN` and `NOTIFY` to implement
+  event-based task updates with the clients. Because of this, we do not plan on
+  suporting other databases in the near future.
+</Note>
 
 ## Relay
 
@@ -72,12 +90,14 @@ The relay consumes task updates from the broker and stores them in the database 
 ### 2. Data Retrieval
 
 The relay also serves a **REST API** for retrieving task data from the database. 
-You can read the API swagger definition in [Relay Endpoints](/technical-reference/relay-endpoints). 
+You can read the API swagger definition in [Relay Endpoints](/technical-reference/relay-endpoints).
+The REST API is implemented in [Axum](https://docs.rs/axum/latest/axum/).
 
 ### 3. Cleanup
 
-The relay will run a cron job to delete tasks that have been in the database for
-longer than a set period of time specified by the user.
+The relay will run a job to delete tasks that have been in the database for
+longer than a set period of time specified by the user. An index exists on the
+TTL column of the database to make this operation efficient.
 
 ### 4. Replication
 
@@ -85,16 +105,14 @@ The relay is stateless and can be scaled horizontally if you need to
 load balance requests between multiple relays or increase the consuming
 rate of tasks.
 
-### Bonus: Rust Implementation Details
+<Tip>
+  The relay has a lot of features packaged into a single service for the sake of simplicity.
 
-The relay is implemented in Rust with the following specs:
-- The API is an Axum app
-- The database is managed via SQLX
-- The task update consumer is a background task running in parallel with the API
-- The cleanup is a background task running as a cronjob. We've decided to not
-make it a Postgres job so that we can support additional datastores in the future.
-
----
+  If you only want to scale the consuming rate of tasks horizontally but you don't need more APIs,
+  you can use the environment variables `ENABLE_RELAY_TASK_CONSUMER`, `ENABLE_RELAY_CLEANUP` and
+  `ENABLE_RELAY_API` to disable the features you don't need. Read more about environment variables
+  in the [Relay environment variables](/technical-reference/relay-environment-variables) section.
+</Tip>
 
 # User Services
 
@@ -106,39 +124,42 @@ needed.
 The worker is responsible for executing tasks. Each worker has a `worker_kind`
 and multiple `task_kind`'s that it is capable of executing.
 
-<div className="bg-blue-300/10 text-blue-300 rounded-lg p-4 border-2 border-blue-300/20 flex flex-row items-start gap-2">
-    <LightBulbIcon className="size-20 h-fit"/>
-    <span className="text-blue-200">
-        Why are worker kinds a thing?
-        
-        It is not uncommon for task queues to all share the same queue. If you were to
-        have two different workers with different task capabilities, they would often
-        consume tasks they are unable to execute, NACK them, and send the task to the
-        back of the queue. This could happen repeatedly and cause the task to never be
-        executed.
+<Note>
+  Why are worker kinds a thing?
 
-        Another possible implementation would be to have one queue per task kind, which
-        would allow workers to only consume the queues they know they are able to 
-        execute. This would, however, require the worker to have a strategy for 
-        determining which queue to prioritize consuming, which would increase complexity.
+  It is not uncommon for task queues to have all their workers consume from the
+  same queue. If you were to have two different workers with different task
+  capabilities, they would often consume tasks they are unable to execute, NACK
+  them, and send the task to the back of the queue. This could happen repeatedly
+  and cause the task to never be executed, or at least be greatly delayed.
 
-        The drawbacks to the current approach are:
-        1. Additional setup parameter that must be known pre-runtime.
-        2. There cannot be two different worker kinds with the shared task kind 
-        capabilities. The user must always choose which worker kind to route a task to.
+  Another possible implementation would be to have one queue per task kind, which
+  would allow workers to only consume the queues they know they are able to 
+  execute. This would, however, require the worker to have a strategy for 
+  determining which queue to prioritize consuming, increasing complexity and making
+  the behaviour more opaque.
 
-        Given these extremely specific drawbacks which apply to almost no one and can
-        easily be worked around, we've decided to use worker kinds to route tasks.
-    </span>
-</div>
+  So, we make the user explicitely decide which worker to route their task to,
+  and we make the worker kind part of the task object.
 
-## Publisher
+  The drawbacks to the current approach are:
+  - Additional setup parameter that must be known pre-runtime.
+  - There cannot be two different worker kinds with the shared task kind 
+    capabilities. The user must always choose which worker kind to route a task to.
 
-A task publisher serves two purposes:
+  Given these extremely specific drawbacks which apply to almost no one and can
+  easily be worked around, we've decided to use worker kinds to route tasks. If 
+  you have a better idea, please let us know! :)
+</Note>
 
-1. Publish a task for the workers to work on. This task is published to the 
-task exchange on the broker, which is then routed to the relay and to the worker.
-2. Retrieve task results by querying the relay's API, which queries the database.
+## Publisher Client
 
-The publisher doesn't need to be its own service, anything can be a 
-publisher - a FastAPI app, a CLI, even a worker.
+A task publisher client isn't a service but a client for submitting tasks to your 
+workers. It connects directly to the broker.
+
+## Relay Client
+
+As task results are completed, they get stored in the database. To access them,
+an application must communicate with the relay via REST API. So, the client SDKs
+have a **Relay Client** built in, whom is capable for retrieving task results via
+the REST API.
