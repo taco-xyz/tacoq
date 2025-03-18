@@ -5,6 +5,7 @@ import Image from "next/image";
 // Types Imports
 import type { MDXComponents } from "mdx/types";
 import { HeadingTypes, getHeaderId } from "@/types/page/Heading";
+import { Card, CardGroup } from "@/components/mdx/Card";
 
 // Components Imports
 import Heading from "@/components/mdx/heading/Heading";
@@ -144,6 +145,16 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       >
         {children}
       </blockquote>
+    ),
+
+    // Cards ---------------------------------------------------
+
+    Card: ({ className, ...props }) => (
+      <Card className={className} {...props}></Card>
+    ),
+
+    CardGroup: ({ className, ...props }) => (
+      <CardGroup className={className} {...props}></CardGroup>
     ),
 
     hr: ({ className }) => (
