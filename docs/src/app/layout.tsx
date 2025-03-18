@@ -30,6 +30,67 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const metadata = {
+  metadataBase: new URL("https://www.tacodivision.com/  "),
+  title: {
+    template: "%s | TacoQ Documentation",
+    default: "TacoQ | Multi-Language Distributed Task Queue",
+  },
+  description:
+    "TacoQ is a multi-language distributed task queue with built-in observability, low latency, and first-class idiomatic support for Python, Rust, and JavaScript.",
+  keywords: [
+    "tacoq",
+    "task queue",
+    "distributed system",
+    "message broker",
+    "rabbitmq",
+    "postgres",
+    "python",
+    "rust",
+    "javascript",
+    "async tasks",
+    "worker queue",
+    "job queue",
+    "observability",
+    "multi-language",
+    "distributed computing",
+  ],
+  authors: [{ name: "Taco Division" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "TacoQ | Multi-Language Distributed Task Queue",
+    description:
+      "Modern distributed task queue with multi-language support, built-in observability, and low latency.",
+    images: [
+      {
+        url: "/TacoQBannerLight.svg",
+        width: 1000,
+        height: 300,
+        alt: "TacoQ Banner",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TacoQ Documentation",
+    description: "Modern distributed task queue with multi-language support",
+    images: ["/TacoQBannerLight.svg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
+
 export default function RootLayout({
   children,
 }: {

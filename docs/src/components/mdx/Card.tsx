@@ -59,7 +59,14 @@ const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
   );
 
   if (href) {
-    return <Link href={href}>{content}</Link>;
+    return (
+      <Link
+        href={href}
+        className="custom-tab-outline-offset-2 rounded-2xl transition-all duration-150 ease-in-out"
+      >
+        {content}
+      </Link>
+    );
   }
 
   return content;

@@ -8,7 +8,10 @@ import Image from "next/image";
  */
 export default function Logo() {
   return (
-    <Link href="/">
+    <Link
+      href="/"
+      className="custom-tab-outline-offset-6 rounded-xs transition-all duration-150 ease-in-out"
+    >
       <Image
         src="/TacoQTextLogoLight.svg"
         alt="Logo"
