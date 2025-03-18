@@ -48,7 +48,7 @@ export function Footer() {
               key={idx}
               className="flex flex-col gap-y-3 whitespace-nowrap text-sm w-fit"
             >
-              <h3 className="font-medium text-zinc-700 dark:text-white transition-colors ease-in-out duration-150">
+              <h3 className="font-medium text-zinc-800 dark:text-white transition-colors ease-in-out duration-150">
                 {group.groupName}
               </h3>
               <div className="flex flex-col gap-y-2">
@@ -56,7 +56,7 @@ export function Footer() {
                   <Link
                     key={linkIdx}
                     href={link.url}
-                    className="text-zinc-500 dark:text-white/50 hover:text-zinc-700 dark:hover:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-2 rounded-sm"
+                    className="text-zinc-500 dark:text-white/50 hover:text-zinc-800 dark:hover:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-2 rounded-sm"
                   >
                     {link.linkName}
                   </Link>

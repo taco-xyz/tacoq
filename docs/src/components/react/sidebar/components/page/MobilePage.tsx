@@ -55,9 +55,9 @@ export default function MobilePageComponent({
             href={url}
             className={clsx(
               currentPageTitle === title &&
-                "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-700 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+                "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
               currentPageTitle !== title &&
-                "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
+                "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
               "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
             )}
             onClick={() => {
@@ -110,9 +110,9 @@ export default function MobilePageComponent({
           }}
           className={clsx(
             currentPageTitle === title &&
-              "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-700 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+              "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
             currentPageTitle !== title &&
-              "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
+              "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
             "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
           )}
         >

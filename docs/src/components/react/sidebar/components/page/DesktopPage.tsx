@@ -67,16 +67,16 @@ export default function DesktopPageComponent({
             className={clsx(
               focusedPageTitle === title &&
                 currentPageTitle === title &&
-                "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-700 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+                "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
               focusedPageTitle === title &&
                 currentPageTitle !== title &&
-                "dark:bg-white/5 bg-zinc-800/5 text-zinc-700 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
+                "dark:bg-white/5 bg-zinc-800/5 text-zinc-800 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
               focusedPageTitle !== title &&
                 currentPageTitle === title &&
-                "text-zinc-700 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+                "text-zinc-800 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
               focusedPageTitle !== title &&
                 currentPageTitle !== title &&
-                "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
+                "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
               "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
             )}
             onClick={() => {
@@ -135,16 +135,16 @@ export default function DesktopPageComponent({
           className={clsx(
             focusedPageTitle === title &&
               currentPageTitle === title &&
-              "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-700 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+              "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
             focusedPageTitle === title &&
               currentPageTitle !== title &&
-              "dark:bg-white/5 bg-zinc-800/5 text-zinc-700 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
+              "dark:bg-white/5 bg-zinc-800/5 text-zinc-800 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
             focusedPageTitle !== title &&
               currentPageTitle === title &&
-              "text-zinc-700 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+              "text-zinc-800 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
             focusedPageTitle !== title &&
               currentPageTitle !== title &&
-              "hover:text-zinc-700 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
+              "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
             "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
           )}
         >

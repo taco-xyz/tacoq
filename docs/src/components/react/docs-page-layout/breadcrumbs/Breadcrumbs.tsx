@@ -23,7 +23,7 @@ export default function Breadcrumbs() {
         <div className="flex items-center flex-row">
           <Link
             href={"/"}
-            className="text-xs whitespace-nowrap transition-colors duration-150 ease-in-out text-zinc-700 dark:text-white font-medium pointer-events-none"
+            className="text-xs whitespace-nowrap transition-colors duration-150 ease-in-out text-zinc-800 dark:text-white font-medium pointer-events-none"
           >
             Home
           </Link>
@@ -40,7 +40,7 @@ export default function Breadcrumbs() {
             className={clsx(
               "text-xs whitespace-nowrap transition-colors duration-150 ease-in-out",
               index === breadcrumbs.length - 1
-                ? "text-zinc-700 dark:text-white font-medium pointer-events-none"
+                ? "text-zinc-800 dark:text-white font-medium pointer-events-none"
                 : "text-zinc-500 dark:text-zinc-500",
               crumb.url
                 ? "cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300"
