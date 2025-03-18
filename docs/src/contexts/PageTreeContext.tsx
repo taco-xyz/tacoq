@@ -13,9 +13,8 @@ import {
 import { usePathname } from "next/navigation";
 
 // Type imports
-import type { Page } from "@/types/page/Page";
+import type { Page, PageTree } from "@/types/PageTree";
 import type { Anchor } from "@/types/Anchor";
-import { HeadingTypes } from "@/types/page/Heading";
 import FooterContent from "@/types/FooterContent";
 
 // Heroicons Imports
@@ -24,22 +23,6 @@ import {
   NewspaperIcon,
   CreditCardIcon,
 } from "@heroicons/react/24/solid";
-import {
-  BoltIcon,
-  LinkIcon,
-  RocketLaunchIcon,
-  AcademicCapIcon,
-  ArrowDownTrayIcon,
-  BookOpenIcon,
-  BuildingLibraryIcon,
-  CpuChipIcon,
-  AdjustmentsVerticalIcon,
-  ArrowUpIcon,
-  ChevronDoubleRightIcon,
-  PencilSquareIcon,
-  PresentationChartLineIcon,
-  ChartBarIcon,
-} from "@heroicons/react/24/outline";
 
 // Custom Icons Imports
 import {
@@ -47,6 +30,14 @@ import {
   XIcon,
   DiscordIcon,
 } from "@/components/react/icons/social";
+
+// Data imports
+import pageTreeJson from "@/page-tree.json";
+
+const pageTree = pageTreeJson as PageTree;
+
+// Utils
+import { getIcon } from "../utils/getIcon";
 
 const anchors: Anchor[] = [
   {
@@ -63,284 +54,6 @@ const anchors: Anchor[] = [
     title: "Pricing",
     url: "/pricing",
     Icon: CreditCardIcon,
-  },
-];
-
-const pages: Page[] = [
-  // Quickstart
-  {
-    metadata: {
-      title: "Quickstart",
-      description: "Get started using TacoQ",
-      sidebar: {
-        title: "Quickstart",
-        Icon: RocketLaunchIcon,
-      },
-    },
-    children: [
-      {
-        url: "/quickstart/core-concepts",
-        metadata: {
-          title: "Core Concepts",
-          description:
-            "Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.",
-          badge: {
-            text: "Quickstart",
-          },
-          sidebar: {
-            title: "Core Concepts",
-            Icon: AcademicCapIcon,
-          },
-        },
-        content: [
-          { type: HeadingTypes.H1, name: "What is TacoQ?" },
-          { type: HeadingTypes.H1, name: "Core Concepts: Rapid-fire Overview" },
-          { type: HeadingTypes.H2, name: "Tasks" },
-          { type: HeadingTypes.H2, name: "Message Broker" },
-          { type: HeadingTypes.H2, name: "Workers" },
-          { type: HeadingTypes.H2, name: "Publishers" },
-          { type: HeadingTypes.H2, name: "Relay" },
-          { type: HeadingTypes.H1, name: "What makes TacoQ different?" },
-        ],
-      },
-      {
-        url: "/quickstart/setup",
-        metadata: {
-          title: "Setup",
-          description:
-            "Get TacoQ up and running on your project using Docker and the Python SDK.",
-          badge: {
-            text: "Quickstart",
-          },
-          sidebar: {
-            title: "Setup",
-            Icon: ArrowDownTrayIcon,
-          },
-        },
-        content: [
-          { type: HeadingTypes.H1, name: "Prerequisites" },
-          { type: HeadingTypes.H1, name: "Infrastructure" },
-          { type: HeadingTypes.H1, name: "Client" },
-          { type: HeadingTypes.H2, name: "Worker" },
-          { type: HeadingTypes.H2, name: "PublisherClient" },
-          { type: HeadingTypes.H2, name: "RelayClient" },
-        ],
-      },
-    ],
-  },
-  // Technical Reference
-  {
-    metadata: {
-      title: "Technical Reference",
-      description: "Learn about the technical details of TacoQ.",
-      sidebar: {
-        title: "Technical Reference",
-        Icon: BookOpenIcon,
-      },
-    },
-    children: [
-      {
-        url: "/technical-reference/system-architecture",
-        metadata: {
-          title: "System Architecture",
-          description:
-            "Learn how services interact with each other and why they are structured the way they are.",
-          badge: {
-            text: "Technical Reference",
-          },
-          sidebar: {
-            title: "System Architecture",
-            Icon: BuildingLibraryIcon,
-          },
-        },
-        content: [
-          { type: HeadingTypes.H1, name: "System Services" },
-          { type: HeadingTypes.H2, name: "Broker" },
-          { type: HeadingTypes.H3, name: "Broker Responsabilities" },
-          { type: HeadingTypes.H3, name: "RabbitMQ Implementation Details" },
-          { type: HeadingTypes.H2, name: "Database" },
-          { type: HeadingTypes.H2, name: "Relay" },
-          { type: HeadingTypes.H3, name: "1. Task Update Consumer" },
-          { type: HeadingTypes.H3, name: "2. Data Retrieval" },
-          { type: HeadingTypes.H3, name: "3. Cleanup" },
-          { type: HeadingTypes.H3, name: "4. Replication" },
-          { type: HeadingTypes.H1, name: "User Services" },
-          { type: HeadingTypes.H2, name: "Worker" },
-          { type: HeadingTypes.H2, name: "Publisher Client" },
-          { type: HeadingTypes.H2, name: "Relay Client" },
-        ],
-      },
-      {
-        url: "/technical-reference/relay-endpoints",
-        metadata: {
-          title: "Relay Endpoints",
-          description:
-            "Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.",
-          badge: {
-            text: "Technical Reference",
-          },
-          sidebar: {
-            title: "Relay Endpoints",
-            Icon: CpuChipIcon,
-          },
-        },
-        content: [],
-      },
-      {
-        url: "/technical-reference/versioning",
-        metadata: {
-          title: "Versioning",
-          description:
-            "Learn how TacoQ handles versioning for images and libraries.",
-          badge: {
-            text: "Technical Reference",
-          },
-          sidebar: {
-            title: "Versioning",
-            Icon: AdjustmentsVerticalIcon,
-          },
-        },
-        content: [
-          { type: HeadingTypes.H1, name: "Semantic Versioning" },
-          { type: HeadingTypes.H1, name: "SDK and Image Lockstep Releases" },
-          { type: HeadingTypes.H1, name: "Task Object" },
-          { type: HeadingTypes.H1, name: "Documentation" },
-        ],
-      },
-      {
-        url: "/technical-reference/benchmarks",
-        metadata: {
-          title: "Benchmarks",
-          description:
-            "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
-          badge: {
-            text: "Technical Reference",
-          },
-          sidebar: {
-            title: "Benchmarks",
-            Icon: ChartBarIcon,
-          },
-        },
-      },
-
-      // {
-      //   metadata: {
-      //     title: "SDKs",
-      //     description: "Reference for each of the available SDKs.",
-      //     badge: {
-      //       text: "Technical Reference",
-      //     },
-      //     sidebar: {
-      //       title: "SDKs",
-      //       Icon: ComputerDesktopIcon,
-      //     },
-      //   },
-      //   children: [
-      //     {
-      //       url: "/technical-reference/sdks/python",
-      //       metadata: {
-      //         title: "Python SDK",
-      //         description: "Reference for the Python SDK.",
-      //         badge: {
-      //           text: "Technical Reference",
-      //         },
-      //         sidebar: {
-      //           title: "Python SDK",
-      //           Icon: CodeBracketIcon,
-      //         },
-      //       },
-      //     },
-      //   ],
-      // },
-    ],
-  },
-  // Guides
-  {
-    metadata: {
-      title: "Guides",
-      description: "Learn how to perform common tasks using TacoQ.",
-      sidebar: {
-        title: "Guides",
-        Icon: PencilSquareIcon,
-      },
-    },
-    children: [
-      {
-        url: "/guides/task-versioning",
-        metadata: {
-          title: "Task Encoding & Versioning",
-          description:
-            "Learn how to serialize your tasks' input and output data as well as version your tasks.",
-          badge: {
-            text: "Guides",
-          },
-          sidebar: {
-            title: "Task Encoding & Versioning",
-            Icon: ArrowUpIcon,
-          },
-        },
-      },
-      {
-        url: "/guides/same-app-worker-pattern",
-        metadata: {
-          title: "Same-app Worker Pattern",
-          description:
-            "Learn how to set up a worker and publisher in the same application to make your life easier.",
-          badge: {
-            text: "Guides",
-          },
-          sidebar: {
-            title: "Same-app Worker Pattern",
-            Icon: ChevronDoubleRightIcon,
-          },
-        },
-      },
-      {
-        url: "/guides/maximizing-performance",
-        metadata: {
-          title: "Maximizing Performance",
-          description:
-            "Understand how to get the best performance out of TacoQ.",
-          badge: {
-            text: "Guides",
-          },
-          sidebar: {
-            title: "Maximizing Performance",
-            Icon: BoltIcon,
-          },
-        },
-      },
-      {
-        url: "/guides/horizontal-scaling",
-        metadata: {
-          title: "Scaling TacoQ",
-          description:
-            "Learn how to scale your TacoQ application horizontally on the cloud with multiple workers, auto-scaling, distributed Postgres, replicated relays, and more.",
-          badge: {
-            text: "Guides",
-          },
-          sidebar: {
-            title: "Horizontal Scaling",
-            Icon: PresentationChartLineIcon,
-          },
-        },
-      },
-      {
-        url: "/guides/api-integration",
-        metadata: {
-          title: "API Integration",
-          description:
-            "Learn how to publish and fetch tasks without an SDK by using the relay endpoints.",
-          badge: {
-            text: "Guides",
-          },
-          sidebar: {
-            title: "API Integration",
-            Icon: LinkIcon,
-          },
-        },
-      },
-    ],
   },
 ];
 
@@ -398,6 +111,8 @@ interface PageTreeContextType {
   isPageExpanded: (pageTitle: string) => boolean;
   /** Retrieves a page by its title */
   getPageByTitle: (pageTitle: string) => Page | null;
+  /** Page one level upwards in the navigation tree */
+  parentPageTitle: string | null;
   /** Title of the currently active page */
   currentPageTitle: string | null;
   /** Array of page titles that are currently visible */
@@ -419,12 +134,6 @@ interface PageTreeContextType {
 const PageTreeContext = createContext<PageTreeContextType | null>(null);
 
 // Helper functions
-/**
- * Gets an array of page titles that are currently visible in the navigation tree
- * @param pages - Array of pages to traverse
- * @param expandedPages - Set of page titles that are currently expanded
- * @returns Array of visible page titles in display order
- */
 function getVisiblePages(pages: Page[], expandedPages: Set<string>): string[] {
   const visiblePages: string[] = [];
   function traverse(page: Page) {
@@ -437,12 +146,6 @@ function getVisiblePages(pages: Page[], expandedPages: Set<string>): string[] {
   return visiblePages;
 }
 
-/**
- * Finds a page in the navigation tree by its title
- * @param pages - Array of pages to search
- * @param title - Title of the page to find
- * @returns The matching page or null if not found
- */
 function findPageByTitle(pages: Page[], title: string): Page | null {
   for (const page of pages) {
     if (page.metadata.title === title) return page;
@@ -454,13 +157,6 @@ function findPageByTitle(pages: Page[], title: string): Page | null {
   return null;
 }
 
-/**
- * Finds a page by URL and returns array of parent page titles leading to it
- * @param pages - Array of pages to search
- * @param targetUrl - URL of the page to find
- * @param parents - Accumulator for parent page titles (used in recursion)
- * @returns Array of page titles from root to target page, empty if not found
- */
 function findPageAndParents(
   pages: Page[],
   targetUrl: string,
@@ -481,11 +177,6 @@ function findPageAndParents(
   return [];
 }
 
-/**
- * Gets a flattened array of pages with URLs in navigation order
- * @param pages - Array of pages to flatten
- * @returns Array of pages with URLs in navigation order
- */
 function getFlattenedPages(pages: Page[]): Page[] {
   const flattened: Page[] = [];
   function traverse(page: Page) {
@@ -503,16 +194,11 @@ function getFlattenedPages(pages: Page[]): Page[] {
 export function PageTreeProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // A set of page titles that are currently expanded
   const [expandedPages, setExpandedPages] = useState<Set<string>>(() => {
-    const parentPages = findPageAndParents(pages, pathname);
+    const parentPages = findPageAndParents(pageTree.children, pathname);
     return new Set(parentPages.slice(0, -1));
   });
 
-  /**
-   * Memoized title of the current page based on URL pathname
-   * Returns null if no matching page is found
-   */
   const currentPageTitle = useMemo(() => {
     function findPageByUrl(pages: Page[], url: string): Page | null {
       for (const page of pages) {
@@ -524,28 +210,19 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
       }
       return null;
     }
-    const currentPage = findPageByUrl(pages, pathname);
+    const currentPage = findPageByUrl(pageTree.children, pathname);
     return currentPage?.metadata.title ?? null;
   }, [pathname]);
 
-  /**
-   * Memoized array of page titles that are visible in the navigation
-   */
   const visiblePagesTitles = useMemo(
-    () => getVisiblePages(pages, expandedPages),
+    () => getVisiblePages(pageTree.children, expandedPages),
     [expandedPages]
   );
 
-  /**
-   * Expands a page in the navigation tree given its title
-   */
   const expandPage = useCallback((pageTitle: string) => {
     setExpandedPages((prev) => new Set([...prev, pageTitle]));
   }, []);
 
-  /**
-   * Collapses a page in the navigation tree given its title
-   */
   const collapsePage = useCallback((pageTitle: string) => {
     setExpandedPages((prev) => {
       const next = new Set(prev);
@@ -554,43 +231,25 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  /**
-   * Checks if a page is currently expanded in the navigation tree
-   */
   const isPageExpanded = useCallback(
     (pageTitle: string) => expandedPages.has(pageTitle),
     [expandedPages]
   );
 
-  /**
-   * Finds and returns a page by its title
-   * Returns null if no matching page is found
-   */
   const getPageByTitle = useCallback(
-    (pageTitle: string) => findPageByTitle(pages, pageTitle),
+    (pageTitle: string) => findPageByTitle(pageTree.children, pageTitle),
     []
   );
 
-  /**
-   * Memoized breadcrumbs for the current page
-   */
   const breadcrumbs = useMemo(() => {
-    // Find the parent titles of the current page
-    const parentTitles = findPageAndParents(pages, pathname);
-    // Find the pages that match the parent titles
-    return (
-      parentTitles
-        .map((title) => findPageByTitle(pages, title))
-        // Filter out any null values
-        .filter((page): page is Page => !!page)
-    );
+    const parentTitles = findPageAndParents(pageTree.children, pathname);
+    return parentTitles
+      .map((title) => findPageByTitle(pageTree.children, title))
+      .filter((page): page is Page => !!page);
   }, [pathname]);
 
-  /**
-   * Memoized previous and next pages based on current pathname
-   */
   const { previousPage, nextPage } = useMemo(() => {
-    const flattenedPages = getFlattenedPages(pages);
+    const flattenedPages = getFlattenedPages(pageTree.children);
     const currentIndex = flattenedPages.findIndex(
       (page) => page.url === pathname
     );
@@ -604,6 +263,31 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
+  const parentPageTitle = useMemo(() => {
+    const parentTitles = findPageAndParents(pageTree.children, pathname);
+    return parentTitles.length > 1
+      ? parentTitles[parentTitles.length - 2]
+      : null;
+  }, [pathname]);
+
+  // Convert icon names to components
+  const pagesWithIcons = useMemo(() => {
+    function addIconsToPages(pages: Page[]): Page[] {
+      return pages.map((page) => ({
+        ...page,
+        metadata: {
+          ...page.metadata,
+          sidebar: {
+            title: page.metadata.title,
+            Icon: getIcon(page.metadata.icon),
+          },
+        },
+        children: page.children ? addIconsToPages(page.children) : undefined,
+      }));
+    }
+    return addIconsToPages(pageTree.children);
+  }, []);
+
   return (
     <PageTreeContext.Provider
       value={{
@@ -611,9 +295,10 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         collapsePage,
         isPageExpanded,
         getPageByTitle,
+        parentPageTitle,
         currentPageTitle,
         visiblePagesTitles,
-        pages,
+        pages: pagesWithIcons,
         anchors,
         footerContent,
         breadcrumbs,

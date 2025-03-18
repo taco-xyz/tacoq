@@ -7,7 +7,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { usePageTree } from "@/contexts/PageTreeContext";
 
 // Types Imports
-import { HeadingTypes, getHeaderId } from "@/types/page/Heading";
+import getHeaderId from "@/utils/getHeaderId";
 
 // Utils Imports
 import clsx from "clsx";
@@ -63,7 +63,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
   // Effect to track the active heading based on the distance to the top of the viewport (94px offset)
   // Runs once on mount
   useEffect(() => {
-    if (!currentPage?.content) return;
+    if (!currentPage?.headers) return;
 
     // Check URL hash on initial load
     const hash = window.location.hash.slice(1); // Remove the # symbol
@@ -80,8 +80,8 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
     let closestHeading = null;
     let closestDistance = Infinity;
 
-    currentPage.content.forEach((heading) => {
-      const element = document.getElementById(getHeaderId(heading));
+    currentPage.headers.forEach((header) => {
+      const element = document.getElementById(getHeaderId(header));
       if (element) {
         // Calculate the distance between the heading and the 94px mark
         const distance = Math.abs(element.getBoundingClientRect().top - 94);
@@ -109,15 +109,15 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
     );
 
     // Start observing all heading elements
-    currentPage.content.forEach((heading) => {
-      const element = document.getElementById(getHeaderId(heading));
+    currentPage.headers.forEach((header) => {
+      const element = document.getElementById(getHeaderId(header));
       if (element) observer.observe(element);
     });
 
     return () => observer.disconnect();
-  }, [currentPage?.content]);
+  }, [currentPage?.headers]);
 
-  if (!currentPage?.content) return null;
+  if (!currentPage?.headers) return null;
 
   return (
     <div className="w-full h-full relative">
@@ -137,8 +137,8 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
 
         {/* Links */}
         <div className="flex flex-col gap-y-2">
-          {currentPage.content.map((heading, index) => {
-            const headingId = getHeaderId(heading);
+          {currentPage.headers.map((header, index) => {
+            const headingId = getHeaderId(header);
             const isActive = headingId === activeHeadingId;
             return (
               <button
@@ -147,15 +147,15 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
                 className={clsx(
                   "text-left hover:text-zinc-800 dark:hover:text-white transition-all rounded-sm duration-150 ease-in-out whitespace-nowrap cursor-pointer custom-tab-outline-offset-2",
 
-                  heading.type === HeadingTypes.H1 && "pl-0",
-                  heading.type === HeadingTypes.H2 && "pl-4",
-                  heading.type === HeadingTypes.H3 && "pl-8",
+                  header.type === "h1" && "pl-0",
+                  header.type === "h2" && "pl-4",
+                  header.type === "h3" && "pl-8",
                   isActive
                     ? "font-medium text-zinc-800 dark:text-white"
                     : "font-normal text-zinc-500 dark:text-zinc-300"
                 )}
               >
-                {heading.name}
+                {header.title}
               </button>
             );
           })}

@@ -15,7 +15,8 @@ export interface DocsPageLayoutProps {
 }
 
 export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
-  const { breadcrumbs, previousPage, nextPage } = usePageTree();
+  const { breadcrumbs, previousPage, nextPage, parentPageTitle } =
+    usePageTree();
 
   // Get the current page for simplicity
   const currentPage = useMemo(() => {
@@ -31,12 +32,9 @@ export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
       {/* Header */}
       <div className="flex flex-col items-start justify-start gap-y-5 border-b border-zinc-200 dark:border-zinc-800 pb-9 transition-colors duration-150 ease-in-out">
         <div className="flex flex-col items-start justify-start gap-y-3">
-          {currentPage.metadata.badge ? (
+          {parentPageTitle ? (
             <div className="flex flex-row items-center w-fit justify-center gap-x-2 font-mono uppercase text-xs font-semibold text-zinc-500 dark:text-zinc-400 transition-colors duration-150 ease-in-out">
-              {currentPage.metadata.badge.Icon && (
-                <currentPage.metadata.badge.Icon className="size-3" />
-              )}
-              {currentPage.metadata.badge.text}
+              {parentPageTitle}
             </div>
           ) : (
             // Default to the name of the parent page if no badge info was provided
