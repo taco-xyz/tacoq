@@ -1,4 +1,21 @@
-# TacoQ
+import Image from "next/image";
+
+<div className="w-full h-fit my-2 ring-1 rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/1 dark:shadow-black/5 transition-all duration-150 ease-in-out ring-inset">
+  <Image
+    src="/TacoQBannerLight.svg"
+    alt="TacoQ Banner"
+    width={1000}
+    height={100}
+    className="flex dark:hidden w-full h-auto rounded-[11px] border-1 border-zinc-200 dark:border-zinc-800/70 transition-all duration-150 ease-in-out"
+  />
+  <Image
+    src="/TacoQBannerDark.svg"
+    alt="TacoQ Banner"
+    width={1000}
+    height={100}
+    className="hidden dark:flex w-full h-auto rounded-[11px] border-1 border-zinc-200 dark:border-zinc-800/70 transition-all duration-150 ease-in-out"
+  />
+</div>
 
 TacoQ is a multi-language distributed task queue with built-in observability, low latency, and first-class idiomatic support.
 
@@ -7,8 +24,28 @@ To get started, check out the [Quickstart Guide](/quickstart/core-concepts).
 To learn more about the TacoQ system, go over to the [Technical Reference](/technical-reference/system-architecture).
 
 <CardGroup columns={2}>
-  <Card title="Quickstart" description="Get up and running with TacoQ." icon="rocket" href="/quickstart/core-concepts" />
-  <Card title="Technical Reference" description="Learn more about the TacoQ system." icon="book" href="/technical-reference/system-architecture" />
-  <Card title="Community" description="Join the Taco community." icon="userGroup" href="/community" />
-  <Card title="Guides" description="Learn how to achieve specific goals with TacoQ." icon="bookmarkSquare" href="/guides" />
+  <Card
+    title="Quickstart"
+    description="Get up and running with TacoQ."
+    icon="rocket"
+    href="/quickstart/core-concepts"
+  />
+  <Card
+    title="Technical Reference"
+    description="Learn more about the TacoQ system."
+    icon="book"
+    href="/technical-reference/system-architecture"
+  />
+  <Card
+    title="Community"
+    description="Join the Taco community."
+    icon="userGroup"
+    href="/community"
+  />
+  <Card
+    title="Guides"
+    description="Learn how to achieve specific goals with TacoQ."
+    icon="bookmarkSquare"
+    href="/guides"
+  />
 </CardGroup>

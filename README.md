@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="banner.png" alt="banner">
-</p>
+![TacoQ Banner](https://raw.githubusercontent.com/taco-xyz/tacoq/7f5a946229a3bdd63e94d7306720d0bccadd2f6e/TacoQBanner.png)
 
 # TacoQ
 
