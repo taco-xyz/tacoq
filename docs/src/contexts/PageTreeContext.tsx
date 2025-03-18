@@ -26,8 +26,6 @@ import {
 } from "@heroicons/react/24/solid";
 import {
   BoltIcon,
-  CodeBracketIcon,
-  ComputerDesktopIcon,
   LinkIcon,
   RocketLaunchIcon,
   AcademicCapIcon,
@@ -94,6 +92,16 @@ const pages: Page[] = [
             Icon: AcademicCapIcon,
           },
         },
+        content: [
+          { type: HeadingTypes.H1, name: "What is TacoQ?" },
+          { type: HeadingTypes.H1, name: "Core Concepts: Rapid-fire Overview" },
+          { type: HeadingTypes.H2, name: "Tasks" },
+          { type: HeadingTypes.H2, name: "Message Broker" },
+          { type: HeadingTypes.H2, name: "Workers" },
+          { type: HeadingTypes.H2, name: "Publishers" },
+          { type: HeadingTypes.H2, name: "Relay" },
+          { type: HeadingTypes.H1, name: "What makes TacoQ different?" },
+        ],
       },
       {
         url: "/quickstart/setup",
@@ -109,6 +117,14 @@ const pages: Page[] = [
             Icon: ArrowDownTrayIcon,
           },
         },
+        content: [
+          { type: HeadingTypes.H1, name: "Prerequisites" },
+          { type: HeadingTypes.H1, name: "Infrastructure" },
+          { type: HeadingTypes.H1, name: "Client" },
+          { type: HeadingTypes.H2, name: "Worker" },
+          { type: HeadingTypes.H2, name: "PublisherClient" },
+          { type: HeadingTypes.H2, name: "RelayClient" },
+        ],
       },
     ],
   },
@@ -138,36 +154,21 @@ const pages: Page[] = [
           },
         },
         content: [
-          { type: HeadingTypes.H1, name: "Interactive Map" },
           { type: HeadingTypes.H1, name: "System Services" },
           { type: HeadingTypes.H2, name: "Broker" },
+          { type: HeadingTypes.H3, name: "Broker Responsabilities" },
           { type: HeadingTypes.H3, name: "RabbitMQ Implementation Details" },
           { type: HeadingTypes.H2, name: "Database" },
           { type: HeadingTypes.H2, name: "Relay" },
-          { type: HeadingTypes.H3, name: "Task Update Consumer" },
-          { type: HeadingTypes.H3, name: "Data Retrieval" },
-          { type: HeadingTypes.H3, name: "Cleanup" },
-          { type: HeadingTypes.H3, name: "Replication" },
-          { type: HeadingTypes.H3, name: "Rust Implementation Details" },
+          { type: HeadingTypes.H3, name: "1. Task Update Consumer" },
+          { type: HeadingTypes.H3, name: "2. Data Retrieval" },
+          { type: HeadingTypes.H3, name: "3. Cleanup" },
+          { type: HeadingTypes.H3, name: "4. Replication" },
           { type: HeadingTypes.H1, name: "User Services" },
           { type: HeadingTypes.H2, name: "Worker" },
-          { type: HeadingTypes.H2, name: "Publisher" },
+          { type: HeadingTypes.H2, name: "Publisher Client" },
+          { type: HeadingTypes.H2, name: "Relay Client" },
         ],
-      },
-      {
-        url: "/technical-reference/benchmarking",
-        metadata: {
-          title: "Benchmarks",
-          description:
-            "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
-          badge: {
-            text: "Technical Reference",
-          },
-          sidebar: {
-            title: "Benchmarks",
-            Icon: ChartBarIcon,
-          },
-        },
       },
       {
         url: "/technical-reference/relay-endpoints",
@@ -183,43 +184,7 @@ const pages: Page[] = [
             Icon: CpuChipIcon,
           },
         },
-        content: [
-          { type: HeadingTypes.H1, name: "Quickstart Guide" },
-          { type: HeadingTypes.H2, name: "Installation" },
-          { type: HeadingTypes.H2, name: "Basic Setup" },
-          { type: HeadingTypes.H3, name: "Configuration" },
-          { type: HeadingTypes.H3, name: "Environment Variables" },
-          { type: HeadingTypes.H2, name: "Next Steps" },
-        ],
-      },
-      {
-        metadata: {
-          title: "SDKs",
-          description: "Reference for each of the available SDKs.",
-          badge: {
-            text: "Technical Reference",
-          },
-          sidebar: {
-            title: "SDKs",
-            Icon: ComputerDesktopIcon,
-          },
-        },
-        children: [
-          {
-            url: "/technical-reference/sdks/python",
-            metadata: {
-              title: "Python SDK",
-              description: "Reference for the Python SDK.",
-              badge: {
-                text: "Technical Reference",
-              },
-              sidebar: {
-                title: "Python SDK",
-                Icon: CodeBracketIcon,
-              },
-            },
-          },
-        ],
+        content: [],
       },
       {
         url: "/technical-reference/versioning",
@@ -235,7 +200,58 @@ const pages: Page[] = [
             Icon: AdjustmentsVerticalIcon,
           },
         },
+        content: [
+          { type: HeadingTypes.H1, name: "Semantic Versioning" },
+          { type: HeadingTypes.H1, name: "SDK and Image Lockstep Releases" },
+          { type: HeadingTypes.H1, name: "Task Object" },
+          { type: HeadingTypes.H1, name: "Documentation" },
+        ],
       },
+      {
+        url: "/technical-reference/benchmarks",
+        metadata: {
+          title: "Benchmarks",
+          description:
+            "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
+          badge: {
+            text: "Technical Reference",
+          },
+          sidebar: {
+            title: "Benchmarks",
+            Icon: ChartBarIcon,
+          },
+        },
+      },
+
+      // {
+      //   metadata: {
+      //     title: "SDKs",
+      //     description: "Reference for each of the available SDKs.",
+      //     badge: {
+      //       text: "Technical Reference",
+      //     },
+      //     sidebar: {
+      //       title: "SDKs",
+      //       Icon: ComputerDesktopIcon,
+      //     },
+      //   },
+      //   children: [
+      //     {
+      //       url: "/technical-reference/sdks/python",
+      //       metadata: {
+      //         title: "Python SDK",
+      //         description: "Reference for the Python SDK.",
+      //         badge: {
+      //           text: "Technical Reference",
+      //         },
+      //         sidebar: {
+      //           title: "Python SDK",
+      //           Icon: CodeBracketIcon,
+      //         },
+      //       },
+      //     },
+      //   ],
+      // },
     ],
   },
   // Guides
@@ -252,14 +268,14 @@ const pages: Page[] = [
       {
         url: "/guides/task-versioning",
         metadata: {
-          title: "Serialization & Versioning",
+          title: "Task Encoding & Versioning",
           description:
             "Learn how to serialize your tasks' input and output data as well as version your tasks.",
           badge: {
             text: "Guides",
           },
           sidebar: {
-            title: "Task Serialization & Versioning",
+            title: "Task Encoding & Versioning",
             Icon: ArrowUpIcon,
           },
         },
@@ -394,6 +410,10 @@ interface PageTreeContextType {
   footerContent: FooterContent;
   /** Array of pages that are the breadcrumbs for the current page */
   breadcrumbs: Page[];
+  /** Previous page in navigation sequence, null if none */
+  previousPage: Page | null;
+  /** Next page in navigation sequence, null if none */
+  nextPage: Page | null;
 }
 
 const PageTreeContext = createContext<PageTreeContextType | null>(null);
@@ -459,6 +479,25 @@ function findPageAndParents(
     }
   }
   return [];
+}
+
+/**
+ * Gets a flattened array of pages with URLs in navigation order
+ * @param pages - Array of pages to flatten
+ * @returns Array of pages with URLs in navigation order
+ */
+function getFlattenedPages(pages: Page[]): Page[] {
+  const flattened: Page[] = [];
+  function traverse(page: Page) {
+    if (page.url) {
+      flattened.push(page);
+    }
+    if (page.children) {
+      page.children.forEach(traverse);
+    }
+  }
+  pages.forEach(traverse);
+  return flattened;
 }
 
 export function PageTreeProvider({ children }: { children: React.ReactNode }) {
@@ -547,6 +586,24 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     );
   }, [pathname]);
 
+  /**
+   * Memoized previous and next pages based on current pathname
+   */
+  const { previousPage, nextPage } = useMemo(() => {
+    const flattenedPages = getFlattenedPages(pages);
+    const currentIndex = flattenedPages.findIndex(
+      (page) => page.url === pathname
+    );
+
+    return {
+      previousPage: currentIndex > 0 ? flattenedPages[currentIndex - 1] : null,
+      nextPage:
+        currentIndex < flattenedPages.length - 1
+          ? flattenedPages[currentIndex + 1]
+          : null,
+    };
+  }, [pathname]);
+
   return (
     <PageTreeContext.Provider
       value={{
@@ -560,6 +617,8 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         anchors,
         footerContent,
         breadcrumbs,
+        previousPage,
+        nextPage,
       }}
     >
       {children}
