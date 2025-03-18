@@ -6,8 +6,8 @@ asynchronously in workers outside your application. (e.g. in a different contain
 
 # Core Concepts: Rapid-fire Overview
 
-To properly use TacoQ, it is recommended that you have a basic understand of
-the core concepts of task queues. This section will provide a rapid-fire 
+To properly use TacoQ, it is recommended that you have a basic understanding 
+of the core concepts of task queues. This section will provide a rapid-fire 
 overview of the most important topics so you can hit the ground running.
 
 ## Tasks
@@ -16,11 +16,12 @@ Tasks are a unit of work that can be scheduled to be executed asynchronously.
 Here are some core properties of tasks that you should know about:
 
 - Tasks have a `worker_kind` and a `task_kind`, which are used to identify
-  which set of workers should run execute each task (respectively). If you are
+  which set of workers should execute each task (respectively). If you are
   familiar with message queues, you can think of them as routing keys.
 - Tasks have a `priority` value, which is used to sort tasks and determine which
-  ones to assign to workers first.
-- When generated, tasks have an `id`, which is a unique identifier for the task
+  ones to assign to workers first. Once a task reaches a worker, its priority
+  will no longer matter and it will be executed no matter what its priority is.
+- When generated, tasks get an `id`, which is a unique identifier for the task
   that can be later used to retrieve the task's status and results.
 - Tasks have a `status` that can be `PENDING`, `RUNNING`, or `COMPLETED`. If
   the task has been completed, the `is_error` field will be set to either `true`
@@ -32,23 +33,29 @@ The message broker carries task assignments, updates, and results across the
 entire TacoQ system. The broker is also responsible for routing the tasks to the
 correct set of workers based on its properties. 
 
-> TacoQ uses [RabbitMQ](https://www.rabbitmq.com/) as its message broker.
+<Note>
+  TacoQ uses [RabbitMQ](https://www.rabbitmq.com/) as its message broker.
+</Note>
 
 ## Workers
 
 Workers receive task assignments from the message broker, execute them, and then
 send the result back through the message broker so they can be stored in the database.
 
-> TacoQ uses [Postgres](https://www.postgresql.org/) as its database.
+<Note>
+  TacoQ uses [Postgres](https://www.postgresql.org/) as its database.
+</Note>
 
 ## Publishers
 
 Publishers are services that publish tasks to the message broker. They can then
 query the TacoQ's REST API to retrieve the results and current status of the task.
 
-> The publisher does not need to be a dedicated application. Instead, any
-> service can embed the publisher in its code to publish and retrieve tasks
-> (even workers!).
+<Tip>
+  The publisher does not need to be a dedicated application. Instead, any
+  service can embed the publisher in its code to publish and retrieve tasks
+  (even workers!).
+</Tip>
 
 ## Relay
 
@@ -69,7 +76,8 @@ TacoQ aims to differentiate itself from other task queues by providing the
 following features:
 
 - Multi-language interoperability (e.g. schedule a CPU-intensive task to be 
-  executed by a Rust worker from a Python application).
+  executed by a Rust worker from a Python application, generate a cute PDF
+  in a Javascript worker from a Rust API).
 - Modern SDKs for popular languages like Python, supporting async functions,
   `pydantic`, having a type safe API, built-in hot reloading, and more.
 - Integration via REST API, allowing languages without a dedicated SDK to 
@@ -77,5 +85,7 @@ following features:
 - Great developer experience with a focus on programmer ergonomics, good
   documentation, and explainability (for example, with built-in observability).
 
-> You can learn more about TacoQ's architecture and design in the 
-> [Technical Reference](/technical-reference) section.
+<Tip>
+  You can learn more about TacoQ's architecture and design in the 
+  [System Architecture](/technical-reference/system-architecture) section.
+</Tip>
