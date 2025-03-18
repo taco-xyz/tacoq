@@ -13,7 +13,7 @@ import {
 import { usePathname } from "next/navigation";
 
 // Type imports
-import type { Page } from "../types/page/PageTree";
+import type { Page, PageTree } from "@/types/PageTree";
 import type { Anchor } from "@/types/Anchor";
 import FooterContent from "@/types/FooterContent";
 
@@ -32,7 +32,9 @@ import {
 } from "@/components/react/icons/social";
 
 // Data imports
-import pageTree from "../page-tree.json";
+import pageTreeJson from "@/page-tree.json";
+
+const pageTree = pageTreeJson as PageTree;
 
 // Utils
 import { getIcon } from "../utils/getIcon";
@@ -109,6 +111,8 @@ interface PageTreeContextType {
   isPageExpanded: (pageTitle: string) => boolean;
   /** Retrieves a page by its title */
   getPageByTitle: (pageTitle: string) => Page | null;
+  /** Page one level upwards in the navigation tree */
+  parentPageTitle: string | null;
   /** Title of the currently active page */
   currentPageTitle: string | null;
   /** Array of page titles that are currently visible */
@@ -259,6 +263,13 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
+  const parentPageTitle = useMemo(() => {
+    const parentTitles = findPageAndParents(pageTree.children, pathname);
+    return parentTitles.length > 1
+      ? parentTitles[parentTitles.length - 2]
+      : null;
+  }, [pathname]);
+
   // Convert icon names to components
   const pagesWithIcons = useMemo(() => {
     function addIconsToPages(pages: Page[]): Page[] {
@@ -284,6 +295,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         collapsePage,
         isPageExpanded,
         getPageByTitle,
+        parentPageTitle,
         currentPageTitle,
         visiblePagesTitles,
         pages: pagesWithIcons,

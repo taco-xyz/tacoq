@@ -1,11 +1,11 @@
 // Types ---------------------------------
 import type {
   MetadataJson,
-  HeadingType,
-  ContentRow,
+  Header,
   Page,
   PageTree,
-} from "@/types/page/PageTree";
+  HeaderType,
+} from "@/types/PageTree";
 
 // Imports ---------------------------------
 import fs from "fs";
@@ -25,8 +25,8 @@ const APP_DIR = path.join(__dirname, "..", "app");
  * @param content - The raw MDX content
  * @returns Array of content rows containing headings
  */
-function extractHeadings(content: string): ContentRow[] {
-  const rows: ContentRow[] = [];
+function extractHeadings(content: string): Header[] {
+  const rows: Header[] = [];
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   let inCodeBlock = false;
 
@@ -43,7 +43,7 @@ function extractHeadings(content: string): ContentRow[] {
       const [, , level, title] = match;
       rows.push({
         title,
-        type: level as HeadingType,
+        type: ("h" + level.length) as HeaderType,
       });
     }
   }
@@ -154,7 +154,7 @@ function scanDirectory(
       url: `/${relativePath.replace(/\\/g, "/")}`,
       metadata,
       rawContent: content,
-      contentRows: extractHeadings(content),
+      headers: extractHeadings(content),
     });
   }
 
@@ -186,7 +186,7 @@ function scanDirectory(
             index: 999, // Put additional MDX files at the end
           },
           rawContent: content,
-          contentRows: extractHeadings(content),
+          headers: extractHeadings(content),
         });
       }
     }
@@ -207,13 +207,13 @@ function printSummaryTree(entries: Page[], depth: number = 0): void {
   const indent = "  ".repeat(depth);
   for (const entry of entries) {
     const icon = entry.children ? "📚" : "📄";
-    const contentRows = entry.contentRows
-      ? ` (${chalk.gray(entry.contentRows.length)} headings)`
+    const headers = entry.headers
+      ? ` (${chalk.gray(entry.headers.length)} headings)`
       : "";
     console.log(
       `${indent}${icon} ${chalk.bold(entry.metadata.title)}${
         entry.url ? ` (${chalk.gray(entry.url)})` : ""
-      }${contentRows}`
+      }${headers}`
     );
     if (entry.children) {
       printSummaryTree(entry.children, depth + 1);

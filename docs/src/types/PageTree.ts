@@ -5,18 +5,18 @@ export type MetadataJson = {
   index: number;
 };
 
-export type HeadingType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+export type HeaderType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
-export type ContentRow = {
+export type Header = {
   title: string;
-  type: string;
+  type: HeaderType;
 };
 
 export type Page = {
   url?: string;
   metadata: MetadataJson;
   rawContent?: string;
-  contentRows?: ContentRow[];
+  headers?: Header[];
   children?: Page[];
 };
 
