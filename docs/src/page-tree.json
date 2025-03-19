@@ -167,17 +167,6 @@
           ]
         },
         {
-          "url": "/technical-reference/relay-endpoints",
-          "metadata": {
-            "title": "Relay Endpoints",
-            "description": "Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.",
-            "icon": "CpuChipIcon",
-            "index": 1
-          },
-          "rawContent": "<Warning>\r\n  This section is under construction! Please check back soon :)\r\n</Warning>\r\n",
-          "headers": []
-        },
-        {
           "url": "/technical-reference/benchmarks",
           "metadata": {
             "title": "Benchmarks",
@@ -187,6 +176,49 @@
           },
           "rawContent": "<Warning>\r\n  This section is under construction! Please check back soon :)\r\n</Warning>\r\n",
           "headers": []
+        },
+        {
+          "metadata": {
+            "title": "Relay",
+            "description": "Technical reference for the Relay service.",
+            "icon": "CpuChipIcon",
+            "index": 3
+          },
+          "children": [
+            {
+              "url": "/technical-reference/relay/building-from-source",
+              "metadata": {
+                "title": "Build from source",
+                "description": "Learn how to build the Relay service from source.",
+                "icon": "CpuChipIcon",
+                "index": 1
+              },
+              "rawContent": "<Warning>\r\n  This section is under construction! Please check back soon :)\r\n</Warning>\r\n",
+              "headers": []
+            },
+            {
+              "url": "/technical-reference/relay/environment-variables",
+              "metadata": {
+                "title": "Environment Variables",
+                "description": "Technical reference for the environment variables used in the Relay service.",
+                "icon": "CpuChipIcon",
+                "index": 1
+              },
+              "rawContent": "<Warning>\r\n  This section is under construction! Please check back soon :)\r\n</Warning>\r\n",
+              "headers": []
+            },
+            {
+              "url": "/technical-reference/relay/relay-endpoints",
+              "metadata": {
+                "title": "API Reference",
+                "description": "Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.",
+                "icon": "CpuChipIcon",
+                "index": 2
+              },
+              "rawContent": "<Warning>\r\n  This section is under construction! Please check back soon :)\r\n</Warning>\r\n",
+              "headers": []
+            }
+          ]
         },
         {
           "url": "/technical-reference/versioning",
