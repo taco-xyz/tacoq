@@ -16,6 +16,7 @@ from opentelemetry.propagate import extract
 from opentelemetry.trace import Status, StatusCode
 from pydantic import BaseModel
 from typing_extensions import Self
+from tenacity import retry, wait_exponential
 
 from tacoq.core.infra.broker import WorkerBrokerClient
 from tacoq.core.models import (
@@ -85,8 +86,8 @@ class WorkerApplication(BaseModel):
     asyncio.create_task(worker.entrypoint())
     ```
     This makes it so you could, for example, initialize the worker within your
-    FastAPI application while keeping it running on a single thread. However,
-    this is only recommended for non-blocking tasks. If your workload is
+    FastAPI application while keeping it running on a single thread. This is,
+    however, only recommended for non-blocking tasks. If your workload is
     at all blocking, make sure to isolate your worker in either a separate
     process or an entirely different application.
 
@@ -219,7 +220,7 @@ class WorkerApplication(BaseModel):
                 parent_span.record_exception(error)
                 logger.error(
                     _(
-                        message=f"Task of kind {task.task_kind} not registered. Available tasks: {self._registered_tasks.keys()}",
+                        message=f"Task of kind {task.task_kind} was attempted to be executed, but it was not registered. Available tasks: {self._registered_tasks.keys()}",
                         attributes={
                             "task.kind": task.task_kind,
                             "available_tasks": list(self._registered_tasks.keys()),
@@ -307,11 +308,13 @@ class WorkerApplication(BaseModel):
 
     # Entrypoint
 
+    @retry(wait=wait_exponential(multiplier=1, min=1, max=15))
     async def _init_broker_client(self: Self) -> None:
         """Initialize the broker client for this worker.
 
-        ### Raises:
-        - RuntimeError: If relay client is not initialized
+        This function will always be retried until a connection is successful.
+        This is to ensure that the worker will keep trying to connect to the
+        broker until it succeeds.
         """
 
         # Init the broker client using the queue name of the worker kind
@@ -320,13 +323,17 @@ class WorkerApplication(BaseModel):
             worker_kind=self.config.kind,
             prefetch_count=self.config.broker_prefetch_count,
         )
-        await self._broker_client.connect()
+
+        try:
+            await self._broker_client.connect()
+        except Exception as e:
+            logger = LoggerManager.get_logger()
+            logger.error(
+                _(message="Error connecting to broker", attributes={"error": str(e)})
+            )
+            raise e
 
     async def entrypoint(self: Self) -> None:
-        """Entrypoint into the worker application."""
-        return await self._lifecycle()
-
-    async def _lifecycle(self: Self) -> None:
         """Initialize and start listening for tasks."""
 
         # Initialize the broker client
@@ -336,7 +343,6 @@ class WorkerApplication(BaseModel):
         logger.info(
             _(
                 message="Worker application initialized!",
-                attributes={"worker.kind": self.config.kind},
             )
         )
 
@@ -348,6 +354,11 @@ class WorkerApplication(BaseModel):
 
         # Clean up after everything is done
         finally:
+            logger.info(
+                _(
+                    message="Worker application shutdown complete",
+                )
+            )
             await self._cleanup()
 
     # Loop
@@ -368,6 +379,7 @@ class WorkerApplication(BaseModel):
                 message="Listening for tasks",
             )
         )
+
         # Loop
         while not self._shutdown_event.is_set():
             try:
@@ -387,20 +399,23 @@ class WorkerApplication(BaseModel):
                     )
                 )
                 async_task = asyncio.create_task(self._execute_task(task, message))
-                async_task.add_done_callback(self._active_tasks.discard)
                 self._active_tasks.add(async_task)
+                async_task.add_done_callback(self._active_tasks.discard)
             except asyncio.TimeoutError:
                 continue
+            except Exception as e:
+                logger.error(
+                    _(message="Error listening for tasks", attributes={"error": str(e)})
+                )
+                raise e
 
     # Graceful Shutdown
 
     def issue_shutdown(self: Self) -> None:
-        """Issue a shutdown signal to the worker application.
-
-        ### Usage:
-        Issue a shutdown signal to the worker application. This will cause the
+        """Issue a shutdown signal to the worker application. This will cause the
         worker to shut down gracefully after the existing tasks are finished.
         You can await its shutdown using `await worker.wait_for_shutdown()`.
+        ### Usage:
 
         ```python
         worker.issue_shutdown()
@@ -416,10 +431,9 @@ class WorkerApplication(BaseModel):
         self._shutdown_event.set()
 
     async def wait_for_shutdown(self: Self) -> None:
-        """Wait for the worker application to shut down.
+        """Wait for the worker application to shut down. This is non-blocking.
 
         ### Usage:
-        Wait for the worker application to shut down. This is non-blocking.
         ```python
         worker.issue_shutdown()
         await worker.wait_for_shutdown()
@@ -439,12 +453,9 @@ class WorkerApplication(BaseModel):
         # Wait for all active tasks to complete
 
         logger = LoggerManager.get_logger()
-
-        # Wait for all active tasks to complete
-
         logger.info(
             _(
-                message=f"Waiting for {len(self._active_tasks)} active tasks to complete before shutting down",
+                message=f"Waiting for {len(self._active_tasks)} active tasks to complete before shutting down...",
                 attributes={"active_tasks": len(self._active_tasks)},
             )
         )
@@ -455,11 +466,20 @@ class WorkerApplication(BaseModel):
 
         logger.info(
             _(
-                message="Disconnecting from broker",
+                message="No active tasks left.Disconnecting from broker",
             )
         )
-        if self._broker_client is not None:
-            await self._broker_client.disconnect()
+
+        try:
+            if self._broker_client is not None:
+                await self._broker_client.disconnect()
+        except Exception as e:
+            logger.error(
+                _(
+                    message="Error disconnecting from broker",
+                    attributes={"error": str(e)},
+                )
+            )
 
         logger.info(
             _(
