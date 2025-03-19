@@ -133,7 +133,7 @@ export default function RootLayout({
               </PageNavigationProvider>
             </div>
             {/* Page */}
-            <div className="z-0 w-full flex-1 py-6">
+            <div className="z-0 w-full flex-1 py-6 min-w-0">
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
             {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}
