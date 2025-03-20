@@ -4,13 +4,26 @@ This model is very sensible because serialization logic must be consistent
 across all other languages and the core service. `TaskInput` and `TaskOutput`
 are strings and are expected to be serialized and deserialized by the user."""
 
+import json
+import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any, Type, Self
 from uuid import UUID
 
+from fastavro import parse_schema, schemaless_writer, schemaless_reader  # type: ignore
+from io import BytesIO
 from pydantic import BaseModel, Field
+
+# Avro Schema ==========================
+
+avro_schema = parse_schema(
+    json.load(open(os.path.join(os.path.dirname(__file__), "avro_schema.json")))
+)
+
+
+# Types ================================
 
 TaskInput = str
 """ Task input data defined by the user - they can use whatever format they 
@@ -79,7 +92,7 @@ class Task(BaseModel):
 
     # Timestamps
 
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     """ The time the task was created at. """
 
     started_at: Optional[datetime] = Field(default=None)
@@ -120,7 +133,7 @@ class Task(BaseModel):
     """ The OpenTelemetry context carrier for the task. """
 
     @property
-    def has_finished(self) -> bool:
+    def has_finished(self: Self) -> bool:
         """Whether or not the task has finished executing.
 
         ### Returns:
@@ -130,7 +143,7 @@ class Task(BaseModel):
         return self.status == TaskStatus.COMPLETED
 
     @property
-    def completion_time(self) -> Optional[timedelta]:
+    def completion_time(self: Self) -> Optional[timedelta]:
         """The time it took for the task to complete.
 
         ### Returns:
@@ -140,3 +153,94 @@ class Task(BaseModel):
         if self.completed_at is None or self.started_at is None:
             return None
         return self.completed_at - self.started_at
+
+    ## ==================================
+    ## Avro
+    ## ==================================
+
+    # Writing
+
+    @property
+    def avro_bytes(self: Self) -> bytes:
+        """The Avro bytes for the task."""
+
+        buf = BytesIO()
+        schemaless_writer(buf, avro_schema, self.model_dump())
+        return buf.getvalue()
+
+    # Reading
+
+    @classmethod
+    def from_avro_bytes(cls: Type[Self], data: bytes) -> Self:
+        """Create a task from Avro bytes."""
+
+        buf = BytesIO(data)
+        data_dict: dict[str, Any] = schemaless_reader(  # type: ignore
+            buf, avro_schema, reader_schema=avro_schema
+        )
+        return cls(**data_dict)
+
+
+if __name__ == "__main__":
+    import time
+
+    # Create a test task
+    task = Task(
+        id=uuid.uuid4(),
+        task_kind="test",
+        worker_kind="test",
+        created_at=datetime.now(timezone.utc),
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
+        input_data="test input",
+        output_data="test output",
+        status=TaskStatus.COMPLETED,
+    )
+
+    N = 10_000
+
+    # Create N test tasks
+    tasks = [task for _ in range(N)]
+
+    # Measure Avro serialization
+    start = time.perf_counter()
+    avro_bytes_list = [(t.avro_bytes) for t in tasks]
+    avro_ser_time = time.perf_counter() - start
+
+    # Measure JSON serialization
+    start = time.perf_counter()
+    json_bytes_list = [t.model_dump_json().encode() for t in tasks]
+    json_ser_time = time.perf_counter() - start
+
+    # Measure Avro deserialization
+    start = time.perf_counter()
+    avro_tasks = [Task.from_avro_bytes(b) for b in avro_bytes_list]
+    avro_deser_time = time.perf_counter() - start
+
+    # Measure JSON deserialization
+    start = time.perf_counter()
+    json_tasks = [Task.model_validate_json(b) for b in json_bytes_list]
+    json_deser_time = time.perf_counter() - start
+
+    # Compare sizes
+    avro_size = sum(len(b) for b in avro_bytes_list)
+    json_size = sum(len(b) for b in json_bytes_list)
+    print(f"Avro total size: {avro_size:,} bytes")
+    print(f"JSON total size: {json_size:,} bytes")
+    print(f"Avro is {json_size / avro_size:.1f}x smaller")
+
+    # Compare speeds
+    print(f"\nSerialization times ({N} items):")
+    print(
+        f"Avro: {avro_ser_time * 1000:.1f}ms (Average: {avro_ser_time / N * 1000:.1f}ms)"
+    )
+    print(
+        f"JSON: {json_ser_time * 1000:.1f}ms (Average: {json_ser_time / N * 1000:.1f}ms)"
+    )
+    print(f"\nDeserialization times ({N} items):")
+    print(
+        f"Avro: {avro_deser_time * 1000:.1f}ms (Average: {avro_deser_time / N * 1000:.1f}ms)"
+    )
+    print(
+        f"JSON: {json_deser_time * 1000:.1f}ms (Average: {json_deser_time / N * 1000:.1f}ms)"
+    )
