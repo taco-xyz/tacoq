@@ -8,6 +8,7 @@ results, respectively.
 import json
 from typing import AsyncGenerator, Optional, Self
 from aio_pika import Message, connect_robust
+import aio_pika
 from pydantic import BaseModel
 
 from aio_pika.abc import (
@@ -102,7 +103,9 @@ class BaseBrokerClient(BaseModel):
         """Establish connection to RabbitMQ server and setup channel."""
 
         self._connection = await connect_robust(self.config.url)
-        self._channel = await self._connection.channel()
+        self._channel = await self._connection.channel(
+            publisher_confirms=self.config.publisher_confirms
+        )
 
         # All clients use the same exchange
         self._task_exchange = await self._channel.declare_exchange(
@@ -226,7 +229,11 @@ class PublisherBrokerClient(BaseBrokerClient):
         # Ensure worker queue exists
         await self._declare_worker_queue(task.worker_kind)
 
-        message = Message(body=task.model_dump_json().encode(), priority=task.priority)
+        message = Message(
+            body=task.model_dump_json().encode(),
+            priority=task.priority,
+            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+        )
         routing_key = WORKER_ROUTING_KEY.format(worker_kind=task.worker_kind)
 
         await self._task_exchange.publish(message, routing_key=routing_key)
