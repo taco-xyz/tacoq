@@ -19,17 +19,6 @@ pub enum Error {
     ContextExtractionError,
 }
 
-// Custom serializer function
-fn serialize_bytes<S>(bytes: &Option<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    match bytes {
-        Some(data) => serializer.serialize_str(&String::from_utf8_lossy(data)),
-        None => serializer.serialize_none(),
-    }
-}
-
 // Custom deserializer function
 fn deserialize_bytes<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
 where
@@ -114,15 +103,9 @@ pub struct Task {
     pub task_kind: String,
 
     // Task data
-    #[serde(
-        serialize_with = "serialize_bytes",
-        deserialize_with = "deserialize_bytes"
-    )]
+    #[serde(deserialize_with = "deserialize_bytes")]
     pub input_data: Option<Vec<u8>>, // byte array
-    #[serde(
-        serialize_with = "serialize_bytes",
-        deserialize_with = "deserialize_bytes"
-    )]
+    #[serde(deserialize_with = "deserialize_bytes")]
     pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,
 
@@ -132,7 +115,7 @@ pub struct Task {
     // Relations
     #[sqlx(rename = "worker_kind_name")]
     pub worker_kind: String,
-    pub executed_by: Option<Uuid>, // worker that it is assigned to
+    pub executed_by: Option<String>, // worker that it is assigned to
 
     // Task status
     #[serde(deserialize_with = "deserialize_timestamp_optional")]
@@ -172,7 +155,7 @@ impl Task {
             executed_by: None,
             started_at: None,
             completed_at: None,
-            ttl_duration,
+            ttl_duration: ttl_duration,
             otel_ctx_carrier: None,
             created_at: Local::now().naive_local(),
             updated_at: Local::now().naive_local(),
@@ -210,8 +193,8 @@ impl Task {
     }
 
     /// Sets the assigned worker
-    pub fn executed_by(mut self, worker_id: Uuid) -> Self {
-        self.executed_by = Some(worker_id);
+    pub fn executed_by(mut self, worker_name: String) -> Self {
+        self.executed_by = Some(worker_name);
         self
     }
 
@@ -235,7 +218,7 @@ impl Task {
 
     pub fn is_expired(&self) -> bool {
         self.completed_at.is_some()
-            && self.completed_at.unwrap() + Duration::seconds(self.ttl_duration)
+            && self.completed_at.unwrap() + Duration::seconds(self.ttl_duration as i64)
                 < Local::now().naive_local()
     }
 }
