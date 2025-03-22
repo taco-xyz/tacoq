@@ -1,0 +1,6 @@
+{
+  "title": "Setup",
+  "description": "Get TacoQ up and running on your project using Docker and the Python SDK.",
+  "icon": "ArrowDownTrayIcon",
+  "index": 1
+}

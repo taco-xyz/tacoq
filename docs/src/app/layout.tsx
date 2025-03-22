@@ -2,16 +2,16 @@
 import "./globals.css";
 
 // Components Imports
-import { TopBar } from "./components/topbar/TopBar";
-import { Footer } from "./components/Footer";
-import DesktopSideBar from "./components/sidebar/DesktopSideBar";
-import DocsPageLayout from "./components/docs-page-layout/DocsPageLayout";
-import PageLinksBar from "./components/PageLinksBar";
+import { TopBar } from "../components/react/topbar/TopBar";
+import { Footer } from "../components/react/Footer";
+import DesktopSideBar from "../components/react/sidebar/DesktopSideBar";
+import DocsPageLayout from "../components/react/docs-page-layout/DocsPageLayout";
+import PageLinksBar from "../components/react/PageLinksBar";
 
 // Context imports
-import { TooltipProvider } from "@/app/components/sidebar/context/TooltipContext";
+import { TooltipProvider } from "@/components/react/sidebar/context/TooltipContext";
 import { PageTreeProvider } from "@/contexts/PageTreeContext";
-import { PageNavigationProvider } from "@/app/components/sidebar/context/PageNavigationContext";
+import { PageNavigationProvider } from "@/components/react/sidebar/context/PageNavigationContext";
 
 // Fonts Imports
 import { Geist, Geist_Mono } from "next/font/google";
@@ -29,6 +29,68 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// Metadata
+export const metadata = {
+  metadataBase: new URL("https://www.tacodivision.com"),
+  title: {
+    template: "%s | TacoQ Documentation",
+    default: "TacoQ | Multi-Language Distributed Task Queue",
+  },
+  description:
+    "TacoQ is a multi-language distributed task queue with built-in observability, low latency, and first-class idiomatic support for Python, Rust, and JavaScript.",
+  keywords: [
+    "tacoq",
+    "task queue",
+    "distributed system",
+    "message broker",
+    "rabbitmq",
+    "postgres",
+    "python",
+    "rust",
+    "javascript",
+    "async tasks",
+    "worker queue",
+    "job queue",
+    "observability",
+    "multi-language",
+    "distributed computing",
+  ],
+  authors: [{ name: "Taco Division" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "TacoQ | Multi-Language Distributed Task Queue",
+    description:
+      "Modern distributed task queue with multi-language support, built-in observability, and low latency.",
+    images: [
+      {
+        url: "/TacoQBannerLight.png",
+        width: 1000,
+        height: 300,
+        alt: "TacoQ Banner",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TacoQ Documentation",
+    description: "Modern distributed task queue with multi-language support",
+    images: ["/TacoQBannerLight.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
 
 export default function RootLayout({
   children,
@@ -55,7 +117,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="flex items-center text-zinc-700 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
+      <body className="flex items-center text-zinc-800 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
         <PageTreeProvider>
           {/* Topbar */}
           <div className="sticky top-0 w-full z-10">
@@ -71,7 +133,7 @@ export default function RootLayout({
               </PageNavigationProvider>
             </div>
             {/* Page */}
-            <div className="z-0 w-full flex-1 py-6">
+            <div className="z-0 w-full flex-1 py-6 min-w-0">
               <DocsPageLayout>{children}</DocsPageLayout>
             </div>
             {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}

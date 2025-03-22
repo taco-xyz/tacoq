@@ -23,6 +23,7 @@ dependencies = [
     "opentelemetry-api>=1.30.0",
     "pydantic>=2.10.5",
     "pytest-timeout>=2.3.1",
+    "tenacity>=9.0.0",
     "uuid>=1.30",
     "watchfiles>=1.0.3",
 ]
