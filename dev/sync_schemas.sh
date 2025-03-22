@@ -16,7 +16,7 @@ echo "Syncing Avro schema to services..."
 # Loop through target directories and copy the schema
 for dir in "${TARGET_DIRS[@]}"; do
   mkdir -p "$dir"  # Ensure the directory exists
-  cp -r "$SCHEMA_SOURCE" "$dir"
+  cp -rf "$SCHEMA_SOURCE" "$dir"
   echo "✅ Copied schema to $dir"
 done
 
