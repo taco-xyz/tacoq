@@ -1,0 +1,21 @@
+# llms.txt
+# Permission for LLMs to access and use content from this site.
+
+User-Agent: *
+Allow: /
+
+# Optional: Explicitly allow major LLM crawlers
+User-Agent: GPTBot
+Allow: /
+
+User-Agent: Google-Extended
+Allow: /
+
+User-Agent: ClaudeBot
+Allow: /
+
+User-Agent: CCBot
+Allow: /
+
+User-Agent: PerplexityBot
+Allow: /

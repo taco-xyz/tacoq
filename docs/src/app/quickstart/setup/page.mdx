@@ -1,3 +1,54 @@
+export const metadata = {
+  title: "Setup",
+  description:
+    "Get TacoQ up and running on your project using Docker and the Python SDK.",
+  keywords: [
+    "Docker setup",
+    "Python SDK",
+    "TacoQ installation",
+    "RabbitMQ setup",
+    "Postgres setup",
+    "TacoQ Relay",
+    "docker-compose",
+    "infrastructure setup",
+    "worker configuration",
+    "broker configuration",
+    "task handling",
+    "PublisherClient",
+    "RelayClient",
+    "task publishing",
+    "task execution",
+    "task retrieval",
+    "worker_kind",
+    "task_kind",
+    "async tasks",
+    "message broker",
+    "database integration",
+    "REST API",
+    "health checks",
+    "environment variables",
+    "task serialization",
+    "JSON handling",
+    "task results",
+    "worker application",
+    "UV package manager",
+    "task status",
+    "broker prefetch",
+    "task input",
+    "task output",
+    "async/await",
+    "Docker volumes",
+    "service dependencies",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "Setup | TacoQ Docs",
+    description:
+      "Get TacoQ up and running on your project using Docker and the Python SDK.",
+  },
+};
 
 <Warning>
   This section assumes you have a basic understanding of the core concepts of
@@ -11,8 +62,9 @@
 - [Python](https://www.python.org/downloads/)
 
 <Tip>
-  We recommend using [UV](https://docs.astral.sh/uv/getting-started/installation/)
-  to run Python projects.
+  We recommend using
+  [UV](https://docs.astral.sh/uv/getting-started/installation/) to run Python
+  projects.
 </Tip>
 
 # Infrastructure
@@ -26,7 +78,6 @@ volumes:
   postgres_data: {}
 
 services:
-
   # ================================================
   # TacoQ Relay
   # The relay has two functions:
@@ -118,7 +169,7 @@ uv init
 uv add tacoq
 ```
 
-The worker must know how to receive new task assignments and send updates 
+The worker must know how to receive new task assignments and send updates
 through the broker, so let's start by configuring that:
 
 ```python
@@ -140,9 +191,9 @@ worker_app = WorkerApplication(config=worker_config)
 ```
 
 <Note>
-  Note that the worker field `kind` is set to `"worker_waiter_kind"`. This 
-  field will be used by the publisher to know which set of workers to send 
-  the task to. We recommend using environment variables to align these values.
+  Note that the worker field `kind` is set to `"worker_waiter_kind"`. This field
+  will be used by the publisher to know which set of workers to send the task
+  to. We recommend using environment variables to align these values.
 </Note>
 
 The worker application has been created, but it doesn't know how to handle any
@@ -154,7 +205,7 @@ from tacoq import TaskInput, TaskOutput
 
 @worker_app.task(kind="task_wait_n_seconds")
 async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
-    
+
     # The input data must be de-serialized from a string into your preferred
     # data structure. In this case, we're using JSON. You could use Avro or Proto!
     input_data_dict: dict[str, Any] = json.loads(input_data)
@@ -175,16 +226,16 @@ async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
 ```
 
 <Note>
-  Note the task field `kind` is set to `"task_wait_n_seconds"`. You can 
-  think about it the following way:
-  - **Worker Kind**: Helps the publisher know which set of workers to send the task to.
-  - **Task Kind**: Helps the worker know which method to use to handle a task.
-  If you're familiar with task queues, you're probably used to only specifying
-  the task kind and not the worker kind. You can read about this design decision
-  in the [System Architecture](/technical-reference/system-architecture#h2-worker) section.
+  Note the task field `kind` is set to `"task_wait_n_seconds"`. You can think
+  about it the following way: - **Worker Kind**: Helps the publisher know which
+  set of workers to send the task to. - **Task Kind**: Helps the worker know
+  which method to use to handle a task. If you're familiar with task queues,
+  you're probably used to only specifying the task kind and not the worker kind.
+  You can read about this design decision in the [System
+  Architecture](/technical-reference/system-architecture#h2-worker) section.
 </Note>
 
-Now that our worker is ready to handle tasks, we can boot it up via its 
+Now that our worker is ready to handle tasks, we can boot it up via its
 `entrypoint` method:
 
 ```python
@@ -215,9 +266,9 @@ Instead, we will simply use the publisher to publish the task.
 Let's publish a new task, wait for it to complete, and then retrieve the results:
 
 ```python
-# We must serialize the input data in a string so that it can be passed and 
+# We must serialize the input data in a string so that it can be passed and
 # interpreted by the worker!
-task_input = json.dumps({"duration": 2}) 
+task_input = json.dumps({"duration": 2})
 
 # The task is published to the message broker. Note that the worker kind and
 # task kind but be properly configured and match the worker and task kinds
