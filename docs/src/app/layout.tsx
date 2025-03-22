@@ -64,31 +64,11 @@ export const metadata = {
     title: "TacoQ | Multi-Language Distributed Task Queue",
     description:
       "Modern distributed task queue with multi-language support, built-in observability, and low latency.",
-    images: [
-      {
-        url: "/TacoQBannerLight.png",
-        width: 1000,
-        height: 300,
-        alt: "TacoQ Banner",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "TacoQ Documentation",
     description: "Modern distributed task queue with multi-language support",
-    images: ["/TacoQBannerLight.png"],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
   },
 };
 
