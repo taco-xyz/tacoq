@@ -1,9 +1,9 @@
-mod task_avro;
+mod avro_trait;
 mod tasks;
 mod worker_kinds;
 mod workers;
 
-pub use task_avro::*;
+pub use avro_trait::*;
 pub use tasks::*;
 pub use worker_kinds::*;
 pub use workers::*;

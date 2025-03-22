@@ -12,6 +12,9 @@ use thiserror::Error; // Add thiserror
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use crate::models::{serde_avro_datetime, serde_avro_datetime_opt, AvroSerializable};
+use apache_avro::{serde_avro_bytes_opt, Schema};
+
 /// Task-related errors
 #[derive(Error, Debug)]
 pub enum Error {
@@ -103,9 +106,11 @@ pub struct Task {
     pub task_kind: String,
 
     // Task data
-    #[serde(deserialize_with = "deserialize_bytes")]
+    // #[serde(deserialize_with = "deserialize_bytes")]
+    #[serde(with = "serde_avro_bytes_opt")]
     pub input_data: Option<Vec<u8>>, // byte array
-    #[serde(deserialize_with = "deserialize_bytes")]
+    // #[serde(deserialize_with = "deserialize_bytes")]
+    #[serde(with = "serde_avro_bytes_opt")]
     pub output_data: Option<Vec<u8>>, // byte array
     pub is_error: i32,
 
@@ -118,17 +123,17 @@ pub struct Task {
     pub executed_by: Option<String>, // worker that it is assigned to
 
     // Task status
-    #[serde(deserialize_with = "deserialize_timestamp_optional")]
+    #[serde(with = "serde_avro_datetime_opt")]
     pub started_at: Option<NaiveDateTime>,
-    #[serde(deserialize_with = "deserialize_timestamp_optional")]
+    #[serde(with = "serde_avro_datetime_opt")]
     pub completed_at: Option<NaiveDateTime>,
 
     pub ttl_duration: i64, // in seconds
 
     // Metadata
-    #[serde(deserialize_with = "deserialize_timestamp")]
+    #[serde(with = "serde_avro_datetime")]
     pub created_at: NaiveDateTime,
-    #[serde(skip)]
+    #[serde(with = "serde_avro_datetime")]
     pub updated_at: NaiveDateTime,
 
     // OpenTelemetry context carrier
@@ -223,6 +228,19 @@ impl Task {
     }
 }
 
+// Avro Serialization
+
+impl AvroSerializable for Task {
+    fn schema() -> &'static Schema {
+        lazy_static::lazy_static! {
+            static ref AVRO_SCHEMA: Schema = Schema::parse_str(
+                include_str!("schemas/avro/task.json")
+            ).expect("Failed to parse Avro schema");
+        }
+        &AVRO_SCHEMA
+    }
+}
+
 // Context Extraction (this was a motherfucker)
 
 struct HashMapExtractor<'a>(&'a std::collections::HashMap<String, String>);
@@ -255,5 +273,77 @@ fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
             Ok(otel_cx)
         }
         _ => Err(Error::ContextExtractionError),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_task_avro_serde() {
+        let task = Task::new("", "", 1, 1)
+            .with_input_data(b"".to_vec())
+            .with_output_data(b"".to_vec());
+
+        // Serialize to Avro bytes
+        let avro_bytes = task.into_avro_bytes();
+
+        // Deserialize from Avro bytes
+        let deserialized = Task::from_avro_bytes(&avro_bytes);
+
+        println!("avro_bytes: {:?}", avro_bytes.len());
+
+        assert_eq!(task.id, deserialized.id);
+        assert_eq!(task.worker_kind, deserialized.worker_kind);
+        assert_eq!(task.task_kind, deserialized.task_kind);
+        assert_eq!(task.input_data, deserialized.input_data);
+        assert_eq!(task.status, deserialized.status);
+    }
+
+    #[test]
+    fn test_task_avro_serialization_benchmark() {
+        let n = 10_000;
+        let task = Task::new("", "", 1, 1)
+            .with_input_data(b"".to_vec())
+            .with_output_data(b"".to_vec());
+
+        // Benchmark serialization
+        let start = std::time::Instant::now();
+        let mut serialized_results = Vec::with_capacity(n);
+        for _ in 0..n {
+            let result = task.into_avro_bytes();
+            serialized_results.push(result);
+        }
+        let ser_duration = start.elapsed();
+
+        // Benchmark deserialization
+        let start = std::time::Instant::now();
+        for result in serialized_results {
+            let _task_deserialized = Task::from_avro_bytes(&result);
+        }
+        let deser_duration = start.elapsed();
+
+        println!("Serialization stats:");
+        println!("• Total time ({} iterations): {:?}", n, ser_duration);
+        println!(
+            "• Average time per iteration: {:?}",
+            ser_duration / n as u32
+        );
+        println!(
+            "• Iterations per second: {:.2}",
+            n as f64 / ser_duration.as_secs_f64()
+        );
+
+        println!("\nDeserialization stats:");
+        println!("• Total time ({} iterations): {:?}", n, deser_duration);
+        println!(
+            "• Average time per iteration: {:?}",
+            deser_duration / n as u32
+        );
+        println!(
+            "• Iterations per second: {:.2}",
+            n as f64 / deser_duration.as_secs_f64()
+        );
     }
 }
