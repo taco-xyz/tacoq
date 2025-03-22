@@ -1,0 +1,32 @@
+{
+    "type": "record",
+    "name": "TaskRunningUpdate",
+    "namespace": "com.tacoq.task",
+    "fields": [
+      {
+        "name": "id",
+        "type": {
+          "type": "string",
+          "logicalType": "uuid"
+        }
+      },
+      {
+        "name": "started_at",
+        "type": [
+          "null",
+          {
+            "type": "long",
+            "logicalType": "timestamp-micros"
+          }
+        ]
+      },
+      {
+        "name": "executed_by",
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    ]
+}
+  
