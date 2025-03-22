@@ -103,6 +103,9 @@ class Task(BaseModel):
 
     # Data
 
+    executed_by: Optional[str] = Field(default=None)
+    """ The name of the worker that executed the task. """
+
     input_data: TaskInput = Field(default="")
     """ The input data of the task."""
 
