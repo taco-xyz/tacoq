@@ -46,14 +46,21 @@
         ]
       },
       {
+        "name": "updated_at",
+        "type": {
+          "type": "long",
+          "logicalType": "timestamp-micros"
+        }
+      },
+      {
         "name": "input_data",
-        "type": "string"
+        "type": ["null", "bytes"]
       },
       {
         "name": "output_data",
         "type": [
           "null",
-          "string"
+          "bytes"
         ]
       },
       {
@@ -78,7 +85,14 @@
       },
       {
         "name": "ttl_duration",
-        "type": "int"
+        "type": "long"
+      },
+      {
+        "name": "executed_by",
+        "type": [
+          "null",
+          "string"
+        ]
       },
       {
         "name": "otel_ctx_carrier",
