@@ -5,8 +5,8 @@
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
-        "type_info": "Uuid"
+        "name": "name",
+        "type_info": "Text"
       },
       {
         "ordinal": 1,

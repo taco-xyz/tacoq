@@ -51,7 +51,7 @@
       {
         "ordinal": 9,
         "name": "executed_by",
-        "type_info": "Uuid"
+        "type_info": "Text"
       },
       {
         "ordinal": 10,
