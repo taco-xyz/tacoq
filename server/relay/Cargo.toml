@@ -40,6 +40,8 @@ strum_macros = "0.27.1"
 lapin = "2.5.0"
 strum = { version = "0.27.1", features = ["derive"] }
 thiserror = "2.0.12"
+apache-avro = { version = "0.17.0", features = ["derive"] }
+lazy_static = "1.5.0"
 
 [dev-dependencies]
 ctor = "0.4.0"
