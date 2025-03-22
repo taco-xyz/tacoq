@@ -15,7 +15,7 @@ CREATE TABLE
 -- Workers execute tasks and send heartbeats to the server to indicate that they are still alive
 CREATE TABLE
     workers (
-        id UUID PRIMARY KEY,
+        name TEXT PRIMARY KEY,
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         registered_at TIMESTAMP
         WITH
@@ -25,14 +25,14 @@ CREATE TABLE
 -- Heartbeats are regularly sent by the workers to indicate that they are still alive and kicking
 CREATE TABLE
     worker_heartbeats (
-        worker_id UUID NOT NULL REFERENCES workers (id) ON DELETE CASCADE,
+        worker_name TEXT NOT NULL REFERENCES workers (name) ON DELETE CASCADE,
         heartbeat_time TIMESTAMP
         WITH
             TIME ZONE NOT NULL,
             created_at TIMESTAMP
         WITH
             TIME ZONE NOT NULL DEFAULT NOW (),
-            PRIMARY KEY (worker_id, heartbeat_time)
+            PRIMARY KEY (worker_name, heartbeat_time)
     );
 
 -- Tasks --------------------------------------------------------------------------
@@ -58,7 +58,7 @@ CREATE TABLE
         -- OpenTelemetry context carrier
         otel_ctx_carrier JSONB,
         -- Relations
-        executed_by UUID REFERENCES workers (id),
+        executed_by TEXT REFERENCES workers (name),
         worker_kind_name TEXT NOT NULL REFERENCES worker_kinds (name),
         -- Task status
         ttl_duration BIGINT NOT NULL,

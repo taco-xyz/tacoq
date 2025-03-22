@@ -1,10 +1,8 @@
 use crate::brokers::core::BrokerConsumer;
 use crate::models::Task;
 use crate::repo::worker_kind_repo::PgWorkerKindRepository;
-use crate::repo::{
-    PgTaskRepository, PgWorkerRepository, TaskRepository, WorkerKindRepository, WorkerRepository,
-};
-use tracing::{error, info, info_span, warn, Instrument};
+use crate::repo::{PgTaskRepository, PgWorkerRepository, TaskRepository, WorkerKindRepository};
+use tracing::{error, info, info_span, Instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 use std::sync::Arc;
@@ -60,17 +58,6 @@ impl TaskController {
                 }
             };
             info!("Task updated successfully: {:?}", task);
-
-            if let Some(executed_by) = task.executed_by {
-                match self
-                    .worker_repository
-                    .update_worker(executed_by, &kind.name)
-                    .await
-                {
-                    Ok(_) => info!("Worker updated successfully: {}", executed_by),
-                    Err(e) => warn!("Failed to update worker {}: {}", executed_by, e),
-                }
-            }
 
             info!("Task processing completed successfully");
         }
