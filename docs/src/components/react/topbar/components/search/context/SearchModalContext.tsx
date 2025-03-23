@@ -65,7 +65,7 @@ export function SearchModalProvider({
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
 
   // Handle keyboard shortcuts
-  // Ctrl + K to open the search
+  // Ctrl + K (or Cmd + K on Mac) to open the search
   // Esc to close the search
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {

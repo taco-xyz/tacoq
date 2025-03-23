@@ -144,7 +144,7 @@ export function PageNavigationProvider({
 
   /**
    * Handle keyboard navigation in the sidebar
-   * - Ctrl+0: Start focus mode
+   * - Ctrl+0 (or Cmd+0 on Mac): Start focus mode
    * - Arrow Up/Down: Navigate between visible pages
    * - Space/Arrow Right/Left: Expand/collapse pages with children
    * - Enter: Navigate to page URL
@@ -152,7 +152,7 @@ export function PageNavigationProvider({
    */
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "0") {
+      if ((e.ctrlKey || e.metaKey) && e.key === "0") {
         e.preventDefault();
         startKeyboardFocus();
         return;
