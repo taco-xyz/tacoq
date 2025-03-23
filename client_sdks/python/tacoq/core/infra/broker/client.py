@@ -7,7 +7,6 @@ results, respectively.
 
 from typing import AsyncGenerator, Optional, Self
 from aio_pika import Message, connect_robust
-import aio_pika
 from pydantic import BaseModel
 
 from aio_pika.abc import (
