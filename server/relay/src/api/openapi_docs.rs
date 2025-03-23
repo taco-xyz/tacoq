@@ -5,7 +5,15 @@ use utoipa::OpenApi;
 use crate::AppState;
 
 #[derive(OpenApi)]
-#[openapi(paths(openapi, crate::api::task::get_task_by_id))]
+#[openapi(
+    paths(openapi, crate::api::task::get_task_by_id),
+    components(schemas(crate::models::Task)),
+    info(
+        title = "Task Queue API",
+        version = "0.1.0",
+        description = "API for the Task Queue service. Supports both JSON and Avro formats for task data."
+    )
+)]
 struct ApiDoc;
 
 pub fn routes() -> Router<AppState> {
