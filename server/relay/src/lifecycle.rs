@@ -37,7 +37,6 @@ pub async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
     let backoff = ExponentialBackoffBuilder::new()
         .with_initial_interval(Duration::from_secs(1))
         .with_max_interval(Duration::from_secs(10))
-        .with_max_elapsed_time(Some(Duration::from_secs(60)))
         .build();
 
     // Try to connect with retries
@@ -203,10 +202,30 @@ pub async fn initialize_system(
             queue = %RELAY_QUEUE,
             "Setting up message broker consumer"
         );
+
+        // Configure backoff strategy for broker consumer
+        let broker_backoff = ExponentialBackoffBuilder::new()
+                .with_initial_interval(Duration::from_secs(1))
+                .with_max_interval(Duration::from_secs(10))
+                .build();
+
         let new_task_consumer =
-            match setup_consumer_broker::<Task>(&config.broker_url, RELAY_QUEUE, shutdown.clone())
-                .await
-            {
+            // Try to connect to broker with retries
+            match backoff::future::retry(broker_backoff, || async {
+                match setup_consumer_broker::<Task>(&config.broker_url, RELAY_QUEUE, shutdown.clone()).await {
+                    Ok(consumer) => Ok(consumer),
+                    Err(e) => {
+                        warn!(
+                            error = %e, 
+                            broker_url = %config.broker_url,
+                            queue = %RELAY_QUEUE,
+                            "Failed to connect to message broker, retrying..."
+                        );
+                        Err(backoff::Error::transient(e))
+                    }
+                }
+            })
+            .await {
                 Ok(consumer) => {
                     info!("Message broker consumer initialized successfully");
                     consumer
@@ -216,7 +235,7 @@ pub async fn initialize_system(
                         error = %e,
                         broker_url = %config.broker_url,
                         queue = %RELAY_QUEUE,
-                        "Failed to setup message broker consumer"
+                        "Failed to setup message broker consumer after retries"
                     );
                     return Err(e);
                 }
