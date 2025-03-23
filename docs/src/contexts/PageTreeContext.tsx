@@ -16,62 +16,44 @@ import { usePathname } from "next/navigation";
 // Type imports
 import type { Page, PageTree } from "@/types/PageTree";
 //import type { Anchor } from "@/types/Anchor";
-import FooterContent from "@/types/FooterContent";
-
-// Custom Icons Imports
-import {
-  GithubIcon,
-  XIcon,
-  DiscordIcon,
-} from "@/components/react/icons/social";
+import FooterContent, { Status } from "@/types/FooterContent";
 
 // Data imports
 import pageTreeJson from "@/page-tree.json";
 
-const pageTree = pageTreeJson as PageTree;
-
 // Utils
 import { getIcon } from "../utils/getIcon";
+
+const pageTree = pageTreeJson as PageTree;
 
 const footerContent: FooterContent = {
   linkGroups: [
     {
-      groupName: "Product",
+      groupName: "Frameworks",
       links: [
-        { linkName: "Features", url: "/features" },
-        { linkName: "Pricing", url: "/pricing" },
-        { linkName: "Documentation", url: "/docs" },
+        { linkName: "TacoQ", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
+        { linkName: "TacoDocs", status: Status.WORK_IN_PROGRESS },
+        { linkName: "TacoFlow", status: Status.SOON },
+        { linkName: "TacoBI", status: Status.SOON },
+        { linkName: "TacoCI", status: Status.SOON },
       ],
     },
     {
-      groupName: "Resources",
+      groupName: "Taco Plus",
       links: [
-        { linkName: "Blog", url: "/blog" },
-        { linkName: "Support", url: "/support" },
-        { linkName: "API", url: "/api" },
+        { linkName: "Docs Templates", status: Status.WORK_IN_PROGRESS },
+        { linkName: "Early Access", status: Status.SOON },
+        { linkName: "Priority Support", status: Status.SOON },
+        { linkName: "BI Templates", status: Status.SOON },
       ],
     },
     {
-      groupName: "Company",
+      groupName: "Community",
       links: [
-        { linkName: "About", url: "/about" },
-        { linkName: "Careers", url: "/careers" },
-        { linkName: "Contact", url: "/contact" },
+        { linkName: "Discord", url: "https://discord.gg/NXwBEtZSUq", status: Status.COMPLETED },
+        { linkName: "Github", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
       ],
     },
-    {
-      groupName: "Legal",
-      links: [
-        { linkName: "Privacy", url: "/privacy" },
-        { linkName: "Terms", url: "/terms" },
-        { linkName: "Security", url: "/security" },
-      ],
-    },
-  ],
-  socialLinks: [
-    { Icon: GithubIcon, url: "https://github.com/your-repo" },
-    { Icon: XIcon, url: "https://twitter.com/your-handle" },
-    { Icon: DiscordIcon, url: "https://discord.gg/your-server" },
   ],
 };
 
