@@ -155,6 +155,7 @@ impl Consumer {
             debug!(
                 queue = %self.queue,
                 delivery_tag = %delivery_tag,
+                headers = ?message.properties.headers(),
                 payload_size = payload.len(),
                 "Received message"
             );
@@ -164,10 +165,13 @@ impl Consumer {
                 match message.properties.headers() {
                     Some(headers) => match headers.inner().get("message_type") {
                         Some(message_type) => message_type
-                            .as_short_string()
-                            .unwrap()
-                            .to_string()
-                            .try_into()
+                            .as_long_string()
+                            .ok_or_else(|| MessageConsumptionError::NoMessageTypeFound)
+                            .map(|s| s.to_string())
+                            .and_then(|s| {
+                                s.try_into()
+                                    .map_err(|_| MessageConsumptionError::NoMessageTypeFound)
+                            })
                             .map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>),
                         None => Err(MessageConsumptionError::NoMessageTypeFound.into()),
                     },
