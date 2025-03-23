@@ -20,10 +20,11 @@ from typing_extensions import Self
 from tacoq.core.infra.broker import WorkerBrokerClient
 from tacoq.core.models import (
     SerializedException,
-    Task,
+    TaskAssignmentUpdate,
+    TaskCompletedUpdate,
     TaskInput,
     TaskOutput,
-    TaskStatus,
+    TaskRunningUpdate,
 )
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
@@ -177,7 +178,11 @@ class WorkerApplication(BaseModel):
 
         return decorator
 
-    async def _execute_task(self: Self, task: Task, message: AbstractIncomingMessage):
+    async def _execute_task_assignment(
+        self: Self,
+        task_assignment_update: TaskAssignmentUpdate,
+        message: AbstractIncomingMessage,
+    ):
         """Execute a task and update its status in the relay.
 
         ### Arguments
@@ -190,11 +195,7 @@ class WorkerApplication(BaseModel):
             raise RuntimeError("Broker client not initialized")
 
         # Extract OTEL context from the task and init loggers and tracers
-
-        if task.otel_ctx_carrier is not None:
-            otel_ctx_carrier = extract(task.otel_ctx_carrier)
-        else:
-            otel_ctx_carrier = None
+        otel_ctx_carrier = extract(task_assignment_update.otel_ctx_carrier)
 
         tracer = TracerManager.get_tracer()
         logger = LoggerManager.get_logger()
@@ -203,8 +204,8 @@ class WorkerApplication(BaseModel):
             "task_worker_lifecycle",
             context=otel_ctx_carrier,
             attributes={
-                "task.id": str(task.id),
-                "task.kind": task.task_kind,
+                "task.id": str(task_assignment_update.id),
+                "task.kind": task_assignment_update.task_kind,
                 "worker.kind": self.config.kind,
             },
         ) as parent_span:
@@ -212,16 +213,18 @@ class WorkerApplication(BaseModel):
             # If this task is not registered anywhere, it will loop infinitely through
             # the workers. That's the user's problem.
 
-            task_func = self._registered_tasks.get(task.task_kind)
+            task_func = self._registered_tasks.get(task_assignment_update.task_kind)
             if task_func is None:
-                error = TaskNotRegisteredError(task.task_kind, self._registered_tasks)
+                error = TaskNotRegisteredError(
+                    task_assignment_update.task_kind, self._registered_tasks
+                )
                 parent_span.set_status(Status(StatusCode.ERROR))
                 parent_span.record_exception(error)
                 logger.error(
                     _(
-                        message=f"Task of kind {task.task_kind} not registered. Available tasks: {self._registered_tasks.keys()}",
+                        message=f"Task of kind {task_assignment_update.task_kind} not registered. Available tasks: {self._registered_tasks.keys()}",
                         attributes={
-                            "task.kind": task.task_kind,
+                            "task.kind": task_assignment_update.task_kind,
                             "available_tasks": list(self._registered_tasks.keys()),
                         },
                     )
@@ -232,40 +235,49 @@ class WorkerApplication(BaseModel):
             # Task Execution ================================
             # TODO - Improve exception serialization
 
-            result: Optional[TaskOutput] = None
+            result: TaskOutput = None
             is_error: bool = False
 
             # Send task processing event
-            task.status = TaskStatus.PROCESSING
-            task.started_at = datetime.now()
+            started_at = datetime.now()
 
             # Submit task processing event via broker
-            asyncio.create_task(self._broker_client.publish_task_result(task=task))
+            asyncio.create_task(
+                self._broker_client.publish_task_running(
+                    TaskRunningUpdate(
+                        id=task_assignment_update.id,
+                        started_at=started_at,
+                        executed_by=self.config.name,
+                    )
+                )
+            )
 
             # Start timer
-            parent_span.set_attribute("task.started_at", task.started_at.isoformat())
+            parent_span.set_attribute("task.started_at", started_at.isoformat())
 
             with tracer.start_as_current_span(
                 "task_execution",
                 attributes={
                     "task.handler": task_func.__name__,
-                    "task.input_size": len(str(task.input_data)),
+                    "task.input_size": len(str(task_assignment_update.input_data)),
                 },
             ) as execution_span:
                 try:
-                    result = await task_func(task.input_data)
+                    result = await task_func(task_assignment_update.input_data)
                     execution_span.set_attribute("task.output_size", len(str(result)))
                 except Exception as e:
-                    result = json.dumps(
-                        SerializedException.from_exception(e).model_dump()
-                    )
+                    exception = SerializedException.from_exception(e)
+                    result = json.dumps(exception.model_dump()).encode("utf-8")
+
                     is_error = True
                     logger.error(
                         _(
-                            message=f"Error executing task of kind {task.task_kind} with ID {task.id}",
+                            message=f"Error executing task of kind {task_assignment_update.task_kind} with ID {task_assignment_update.id}",
                             attributes={
-                                "task.id": str(task.id),
-                                "task.kind": task.task_kind,
+                                "task.id": str(task_assignment_update.id),
+                                "task.kind": task_assignment_update.task_kind,
+                                "exception_message": exception.message,
+                                "exception_type": exception.type,
                             },
                         )
                     )
@@ -276,10 +288,9 @@ class WorkerApplication(BaseModel):
             completed_at = datetime.now()
 
             # Update task
-            task.output_data = result
-            task.is_error = is_error
-            task.completed_at = completed_at
-            task.status = TaskStatus.COMPLETED
+            output_data = result
+            is_error = is_error
+            completed_at = completed_at
 
             # Submission =========================================
 
@@ -288,10 +299,17 @@ class WorkerApplication(BaseModel):
                 "publish_task_result",
                 attributes={
                     "task.result_size": len(str(result)),
-                    "task": str(task.model_dump()),
+                    "task.id": str(task_assignment_update.id),
+                    "task.kind": task_assignment_update.task_kind,
                 },
             ):
-                await self._broker_client.publish_task_result(task=task)
+                await self._broker_client.publish_task_completed(
+                    TaskCompletedUpdate(
+                        id=task_assignment_update.id,
+                        output_data=output_data,
+                        is_error=is_error,
+                    )
+                )
 
             # Acknowledge the message
             with tracer.start_as_current_span("acknowledge_message"):
@@ -371,7 +389,7 @@ class WorkerApplication(BaseModel):
         # Loop
         while not self._shutdown_event.is_set():
             try:
-                task, message = await asyncio.wait_for(
+                task_assignment, message = await asyncio.wait_for(
                     self._broker_client.listen().__anext__(),
                     timeout=1.0,  # Check shutdown signal every second
                 )
@@ -379,14 +397,16 @@ class WorkerApplication(BaseModel):
                 # Task is created and added to the tracker pool
                 logger.info(
                     _(
-                        message=f"Received task of kind {task.task_kind} with ID {task.id}",
+                        message=f"Received task of kind {task_assignment.task_kind} with ID {task_assignment.id}",
                         attributes={
-                            "task.id": str(task.id),
-                            "task.kind": task.task_kind,
+                            "task.id": str(task_assignment.id),
+                            "task.kind": task_assignment.task_kind,
                         },
                     )
                 )
-                async_task = asyncio.create_task(self._execute_task(task, message))
+                async_task = asyncio.create_task(
+                    self._execute_task_assignment(task_assignment, message)
+                )
                 async_task.add_done_callback(self._active_tasks.discard)
                 self._active_tasks.add(async_task)
             except asyncio.TimeoutError:
