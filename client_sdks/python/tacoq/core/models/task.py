@@ -18,12 +18,12 @@ from tacoq.core.models.avro_serializable_base_model import (
 
 # Types ================================
 
-TaskInput = bytes
+TaskInput = Optional[bytes]
 """ Task input data defined by the user - they can use whatever format they 
 want, but they must handle the serialization and deserialization of the data
 themselves."""
 
-TaskOutput = bytes
+TaskOutput = Optional[bytes]
 """ Task output data defined by the user - they can use whatever format they
 want, but they must handle the serialization and deserialization of the data 
 themselves. """
@@ -100,10 +100,10 @@ class Task(AvroSerializableBaseModel):
     executed_by: Optional[str] = Field(default=None)
     """ The name of the worker that executed the task. """
 
-    input_data: Optional[TaskInput] = Field(default=None)
+    input_data: TaskInput = Field(default=None)
     """ The input data of the task."""
 
-    output_data: Optional[TaskOutput] = Field(default=None)
+    output_data: TaskOutput = Field(default=None)
     """ The data output by the task."""
 
     is_error: Optional[int] = Field(default=None)
