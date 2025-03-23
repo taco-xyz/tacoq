@@ -6,8 +6,8 @@ import React, { useRef } from "react";
 // Next Imports
 import Link from "next/link";
 
-// Heroicons Imports
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { ChevronRight } from "lucide-react";
 
 // Tailwind Imports
 import clsx from "clsx";
@@ -79,11 +79,6 @@ export default function DesktopPageComponent({
                 "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
               "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
             )}
-            onClick={() => {
-              if (children && !isPageExpanded(title)) {
-                expandPage(title);
-              }
-            }}
             tabIndex={-1}
           >
             {sidebar?.Icon && (
@@ -98,9 +93,9 @@ export default function DesktopPageComponent({
             )}
             {sidebar?.title ?? title}
             {children && (
-              <ChevronRightIcon
+              <ChevronRight
                 onClick={(e) => {
-                  // Prevent this form triggering the main elem
+                  // Prevent this form triggering the link navigation
                   e.preventDefault();
                   e.stopPropagation();
                   if (isPageExpanded(title)) {
@@ -160,7 +155,7 @@ export default function DesktopPageComponent({
           )}
           {sidebar?.title ?? title}
           {children && (
-            <ChevronRightIcon
+            <ChevronRight
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
