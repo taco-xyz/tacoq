@@ -88,7 +88,6 @@ impl TaskController {
                 let this = this.clone();
                 Box::pin(async move {
                     this.consume_task(task).await;
-                    ()
                 })
             }))
             .await

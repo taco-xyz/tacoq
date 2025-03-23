@@ -43,7 +43,6 @@ where
         }
     })
     .await
-    .map_err(|e| e.into())
 }
 
 /// Initializes a generic consumer broker
@@ -81,5 +80,5 @@ where
             },
             _ => Err(backoff::Error::permanent("Unsupported broker".into())),
         }
-    }).await.map_err(|e| e.into())
+    }).await
 }

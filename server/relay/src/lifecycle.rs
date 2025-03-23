@@ -71,7 +71,7 @@ pub async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
         }
         Err(e) => {
             error!(error = %e, "Failed to run database migrations");
-            return Err(e.into());
+            Err(e.into())
         }
     }
 }
