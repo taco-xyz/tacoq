@@ -303,7 +303,38 @@ where
     }
 
     async fn health_check(&self) -> Result<(), Box<dyn std::error::Error>> {
-        Ok(())
+        debug!(exchange = %self.exchange, "Performing RabbitMQ health check");
+
+        // The best way to check RabbitMQ health is to verify the channel is open
+        // and try to perform a simple operation
+        if !self.channel.status().connected() {
+            error!(exchange = %self.exchange, "RabbitMQ channel is not connected");
+            return Err("RabbitMQ channel is not connected".into());
+        }
+
+        // Try to declare a temporary queue to verify connection works
+        match self
+            .channel
+            .queue_declare(
+                "", // Empty name creates a temporary queue
+                QueueDeclareOptions {
+                    exclusive: true,
+                    auto_delete: true,
+                    ..QueueDeclareOptions::default()
+                },
+                FieldTable::default(),
+            )
+            .await
+        {
+            Ok(_) => {
+                debug!(exchange = %self.exchange, "RabbitMQ health check successful");
+                Ok(())
+            }
+            Err(e) => {
+                error!(error = %e, exchange = %self.exchange, "RabbitMQ health check failed");
+                Err(Box::new(e))
+            }
+        }
     }
 }
 
