@@ -8,8 +8,10 @@ use crate::server::Server;
 use crate::{AppState, Config};
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
+use backoff::ExponentialBackoffBuilder;
 use sqlx::PgPool;
 use std::sync::{atomic::AtomicBool, Arc};
+use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 
@@ -31,13 +33,31 @@ pub async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
         "Connecting to database"
     );
 
-    let pool = match PgPool::connect(&config.db_url).await {
+    // Configure backoff strategy
+    let backoff = ExponentialBackoffBuilder::new()
+        .with_initial_interval(Duration::from_secs(1))
+        .with_max_interval(Duration::from_secs(10))
+        .with_max_elapsed_time(Some(Duration::from_secs(60)))
+        .build();
+
+    // Try to connect with retries
+    let pool = match backoff::future::retry(backoff, || async {
+        match PgPool::connect(&config.db_url).await {
+            Ok(pool) => Ok(pool),
+            Err(e) => {
+                warn!(error = %e, "Failed to connect to database, retrying...");
+                Err(backoff::Error::transient(e))
+            }
+        }
+    })
+    .await
+    {
         Ok(pool) => {
             info!("Successfully connected to database");
             pool
         }
         Err(e) => {
-            error!(error = %e, "Failed to connect to database");
+            error!(error = %e, "Failed to connect to database after retries");
             return Err(e);
         }
     };
@@ -51,7 +71,7 @@ pub async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
         }
         Err(e) => {
             error!(error = %e, "Failed to run database migrations");
-            Err(e.into())
+            return Err(e.into());
         }
     }
 }
