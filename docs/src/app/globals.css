@@ -56,7 +56,68 @@
   }
 }
 
+/*Custom scrollbar utilities*/
+@utility custom-body-scrollbar {
+  scrollbar-color: oklch(0.705 0.015 286.067) transparent; /*gray-400*/
+
+  &::-webkit-scrollbar-thumb {
+    background-color: oklch(0.705 0.015 286.067); /*gray-400*/
+    border-radius: 20px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+
+  scrollbar-color: oklch(0.92 0.004 286.32) transparent; /*gray-200*/
+
+  &:hover {
+    scrollbar-color: oklch(0.92 0.004 286.32) transparent; /*gray-200*/
+  }
+
+  :is(.dark &) {
+    scrollbar-color: oklch(0.21 0.006 285.885) transparent; /*gray-900*/
+
+    &:hover {
+      scrollbar-color: oklch(0.21 0.006 285.885) transparent; /*gray-900*/
+    }
+  }
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: oklch(0.92 0.004 286.32); /*gray-200*/
+    border-radius: 20px;
+
+    :is(.dark &) {
+      background-color: oklch(0.21 0.006 285.885); /*gray-900*/
+    }
+
+    &:hover {
+      background-color: oklch(0.92 0.004 286.32); /*gray-200*/
+
+      :is(.dark &) {
+        background-color: oklch(0.21 0.006 285.885); /*gray-900*/
+      }
+    }
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
 /* Custom tab outline */
+.custom-tab-outline-offset-0 {
+  @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
+}
+
 .custom-tab-outline-offset-2 {
   @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
 }
@@ -69,19 +130,10 @@
   @apply outline-transparent focus:outline-transparent focus-visible:outline-2 focus-visible:outline-offset-6 focus-visible:outline-zinc-500 dark:focus-visible:outline-zinc-300;
 }
 
-/* Hide scrollbar utility */
-@utility scrollbar-hidden {
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 /* Code Block Base Styles */
 .code-highlight {
-  float: left; 
-  min-width: 100%; 
+  float: left;
+  min-width: 100%;
 }
 
 .code-line {
@@ -97,7 +149,9 @@
 }
 
 .code-line.deleted {
-  background-color: oklch(0.637 0.237 25.331 / 0.1); /* Set deleted line (-) color */
+  background-color: oklch(
+    0.637 0.237 25.331 / 0.1
+  ); /* Set deleted line (-) color */
   border-left: 4px solid oklch(0.637 0.237 25.331); /* Set highlight accent border color */
 }
 
@@ -116,7 +170,7 @@
   content: attr(line);
 }
 
-/*Syntax Token Highlighting*/	
+/*Syntax Token Highlighting*/
 .namespace {
   opacity: 0.7;
 }
@@ -303,4 +357,3 @@
 .language-html .token.punctuation {
   color: #808080;
 }
-
