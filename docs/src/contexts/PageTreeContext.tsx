@@ -7,6 +7,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
 } from "react";
 
 // Next Imports
@@ -14,15 +15,8 @@ import { usePathname } from "next/navigation";
 
 // Type imports
 import type { Page, PageTree } from "@/types/PageTree";
-import type { Anchor } from "@/types/Anchor";
+//import type { Anchor } from "@/types/Anchor";
 import FooterContent from "@/types/FooterContent";
-
-// Heroicons Imports
-import {
-  HomeIcon,
-  NewspaperIcon,
-  CreditCardIcon,
-} from "@heroicons/react/24/solid";
 
 // Custom Icons Imports
 import {
@@ -38,24 +32,6 @@ const pageTree = pageTreeJson as PageTree;
 
 // Utils
 import { getIcon } from "../utils/getIcon";
-
-const anchors: Anchor[] = [
-  {
-    title: "Home",
-    url: "/",
-    Icon: HomeIcon,
-  },
-  {
-    title: "Blog",
-    url: "/blog",
-    Icon: NewspaperIcon,
-  },
-  {
-    title: "Pricing",
-    url: "/pricing",
-    Icon: CreditCardIcon,
-  },
-];
 
 const footerContent: FooterContent = {
   linkGroups: [
@@ -120,7 +96,7 @@ interface PageTreeContextType {
   /** Nested array of all pages in the navigation tree */
   pages: Page[];
   /** Array of anchor links */
-  anchors: Anchor[];
+  // anchors: Anchor[];
   /** Footer content */
   footerContent: FooterContent;
   /** Array of pages that are the breadcrumbs for the current page */
@@ -288,6 +264,11 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     return addIconsToPages(pageTree.children);
   }, []);
 
+  useEffect(() => {
+    const parentPages = findPageAndParents(pageTree.children, pathname);
+    setExpandedPages(new Set(parentPages.slice(0, -1)));
+  }, [pathname]);
+
   return (
     <PageTreeContext.Provider
       value={{
@@ -299,11 +280,11 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         currentPageTitle,
         visiblePagesTitles,
         pages: pagesWithIcons,
-        anchors,
         footerContent,
         breadcrumbs,
         previousPage,
         nextPage,
+        //anchors
       }}
     >
       {children}
