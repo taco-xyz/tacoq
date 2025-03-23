@@ -175,15 +175,36 @@
           ]
         },
         {
-          "url": "/technical-reference/relay-endpoints",
+          "url": "/technical-reference/relay-environment-vars",
           "metadata": {
-            "title": "Relay Endpoints",
-            "description": "Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.",
-            "icon": "Cpu",
+            "title": "Relay Configuration",
+            "description": "Configure the relay using environment variables.",
+            "icon": "Cog",
             "index": 1
           },
-          "rawContent": "export const metadata = {\r\n  title: \"Relay Endpoints\",\r\n  description:\r\n    \"Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.\",\r\n  keywords: [\r\n    \"relay endpoints\",\r\n    \"REST API\",\r\n    \"API endpoints\",\r\n    \"HTTP endpoints\",\r\n    \"relay integration\",\r\n    \"API documentation\",\r\n    \"language integration\",\r\n    \"SDK alternatives\",\r\n    \"HTTP interface\",\r\n    \"task management API\",\r\n    \"relay communication\",\r\n    \"API endpoints\",\r\n    \"cross-language support\",\r\n    \"task status endpoints\",\r\n    \"task result retrieval\",\r\n    \"API integration\",\r\n    \"RESTful services\",\r\n    \"relay API reference\",\r\n  ],\r\n  openGraph: {\r\n    type: \"website\",\r\n    locale: \"en_US\",\r\n    siteName: \"TacoQ Docs\",\r\n    title: \"Relay Endpoints | TacoQ Docs\",\r\n    description:\r\n      \"Discover how to interact with the relay endpoints from any language, even ones without a dedicated SDK.\",\r\n  },\r\n};\r\n\r\n<Warning>This section is under construction! Please check back soon :)</Warning>\r\n",
-          "headers": []
+          "rawContent": "export const metadata = {\r\n  title: \"Relay Configuration\",\r\n  description:\r\n    \"Discover how to configure the relay using environment variables.\",\r\n  keywords: [\r\n    \"environment variables\",\r\n    \"relay configuration\",\r\n    \"broker connection\",\r\n    \"database connection\",\r\n    \"AMQP configuration\",\r\n    \"PostgreSQL configuration\",\r\n    \"OpenTelemetry config\",\r\n    \"telemetry setup\",\r\n    \"relay settings\",\r\n    \"connection URLs\",\r\n    \"functional configuration\",\r\n    \"task consumer settings\",\r\n    \"cleanup configuration\",\r\n    \"API configuration\",\r\n    \"OTEL configuration\",\r\n    \"service configuration\",\r\n    \"deployment settings\",\r\n    \"relay customization\",\r\n    \"tracing configuration\",\r\n    \"sampling configuration\"\r\n  ],\r\n  openGraph: {\r\n    type: \"website\",\r\n    locale: \"en_US\",\r\n    siteName: \"TacoQ Docs\",\r\n    title: \"Relay Configuration | TacoQ Docs\",\r\n    description:\r\n      \"Discover how to configure the relay using environment variables for connections, functionality, and telemetry.\",\r\n  },\r\n};\r\n\r\n# Configuration\r\n\r\nYou can configure the Relay by passing it environment variables. For example:\r\n\r\n```yaml {5-7}\r\nrelay:\r\n    image: ghcr.io/taco-xyz/tacoq-relay:latest\r\n    ports:\r\n      - \"3000:3000\"\r\n    environment:\r\n      TACOQ_DATABASE_URL: postgresql://user:password@localhost:5432/tacoq\r\n      TACOQ_BROKER_URL: amqp://user:password@localhost:5672\r\n```\r\n\r\n# Variables\r\n\r\n## Infrastructure Connections\r\n\r\nThe connections to the broker and the database can be configured using the following environment variables:\r\n\r\n- `TACOQ_BROKER_URL` - The URL of the broker. Example: `amqp://username:password@host:port/vhost`\r\n- `TACOQ_DATABASE_URL` - The URL of the database. Example: `postgresql://username:password@host:port/database_name`\r\n\r\n## Functional Decomposition\r\n\r\nThe relay serves multiple purposes and you might want to replicate only a \r\nsubset of its functionality. You can use the following environment variables to disable\r\nunwanted functionality:\r\n\r\n- `TACOQ_ENABLE_RELAY_TASK_CONSUMER` - Whether to enable the relay consuming the tasks from the broker. Default: `true`\r\n- `TACOQ_ENABLE_RELAY_CLEANUP` - Whether to enable the routine cleanup of expired tasks. Default: `true`\r\n- `TACOQ_ENABLE_RELAY_API` - Whether to enable the relay Axum API. Default: `true`\r\n\r\n## Telemetry\r\n\r\nThe telemetry configuration can be set using the following environment variables:\r\n\r\n- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` - The endpoint for sending OpenTelemetry traces. Default: `http://localhost:4317`\r\n- `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` - The protocol for sending traces. Default: `grpc`\r\n- `OTEL_TRACES_SAMPLER` - The sampling strategy for traces. Default: `always_on`\r\n- `OTEL_SERVICE_NAME` - The service name for telemetry. Default: `tacoq.relay`\r\n",
+          "headers": [
+            {
+              "title": "Configuration",
+              "type": "h1"
+            },
+            {
+              "title": "Variables",
+              "type": "h1"
+            },
+            {
+              "title": "Infrastructure Connections",
+              "type": "h2"
+            },
+            {
+              "title": "Functional Decomposition",
+              "type": "h2"
+            },
+            {
+              "title": "Telemetry",
+              "type": "h2"
+            }
+          ]
         },
         {
           "url": "/technical-reference/benchmarks",
