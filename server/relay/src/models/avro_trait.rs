@@ -111,7 +111,7 @@ pub mod serde_avro_datetime {
     where
         S: Serializer,
     {
-        let ts = dt.and_utc().timestamp_micros();
+        let ts: i64 = dt.and_utc().timestamp_micros();
         serializer.serialize_i64(ts)
     }
 
@@ -147,7 +147,10 @@ pub mod serde_avro_datetime_opt {
         S: Serializer,
     {
         match dt {
-            Some(dt) => serde_avro_datetime::serialize(dt, serializer),
+            Some(dt) => {
+                let ts: i64 = dt.and_utc().timestamp_micros();
+                serializer.serialize_some(&ts)
+            }
             None => serializer.serialize_none(),
         }
     }
@@ -155,7 +158,11 @@ pub mod serde_avro_datetime_opt {
     where
         D: Deserializer<'de>,
     {
-        let ts: Option<i64> = Option::deserialize(deserializer)?;
-        Ok(ts.and_then(|ts| DateTime::from_timestamp_micros(ts).map(|dt| dt.naive_utc())))
+        match Option::deserialize(deserializer)? {
+            Some(ts) => DateTime::from_timestamp_micros(ts)
+                .map(|dt| Some(dt.naive_utc()))
+                .ok_or_else(|| serde::de::Error::custom("Invalid timestamp")),
+            None => Ok(None),
+        }
     }
 }
