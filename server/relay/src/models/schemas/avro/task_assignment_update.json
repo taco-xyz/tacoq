@@ -39,13 +39,10 @@
       },
       {
         "name": "otel_ctx_carrier",
-        "type": [
-          "null",
-          {
+        "type": {
             "type": "map",
             "values": "string"
-          }
-        ]
+        }
       }
     ]
 }

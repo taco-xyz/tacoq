@@ -12,20 +12,14 @@
       },
       {
         "name": "started_at",
-        "type": [
-          "null",
-          {
+        "type": {
             "type": "long",
             "logicalType": "timestamp-micros"
-          }
-        ]
+        }
       },
       {
         "name": "executed_by",
-        "type": [
-          "null",
-          "string"
-        ]
+        "type": "string"
       }
     ]
 }

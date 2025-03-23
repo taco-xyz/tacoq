@@ -12,13 +12,10 @@
       },
       {
         "name": "completed_at",
-        "type": [
-          "null",
-          {
+        "type": {
             "type": "long",
             "logicalType": "timestamp-micros"
-          }
-        ]
+        }
       },
       {
         "name": "output_data",

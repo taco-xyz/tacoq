@@ -12,11 +12,17 @@
       },
       {
         "name": "task_kind",
-        "type": "string"
+        "type": [
+          "null",
+          "string"
+        ]
       },
       {
         "name": "worker_kind",
-        "type": "string"
+        "type": [
+          "null",
+          "string"
+        ]
       },
       {
         "name": "created_at",
@@ -65,27 +71,24 @@
       },
       {
         "name": "is_error",
-        "type": "int"
-      },
-      {
-        "name": "status",
-        "type": {
-          "type": "enum",
-          "name": "TaskStatus",
-          "symbols": [
-            "pending",
-            "processing",
-            "completed"
-          ]
-        }
+        "type": [
+          "null",
+          "int"
+        ]
       },
       {
         "name": "priority",
-        "type": "int"
+        "type": [
+          "null",
+          "int"
+        ]
       },
       {
         "name": "ttl_duration",
-        "type": "long"
+        "type": [
+          "null",
+          "long"
+        ]
       },
       {
         "name": "executed_by",
