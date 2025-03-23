@@ -266,7 +266,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const parentPages = findPageAndParents(pageTree.children, pathname);
-    setExpandedPages(new Set(parentPages.slice(0, -1)));
+    setExpandedPages((prev) => new Set([...prev, ...parentPages.slice(0, -1)]));
   }, [pathname]);
 
   return (
