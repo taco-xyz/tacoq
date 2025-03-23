@@ -12,6 +12,7 @@ import {
   PenSquare,
   ChartNoAxesCombined,
   Rocket,
+  Cog,
 } from "lucide-react";
 
 const icons = {
@@ -28,6 +29,7 @@ const icons = {
   PenSquare,
   ChartNoAxesCombined,
   Rocket,
+  Cog,
 };
 
 export function getIcon(iconName: string) {

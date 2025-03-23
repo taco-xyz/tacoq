@@ -218,3 +218,23 @@ As task results are completed, they get stored in the database. To access them,
 an application must communicate with the relay via REST API. So, the client SDKs
 have a **Relay Client** built in, whom is capable for retrieving task results via
 the REST API.
+
+---
+
+# Appendix
+
+## Task & Event Objects
+
+Services communicate with each other by sending `Task`, `TaskAssignmentUpdate`, 
+`TaskRunningUpdate`, and `TaskCompletedUpdate` objects. We split the updates
+into different objects so we can be as compact as possible when sending small
+updates.
+
+Objects are serialized and schematized using [Apache Avro](https://avro.apache.org/):
+
+- Schemata are defined in `schema/avro`
+- Correspondent idiomatic objects are defined in each SDK.
+- Avro helps us provide full backwards and forwards compatibility.
+
+
+
