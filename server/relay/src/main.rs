@@ -11,6 +11,8 @@ mod server;
 mod testing;
 // mod traces;
 
+use std::sync::Arc;
+
 use init_tracing_opentelemetry::tracing_subscriber_ext::{
     build_level_filter_layer, build_otel_layer,
 };
@@ -27,6 +29,8 @@ pub struct AppState {
     pub task_repository: repo::PgTaskRepository,
     pub worker_kind_repository: repo::PgWorkerKindRepository,
     pub worker_repository: repo::PgWorkerRepository,
+
+    pub task_producer: Arc<dyn brokers::core::BrokerProducer<models::Task>>,
 }
 
 /// Initializes the tracing system

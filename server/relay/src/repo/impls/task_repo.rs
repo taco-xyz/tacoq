@@ -121,6 +121,10 @@ impl PgTaskRepository {
             .await?;
         Ok(())
     }
+
+    pub async fn health_check(&self) -> Result<(), sqlx::Error> {
+        self.core.health_check().await
+    }
 }
 
 #[async_trait]

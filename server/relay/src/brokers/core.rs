@@ -22,6 +22,7 @@ pub trait BrokerConsumer<T: Send + Sync + 'static>: Send + Sync + Debug {
 #[automock]
 #[async_trait]
 pub trait BrokerProducer<T: Send + Sync>: Send + Sync + Debug {
-    #[allow(dead_code)]
     async fn publish_message(&self, message: &T) -> Result<(), Box<dyn std::error::Error>>;
+
+    async fn health_check(&self) -> Result<(), Box<dyn std::error::Error>>;
 }

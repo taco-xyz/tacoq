@@ -1,7 +1,7 @@
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::{routing::get, Router};
-use tracing::{debug, info, instrument};
+use tracing::{debug, error, info, instrument};
 
 use crate::AppState;
 
@@ -19,10 +19,25 @@ pub fn routes() -> Router<AppState> {
     ),
     tag = "health"
 )]
-#[instrument(skip(_state))]
-async fn health(State(_state): State<AppState>) -> StatusCode {
+#[instrument(skip(state))]
+async fn health(State(state): State<AppState>) -> StatusCode {
     info!("Health check requested");
-    // Here you could add additional health checks for backend services
+
+    // Check if the database connection is still alive
+    // TODO: there is perhaps a better way to handle this without using a specific repository
+    let result = state.task_repository.health_check().await;
+    if let Err(e) = result {
+        error!(error = %e, "Database health check failed");
+        return StatusCode::SERVICE_UNAVAILABLE;
+    }
+
+    // Check if broker connection is still alive
+    let result = state.task_producer.health_check().await;
+    if let Err(e) = result {
+        error!(error = %e, "Broker health check failed");
+        return StatusCode::SERVICE_UNAVAILABLE;
+    }
+
     debug!("Health check successful");
     StatusCode::OK
 }

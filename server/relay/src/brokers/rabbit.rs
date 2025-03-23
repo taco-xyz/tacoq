@@ -205,10 +205,7 @@ impl<T> RabbitMQProducer<T>
 where
     T: Debug,
 {
-    pub async fn _new(
-        url_string: &str,
-        exchange: &str,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(url_string: &str, exchange: &str) -> Result<Self, Box<dyn std::error::Error>> {
         info!(url = %url_string, exchange = %exchange, "Connecting to RabbitMQ for producer");
         let connection =
             match Connection::connect(url_string, ConnectionProperties::default()).await {
@@ -304,9 +301,13 @@ where
 
         Ok(())
     }
+
+    async fn health_check(&self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
 
-pub async fn _setup_rabbit_producer<T>(
+pub async fn setup_rabbit_producer<T>(
     url_string: &str,
     exchange: &str,
 ) -> Result<Arc<RabbitMQProducer<T>>, Box<dyn std::error::Error>>
@@ -314,7 +315,7 @@ where
     T: Debug,
 {
     info!(url = %url_string, exchange = %exchange, "Setting up RabbitMQ producer");
-    let producer = match RabbitMQProducer::<T>::_new(url_string, exchange).await {
+    let producer = match RabbitMQProducer::<T>::new(url_string, exchange).await {
         Ok(p) => p,
         Err(e) => {
             error!(error = %e, url = %url_string, exchange = %exchange, "Failed to set up RabbitMQ producer");

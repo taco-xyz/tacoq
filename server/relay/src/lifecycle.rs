@@ -1,5 +1,6 @@
+use crate::brokers::core::BrokerProducer;
 use crate::brokers::setup_consumer_broker;
-use crate::constants::RELAY_QUEUE;
+use crate::constants::{RELAY_EXCHANGE, RELAY_QUEUE};
 use crate::controller::task;
 use crate::jobs::TaskCleanupJob;
 use crate::models::Task;
@@ -104,7 +105,10 @@ pub fn create_repositories(
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app_state(db_pools: &PgPool) -> AppState {
+pub async fn setup_app_state(
+    db_pools: &PgPool,
+    task_producer: Arc<dyn BrokerProducer<Task>>,
+) -> AppState {
     debug!("Setting up application state");
     let (task_repository, worker_kind_repository, worker_repository) =
         create_repositories(db_pools);
@@ -114,6 +118,7 @@ pub async fn setup_app_state(db_pools: &PgPool) -> AppState {
         task_repository,
         worker_kind_repository,
         worker_repository,
+        task_producer,
     }
 }
 
@@ -124,9 +129,9 @@ pub async fn setup_app_state(db_pools: &PgPool) -> AppState {
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app(db_pools: &PgPool) -> Router {
+pub async fn setup_app(db_pools: &PgPool, task_producer: Arc<dyn BrokerProducer<Task>>) -> Router {
     debug!("Beginning app setup");
-    let app_state = setup_app_state(db_pools).await;
+    let app_state = setup_app_state(db_pools, task_producer).await;
     info!("App state created");
 
     // Create base router with routes and state
@@ -203,29 +208,11 @@ pub async fn initialize_system(
             "Setting up message broker consumer"
         );
 
-        // Configure backoff strategy for broker consumer
-        let broker_backoff = ExponentialBackoffBuilder::new()
-                .with_initial_interval(Duration::from_secs(1))
-                .with_max_interval(Duration::from_secs(10))
-                .build();
-
+        // Since retries are now handled in setup_consumer_broker, just call the function directly
         let new_task_consumer =
-            // Try to connect to broker with retries
-            match backoff::future::retry(broker_backoff, || async {
-                match setup_consumer_broker::<Task>(&config.broker_url, RELAY_QUEUE, shutdown.clone()).await {
-                    Ok(consumer) => Ok(consumer),
-                    Err(e) => {
-                        warn!(
-                            error = %e, 
-                            broker_url = %config.broker_url,
-                            queue = %RELAY_QUEUE,
-                            "Failed to connect to message broker, retrying..."
-                        );
-                        Err(backoff::Error::transient(e))
-                    }
-                }
-            })
-            .await {
+            match setup_consumer_broker::<Task>(&config.broker_url, RELAY_QUEUE, shutdown.clone())
+                .await
+            {
                 Ok(consumer) => {
                     info!("Message broker consumer initialized successfully");
                     consumer
@@ -235,7 +222,7 @@ pub async fn initialize_system(
                         error = %e,
                         broker_url = %config.broker_url,
                         queue = %RELAY_QUEUE,
-                        "Failed to setup message broker consumer after retries"
+                        "Failed to setup message broker consumer"
                     );
                     return Err(e);
                 }
@@ -277,9 +264,27 @@ pub async fn initialize_system(
 
     // Setup API server if enabled
     if config.enable_relay_api {
+        // Create the task publisher for the API server -> currently only used for health checks
+        debug!("Setting up task publisher for API server");
+        let task_publisher = match crate::brokers::setup_publisher_broker::<Task>(
+            &config.broker_url,
+            RELAY_EXCHANGE,
+        )
+        .await
+        {
+            Ok(publisher) => {
+                info!("Task publisher initialized successfully");
+                publisher
+            }
+            Err(e) => {
+                error!(error = %e, "Failed to initialize task publisher");
+                return Err(e);
+            }
+        };
+
         // Setup axum app and state
         debug!("Setting up web application");
-        let app = setup_app(&db_pools).await;
+        let app = setup_app(&db_pools, task_publisher).await;
 
         // Create server
         debug!("Creating HTTP server on port 3000");
