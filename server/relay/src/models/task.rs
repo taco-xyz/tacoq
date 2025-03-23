@@ -213,13 +213,28 @@ fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
 
     #[test]
     fn test_task_avro_serde() {
-        let task = Task::new("", "", 1, 1)
-            .with_input_data(b"".to_vec())
-            .with_output_data(b"".to_vec());
+        let mut task = Task::new(
+            "delayed_instrumented_task",
+            "70ab4a91-04c4-4670-91e1-cb81153d4e0f",
+            0,
+            604800,
+        );
+        task.id = Uuid::parse_str("6ff84e6d-f40d-4617-9874-ce625d59a0d5").unwrap();
+        task.executed_by = Some("70ab4a91-04c4-4670-91e1-cb81153d4e0f".to_string());
+        task.started_at = Some(
+            NaiveDateTime::parse_from_str("2025-03-23T05:03:59.995089", "%Y-%m-%dT%H:%M:%S.%f")
+                .unwrap(),
+        );
+        task.input_data = Some(b"{\"test\": \"data\"}".to_vec());
+        task.otel_ctx_carrier = Some(json!({
+            "traceparent": "00-3f4a168998a20c019615e558ec12d985-47d2075b594ffe86-01"
+        }));
 
         // Serialize to Avro bytes
         let avro_bytes = task.try_into_avro_bytes().unwrap();
