@@ -3,7 +3,7 @@ pub mod test {
     use axum_test::TestServer;
     use sqlx::PgPool;
 
-    use crate::setup_app;
+    use crate::lifecycle::setup_app;
 
     pub static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 

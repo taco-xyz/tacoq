@@ -78,7 +78,7 @@ impl TaskController {
         .await;
     }
 
-    pub async fn run(self: Arc<Self>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn run(self: Arc<Self>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // This clone is needed so the self object can live inside the closure due to move
         let this = self.clone();
 
@@ -88,6 +88,7 @@ impl TaskController {
                 let this = this.clone();
                 Box::pin(async move {
                     this.consume_task(task).await;
+                    ()
                 })
             }))
             .await

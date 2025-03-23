@@ -14,7 +14,7 @@ pub trait BrokerConsumer<T: Send + Sync + 'static>: Send + Sync + Debug {
     async fn consume_messages(
         &self,
         handler: MessageHandlerFn<T>, // The callback is used when consuming a message
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
     async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error>>;
 }

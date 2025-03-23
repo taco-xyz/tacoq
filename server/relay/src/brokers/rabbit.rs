@@ -97,7 +97,7 @@ where
     async fn consume_messages(
         &self,
         handler: MessageHandlerFn<T>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!(queue = %self.queue, "Starting message consumption");
         let mut consumer = match self
             .channel
