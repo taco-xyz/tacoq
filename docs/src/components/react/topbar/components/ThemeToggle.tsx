@@ -3,8 +3,8 @@
 // React Imports
 import { useCallback } from "react";
 
-// Heroicons Imports
-import { SunIcon, MoonIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { Sun, MoonStar } from "lucide-react";
 
 /**
  * Theme toggle component that switches between light and dark modes
@@ -27,13 +27,13 @@ export default function ThemeToggle() {
         onClick={changeToLightTheme}
         className="dark:hover:text-white/80 hidden dark:block text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
       >
-        <MoonIcon className="size-5" />
+        <MoonStar className="size-5" />
       </button>
       <button
         className="dark:hover:text-white/80 dark:hidden text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
         onClick={changeToDarkTheme}
       >
-        <SunIcon className="size-5" />
+        <Sun className="size-5" />
       </button>
     </>
   );

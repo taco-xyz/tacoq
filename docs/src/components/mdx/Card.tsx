@@ -1,21 +1,22 @@
 import { FC, ComponentType } from "react";
 import clsx from "clsx";
 import Link from "next/link";
+
 import {
-  RocketLaunchIcon,
-  BookOpenIcon,
-  ArrowUpRightIcon,
-  BookmarkSquareIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+  Rocket,
+  BookOpen,
+  ArrowUpRight,
+  Bookmark,
+  UsersRound,
+} from "lucide-react";
 
 type Icon = "rocket" | "book" | "bookmarkSquare" | "userGroup";
 
 const icons: Record<Icon, ComponentType<{ className?: string }>> = {
-  rocket: RocketLaunchIcon,
-  book: BookOpenIcon,
-  bookmarkSquare: BookmarkSquareIcon,
-  userGroup: UserGroupIcon,
+  rocket: Rocket,
+  book: BookOpen,
+  bookmarkSquare: Bookmark,
+  userGroup: UsersRound,
 };
 
 const getIcon = (icon: Icon) => {
@@ -43,10 +44,10 @@ const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
         )}
       >
         {href && (
-          <ArrowUpRightIcon className="size-4 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-400 dark:text-zinc-600" />
+          <ArrowUpRight className="size-5 group-hover:text-zinc-400 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-300 dark:text-zinc-600 group-hover:scale-105" />
         )}
         {Icon && (
-          <Icon className="size-6 mb-3 dark:text-zinc-400 text-zinc-500" />
+          <Icon className="size-[23px] mb-3 dark:text-zinc-400 text-zinc-500" />
         )}
         <h3 className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
           {title}

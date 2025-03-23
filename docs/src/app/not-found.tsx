@@ -3,8 +3,8 @@
 // Next Imports
 import { useRouter } from "next/navigation";
 
-// Heroicons
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function NotFound() {
         onClick={() => router.back()}
         className=" text-zinc-600 hover:bg-zinc-800/5 dark:hover:bg-white/5 hover:dark:text-white hover:text-zinc-800 py-1 px-1.5 dark:text-zinc-300 transition-all duration-150 ease-in-out flex flex-row items-center gap-x-2 rounded-lg custom-tab-outline-offset-4 cursor-pointer"
       >
-        <ArrowLeftIcon className="size-3.5" />{" "}
+        <ArrowLeft className="size-3.5" />{" "}
         <p className="text-sm font-medium">Go back</p>
       </button>
     </div>

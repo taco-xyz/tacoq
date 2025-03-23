@@ -6,6 +6,9 @@ import { createPortal } from "react-dom";
 // Next Imports
 import dynamic from "next/dynamic";
 
+// Lucide Icons
+import { X } from "lucide-react";
+
 // Utils Imports
 import clsx from "clsx";
 
@@ -67,12 +70,20 @@ export default function SearchDialog() {
               placeholder="What are you looking for?"
               className="w-full bg-transparent dark:text-white dark:placeholder:text-white/60 text-zinc-800 placeholder:text-zinc-500 outline-hidden"
             />
+            {/* Desktop Close Button */}
             <button
               onClick={closeSearch}
-              className="dark:text-white/70 text-zinc-500 transition-all custom-tab-outline-offset-2 hover:text-zinc-700 dark:bg-zinc-950/80 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/5 dark:hover:ring-white/10 dark:hover:text-white/90 bg-zinc-200/40 dark:hover:bg-zinc-950 hover:bg-zinc-200/60 ease-in-out duration-150 cursor-pointer px-2 py-1 rounded-md whitespace-nowrap font-semibold text-xs font-mono"
+              className="dark:text-white/70 md:block hidden text-zinc-500 transition-all custom-tab-outline-offset-2 hover:text-zinc-700 dark:bg-zinc-950/80 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/5 dark:hover:ring-white/10 dark:hover:text-white/90 bg-zinc-200/40 dark:hover:bg-zinc-950 hover:bg-zinc-200/60 ease-in-out duration-150 cursor-pointer px-2 py-1 rounded-md whitespace-nowrap font-semibold text-xs font-mono"
             >
-              <p className="sm:block hidden">Esc</p>
-              <p className="sm:hidden">Close</p>
+              <p>Esc</p>
+            </button>
+
+            {/* Mobile Close Button */}
+            <button
+              onClick={closeSearch}
+              className="dark:hover:text-white/80 md:hidden text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
+            >
+              <X className="size-6" />
             </button>
           </div>
           <div className="border-t-[1.5px] dark:border-white/10 border-zinc-100 py-4 px-5">

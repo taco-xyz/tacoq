@@ -3,6 +3,7 @@
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/components/react/sidebar/context/PageNavigationContext";
+import { usePlatform } from "@/contexts/PlatformContext";
 
 // Components Imports
 import Tooltip from "@/components/react/sidebar/components/Tooltip";
@@ -30,12 +31,15 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
     sidebarContainerRef,
   } = usePageNavigation();
 
+  // Extract the platform context
+  const { isMacOS } = usePlatform();
+
   return (
     <div className="w-full h-full relative">
       <div
         ref={sidebarContainerRef}
         className={clsx(
-          "w-full h-full gap-y-12 flex flex-col overflow-y-scroll scrollbar-hidden",
+          "w-full h-full gap-y-12 flex flex-col overflow-y-auto custom-scrollbar pr-2.5",
           className
         )}
       >
@@ -56,7 +60,7 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
                   : "opacity-100 pointer-events-auto"
               }`}
             >
-              Ctrl 0
+              {isMacOS ? "⌘" : "Ctrl"} 0
             </button>
 
             <button
