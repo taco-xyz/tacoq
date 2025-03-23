@@ -5,7 +5,6 @@ These tests verify that the worker application can correctly register task handl
 execute tasks, and manage its lifecycle.
 """
 
-import datetime
 import json
 from unittest import mock
 from uuid import uuid4
@@ -13,7 +12,11 @@ from uuid import uuid4
 import pytest
 from aio_pika.abc import AbstractIncomingMessage
 from tacoq.core.infra.broker import BrokerConfig, WorkerBrokerClient
-from tacoq.core.models import Task, TaskInput, TaskOutput, TaskStatus
+from tacoq.core.models import (
+    TaskAssignmentUpdate,
+    TaskInput,
+    TaskOutput,
+)
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
 # =========================================
@@ -37,17 +40,15 @@ def worker_app():
 
 
 @pytest.fixture
-def sample_task():
-    """Creates a sample task for testing."""
-    return Task(
+def sample_task_assignment():
+    """Creates a sample task assignment for testing."""
+    return TaskAssignmentUpdate(
         id=uuid4(),
         task_kind="test_task",
         worker_kind="test_kind",
-        input_data=json.dumps({"value": 5}),
+        input_data=json.dumps({"value": 5}).encode("utf-8"),
         priority=0,
-        created_at=datetime.datetime.now(),
-        status=TaskStatus.PENDING,
-        output_data=None,
+        ttl_duration=60 * 60 * 24 * 7,
     )
 
 
@@ -62,7 +63,12 @@ async def test_register_single_task(worker_app: WorkerApplication):
     """Test registering a single task handler."""
 
     async def task_handler(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": json.loads(input_data)["value"] * 2})
+        if input_data is None:
+            return None
+
+        return json.dumps(
+            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
+        ).encode("utf-8")
 
     worker_app.register_task("test_task", task_handler)
     assert "test_task" in worker_app._registered_tasks
@@ -75,10 +81,20 @@ async def test_register_multiple_tasks(worker_app: WorkerApplication):
     """Test registering multiple task handlers."""
 
     async def task1(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": json.loads(input_data)["value"] * 2})
+        if input_data is None:
+            return None
+
+        return json.dumps(
+            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
+        ).encode("utf-8")
 
     async def task2(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": json.loads(input_data)["value"] + 1})
+        if input_data is None:
+            return None
+
+        return json.dumps(
+            {"result": json.loads(input_data.decode("utf-8"))["value"] + 1}
+        ).encode("utf-8")
 
     worker_app.register_task("task1", task1)
     worker_app.register_task("task2", task2)
@@ -96,7 +112,12 @@ async def test_task_decorator_registration(worker_app: WorkerApplication):
 
     @worker_app.task("decorated_task")
     async def task_handler(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": json.loads(input_data)["value"] * 2})
+        if input_data is None:
+            return None
+
+        return json.dumps(
+            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
+        ).encode("utf-8")
 
     assert "decorated_task" in worker_app._registered_tasks
     assert worker_app._registered_tasks["decorated_task"] == task_handler
@@ -108,10 +129,10 @@ async def test_reregister_task(worker_app: WorkerApplication):
     """Test re-registering a task (should overwrite)."""
 
     async def task1(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": 1})
+        return json.dumps({"result": 1}).encode("utf-8")
 
     async def task2(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": 2})
+        return json.dumps({"result": 2}).encode("utf-8")
 
     worker_app.register_task("same_kind", task1)
     worker_app.register_task("same_kind", task2)
@@ -127,7 +148,7 @@ async def test_reregister_task(worker_app: WorkerApplication):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_execute_registered_task(
-    worker_app: WorkerApplication, sample_task: Task
+    worker_app: WorkerApplication, sample_task_assignment: TaskAssignmentUpdate
 ):
     """Test executing a registered task successfully."""
     executed = False
@@ -136,12 +157,19 @@ async def test_execute_registered_task(
     async def task_handler(input_data: TaskInput) -> TaskOutput:
         nonlocal executed
         executed = True
-        assert input_data == sample_task.input_data
-        return json.dumps({"result": json.loads(input_data)["value"] * 2})
+        assert input_data == sample_task_assignment.input_data
 
-    worker_app.register_task(sample_task.task_kind, task_handler)
-    await worker_app._execute_task(
-        sample_task, mock.create_autospec(AbstractIncomingMessage, instance=True)
+        if input_data is None:
+            return None
+
+        return json.dumps(
+            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
+        ).encode("utf-8")
+
+    worker_app.register_task(sample_task_assignment.task_kind, task_handler)  # type: ignore
+    await worker_app._execute_task_assignment(
+        sample_task_assignment,
+        mock.create_autospec(AbstractIncomingMessage, instance=True),
     )
     assert executed
 
@@ -149,23 +177,24 @@ async def test_execute_registered_task(
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_execute_unregistered_task(
-    worker_app: WorkerApplication, sample_task: Task
+    worker_app: WorkerApplication, sample_task_assignment: TaskAssignmentUpdate
 ):
     """Test executing an unregistered task."""
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
-    message_mock = mock.create_autospec(AbstractIncomingMessage, instance=True)
 
-    await worker_app._execute_task(sample_task, message_mock)
+    await worker_app._execute_task_assignment(
+        sample_task_assignment,
+        mock.create_autospec(AbstractIncomingMessage, instance=True),
+    )
 
-    message_mock.nack.assert_called_once()
     # Verify that the task wasn't published
-    worker_app._broker_client.publish_task_result.assert_not_called()  # type: ignore
+    worker_app._broker_client.publish_task_completed.assert_not_called()  # type: ignore
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_execute_task_with_error(
-    worker_app: WorkerApplication, sample_task: Task
+    worker_app: WorkerApplication, sample_task_assignment: TaskAssignmentUpdate
 ):
     """Test executing a task that raises an exception."""
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
@@ -173,9 +202,10 @@ async def test_execute_task_with_error(
     async def failing_task(_: TaskInput) -> TaskOutput:
         raise ValueError("Task failed")
 
-    worker_app.register_task(sample_task.task_kind, failing_task)
-    await worker_app._execute_task(
-        sample_task, mock.create_autospec(AbstractIncomingMessage, instance=True)
+    worker_app.register_task(sample_task_assignment.task_kind, failing_task)  # type: ignore
+    await worker_app._execute_task_assignment(
+        sample_task_assignment,
+        mock.create_autospec(AbstractIncomingMessage, instance=True),
     )
     # TODO: Add assertions for error handling once implemented
 

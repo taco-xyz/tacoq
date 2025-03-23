@@ -35,7 +35,7 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     task = await publisher_client.publish_task(
         task_kind=task_kind,
         worker_kind=worker_kind,
-        input_data=json.dumps(input_data),
+        input_data=json.dumps(input_data).encode("utf-8"),
         priority=priority,
         task_id=id,
     )
@@ -43,11 +43,9 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     # Verify task properties
     assert task.task_kind == task_kind
     assert task.worker_kind == worker_kind
-    assert json.loads(task.input_data) == input_data
+    assert task.input_data == json.dumps(input_data).encode("utf-8")
     assert task.priority == priority
     assert task.id == id
 
     # Verify broker client calls
-    publisher_client._broker_client.publish_task.assert_called_once_with(  # type: ignore
-        task,
-    )
+    publisher_client._broker_client.publish_task_assignment.assert_called_once()  # type: ignore

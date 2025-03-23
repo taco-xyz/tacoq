@@ -27,7 +27,7 @@ async def test_get_task_success(mock_relay_client: RelayClient):
         "task_kind": "test_kind",
         "worker_kind": "test_worker_kind",
         "created_at": "2024-01-01T00:00:00Z",
-        "input_data": json.dumps({"foo": "bar"}),
+        "input_data": str(json.dumps({"foo": "bar"}).encode("utf-8")),
         "status": TaskStatus.PENDING.value,  # Use enum value for serialization
         "priority": 5,
         "result": None,
