@@ -7,7 +7,7 @@ import {
   BookOpen,
   ArrowUpRight,
   Bookmark,
-  UserRound,
+  UsersRound,
 } from "lucide-react";
 
 type Icon = "rocket" | "book" | "bookmarkSquare" | "userGroup";
@@ -16,7 +16,7 @@ const icons: Record<Icon, ComponentType<{ className?: string }>> = {
   rocket: Rocket,
   book: BookOpen,
   bookmarkSquare: Bookmark,
-  userGroup: UserRound,
+  userGroup: UsersRound,
 };
 
 const getIcon = (icon: Icon) => {
@@ -44,7 +44,7 @@ const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
         )}
       >
         {href && (
-          <ArrowUpRight className="size-4 group-hover:text-zinc-500 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-400 dark:text-zinc-600" />
+          <ArrowUpRight className="size-5 group-hover:text-zinc-400 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-300 dark:text-zinc-600" />
         )}
         {Icon && (
           <Icon className="size-6 mb-3 dark:text-zinc-400 text-zinc-500" />

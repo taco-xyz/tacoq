@@ -84,7 +84,7 @@ export default function DesktopPageComponent({
             {sidebar?.Icon && (
               <sidebar.Icon
                 className={clsx(
-                  "size-3.5 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                  "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
                   currentPageTitle === title
                     ? "text-zinc-950 dark:text-white/100"
                     : "text-zinc-500 dark:text-white/50"
@@ -146,7 +146,7 @@ export default function DesktopPageComponent({
           {sidebar?.Icon && (
             <sidebar.Icon
               className={clsx(
-                "size-3.5 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
                 currentPageTitle === title
                   ? "text-zinc-950 dark:text-white/100"
                   : "text-zinc-500 dark:text-white/50"
