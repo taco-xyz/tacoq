@@ -12,8 +12,8 @@ import getHeaderId from "@/utils/getHeaderId";
 // Utils Imports
 import clsx from "clsx";
 
-// Heroicons Imports
-import { Bars3CenterLeftIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { ChartNoAxesGantt } from "lucide-react";
 
 // Next Imports
 import { useRouter } from "next/navigation";
@@ -125,13 +125,13 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
       <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
       <nav
         className={clsx(
-          "flex flex-col gap-y-2 text-sm w-full overflow-y-scroll scrollbar-hidden h-full",
+          "flex flex-col gap-y-2 text-sm w-full overflow-y-auto custom-scrollbar h-full pr-2.5 pl-[1px]",
           className
         )}
       >
         {/* Title */}
-        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2">
-          <Bars3CenterLeftIcon className="w-4 h-4" />
+        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2 -ml-[3px]">
+          <ChartNoAxesGantt className="size-4" />
           On this page
         </span>
 
@@ -145,7 +145,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
                 key={index}
                 onClick={() => handleClick(headingId)}
                 className={clsx(
-                  "text-left hover:text-zinc-800 dark:hover:text-white transition-all rounded-sm duration-150 ease-in-out whitespace-nowrap cursor-pointer custom-tab-outline-offset-2",
+                  "text-left hover:text-zinc-800 dark:hover:text-white transition-all rounded-md duration-150 ease-in-out cursor-pointer custom-tab-outline-offset-0",
 
                   header.type === "h1" && "pl-0",
                   header.type === "h2" && "pl-4",

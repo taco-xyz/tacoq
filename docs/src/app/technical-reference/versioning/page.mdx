@@ -1,3 +1,37 @@
+export const metadata = {
+  title: "Versioning",
+  description: "Learn how TacoQ handles versioning for images and libraries.",
+  keywords: [
+    "Semantic Versioning",
+    "SemVer",
+    "version 1.0",
+    "major version",
+    "minor version",
+    "patch version",
+    "breaking changes",
+    "SDK versioning",
+    "image versioning",
+    "lockstep releases",
+    "Relay versioning",
+    "version compatibility",
+    "task object versioning",
+    "version upgrading",
+    "Avro",
+    "compatibility issues",
+    "NACK",
+    "worker compatibility",
+    "relay compatibility",
+    "version documentation",
+    "changelog",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "Versioning | TacoQ Docs",
+    description: "Learn how TacoQ handles versioning for images and libraries.",
+  },
+};
 
 # Semantic Versioning
 
@@ -24,7 +58,7 @@ bumped.
 
 # Task Object
 
-Currently, changes to the task object can cause compatibility issues, preventing 
+Currently, changes to the task object can cause compatibility issues, preventing
 your workers and relays from processing messages and NACK'ing them. To upgrade
 without compatibility issues, follow the [version upgrading guide](/guides/upgrading).
 

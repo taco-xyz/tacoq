@@ -2,8 +2,7 @@
 
 The publisher client abstracts the details of communicating with
 the broker and relay. This is a public-facing class that can
-be used to both publish tasks and retrieve their current status
-and eventual output.
+be used to publish tasks.
 """
 
 from typing import Any, Dict, Optional
@@ -21,7 +20,7 @@ from tacoq.core.telemetry import TracerManager
 class PublisherClient(BaseModel):
     """A client for publishing tasks to the message broker.
 
-    To retrieve tasks, refer to the `RelayClient` class.
+    NOTE: To retrieve tasks, refer to the `RelayClient` class.
 
     ### Attributes
     - broker_config: The configuration for the broker. See `BrokerConfig` for more details on how to configure it.

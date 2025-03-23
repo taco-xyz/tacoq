@@ -7,6 +7,7 @@ results, respectively.
 
 from typing import AsyncGenerator, Optional, Self
 from aio_pika import Message, connect_robust
+import aio_pika
 from pydantic import BaseModel
 
 from aio_pika.abc import (
@@ -105,7 +106,9 @@ class BaseBrokerClient(BaseModel):
         """Establish connection to RabbitMQ server and setup channel."""
 
         self._connection = await connect_robust(self.config.url)
-        self._channel = await self._connection.channel()
+        self._channel = await self._connection.channel(
+            publisher_confirms=self.config.publisher_confirms
+        )
 
         # All clients use the same exchange
         self._task_exchange = await self._channel.declare_exchange(

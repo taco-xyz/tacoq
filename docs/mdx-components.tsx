@@ -114,7 +114,6 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
             alt={alt}
             fill
             className={clsx("object-cover object-center", className)}
-            quality={100}
           />
         </span>
       </span>
@@ -194,7 +193,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <Link
         href={href}
         className={clsx(
-          "dark:text-white text-zinc-800 custom-tab-outline-offset-2 font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-[outline] ease-in-out duration-150",
+          "dark:text-white text-zinc-800 custom-tab-outline-offset-2 focus-visible:rounded-sm font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-[outline] ease-in-out duration-150",
           "[blockquote_&]:text-inherit [blockquote_&]:border-inherit",
           className
         )}
