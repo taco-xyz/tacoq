@@ -13,7 +13,7 @@ import getHeaderId from "@/utils/getHeaderId";
 import clsx from "clsx";
 
 // Lucide Icons
-import { Text } from "lucide-react";
+import { ChartNoAxesGantt } from "lucide-react";
 
 // Next Imports
 import { useRouter } from "next/navigation";
@@ -130,8 +130,8 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
         )}
       >
         {/* Title */}
-        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2">
-          <Text className="w-4 h-4" />
+        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2 -ml-[3px]">
+          <ChartNoAxesGantt className="size-4" />
           On this page
         </span>
 
