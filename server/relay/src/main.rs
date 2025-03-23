@@ -1,16 +1,14 @@
 mod api;
-mod brokers;
 mod config;
 mod constants;
-mod controller;
+mod consumer;
 mod jobs;
 mod models;
 mod repo;
 mod server;
 mod testing;
-// mod traces;
 
-use brokers::setup_consumer_broker;
+use consumer::update_consumer::Consumer;
 use init_tracing_opentelemetry::tracing_subscriber_ext::{
     build_level_filter_layer, build_otel_layer,
 };
@@ -23,28 +21,24 @@ use tracing_subscriber::{layer::SubscriberExt, Layer};
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use constants::RELAY_QUEUE;
-use models::Task;
 use sqlx::PgPool;
 
 use config::Config;
-use controller::task;
 use jobs::TaskCleanupJob;
-use repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
+use repo::{PgRepositoryCore, TaskRepository};
 
 /// Represents the shared application state that can be accessed by all routes
 ///
 /// Contains all the repositories used for the application logic and the broker
 #[derive(Clone)]
 pub struct AppState {
-    pub task_repository: PgTaskRepository,
-    pub worker_kind_repository: PgWorkerKindRepository,
-    pub worker_repository: PgWorkerRepository,
+    pub task_repository: TaskRepository,
 }
 
 /// Application components that need to be started and shut down
 struct AppComponents {
     server: Server,
-    task_controller: Arc<task::TaskController>,
+    update_consumer: Arc<Consumer>,
     task_cleanup_job: Arc<TaskCleanupJob>,
 }
 
@@ -131,23 +125,15 @@ async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
 /// # Arguments
 ///
 /// * `pool` - The database connection pool
-fn create_repositories(
-    pool: &PgPool,
-) -> (PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository) {
+fn create_repositories(pool: &PgPool) -> TaskRepository {
     debug!("Creating repository core");
     let core = PgRepositoryCore::new(pool.clone());
 
     debug!("Creating task repository");
-    let task_repository = PgTaskRepository::new(core.clone());
-
-    debug!("Creating worker kind repository");
-    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
-
-    debug!("Creating worker repository");
-    let worker_repository = PgWorkerRepository::new(core.clone());
+    let task_repository = TaskRepository::new(core.clone());
 
     debug!("All repositories created successfully");
-    (task_repository, worker_kind_repository, worker_repository)
+    task_repository
 }
 
 /// Initializes the application state based on the given configuration
@@ -157,15 +143,10 @@ fn create_repositories(
 /// * `db_pools` - The database connection pools
 async fn setup_app_state(db_pools: &PgPool) -> AppState {
     debug!("Setting up application state");
-    let (task_repository, worker_kind_repository, worker_repository) =
-        create_repositories(db_pools);
+    let task_repository = create_repositories(db_pools);
 
     info!("Application state initialized successfully");
-    AppState {
-        task_repository,
-        worker_kind_repository,
-        worker_repository,
-    }
+    AppState { task_repository }
 }
 
 /// Initializes the application router
@@ -232,15 +213,20 @@ async fn initialize_system(config: &Config) -> Result<AppComponents, Box<dyn std
     };
     info!("Database connection pools created");
 
+    // Create repositories
+    debug!("Creating repositories for components");
+    let task_repo = create_repositories(&db_pools);
+
     // Setup message broker
     debug!(
         broker_url = %config.broker_url,
         queue = %RELAY_QUEUE,
         "Setting up message broker consumer"
     );
-    let new_task_consumer = match setup_consumer_broker::<Task>(
+    let update_consumer = match Consumer::new(
         &config.broker_url,
         RELAY_QUEUE,
+        Arc::new(task_repo),
         shutdown.clone(),
     )
     .await
@@ -264,33 +250,9 @@ async fn initialize_system(config: &Config) -> Result<AppComponents, Box<dyn std
     debug!("Setting up web application");
     let app = setup_app(&db_pools).await;
 
-    // Create repositories
-    debug!("Creating repositories for components");
-    let (task_repo, worker_kind_repo, worker_repo) = create_repositories(&db_pools);
-
-    // Initialize controller and job
-    debug!("Creating task controller");
-    let task_controller = match task::TaskController::new(
-        new_task_consumer,
-        worker_repo,
-        worker_kind_repo,
-        task_repo,
-    )
-    .await
-    {
-        Ok(controller) => {
-            info!("Task controller initialized successfully");
-            Arc::new(controller)
-        }
-        Err(e) => {
-            error!(error = %e, "Failed to initialize task controller");
-            return Err(e);
-        }
-    };
-
     debug!("Creating task cleanup job with 5-minute interval");
     let task_cleanup_job = Arc::new(TaskCleanupJob::new(
-        PgTaskRepository::new(PgRepositoryCore::new(db_pools.clone())),
+        TaskRepository::new(PgRepositoryCore::new(db_pools.clone())),
         300, // Every 5 minutes
     ));
     info!("Task cleanup job created with 300-second interval");
@@ -303,7 +265,7 @@ async fn initialize_system(config: &Config) -> Result<AppComponents, Box<dyn std
     info!("All system components initialized successfully");
     Ok(AppComponents {
         server,
-        task_controller,
+        update_consumer: Arc::new(update_consumer),
         task_cleanup_job,
     })
 }
@@ -322,7 +284,7 @@ async fn start_background_tasks(
     tokio::task::JoinHandle<()>,
     tokio::task::JoinHandle<()>,
     tokio::task::JoinHandle<()>,
-    Arc<task::TaskController>,
+    Arc<Consumer>,
 ) {
     debug!("Starting background tasks");
 
@@ -338,16 +300,16 @@ async fn start_background_tasks(
     });
 
     // Keep a reference for shutdown
-    let task_controller_shutdown = components.task_controller.clone();
+    let update_consumer_shutdown = components.update_consumer.clone();
 
     // Start task controller
-    info!("Starting task controller");
-    let task_handle = tokio::spawn(async move {
-        debug!("Task controller started");
-        if let Err(e) = components.task_controller.run().await {
-            error!(error = %e, "Task input controller failed");
+    info!("Starting update consumer");
+    let update_consumer_handle = tokio::spawn(async move {
+        debug!("Update consumer started");
+        if let Err(e) = components.update_consumer.consume_messages().await {
+            error!(error = %e, "Update consumer failed");
         } else {
-            info!("Task controller completed successfully");
+            info!("Update consumer completed successfully");
         }
     });
 
@@ -365,9 +327,9 @@ async fn start_background_tasks(
     info!("All background tasks started");
     (
         task_cleanup_handle,
-        task_handle,
+        update_consumer_handle,
         server_handle,
-        task_controller_shutdown,
+        update_consumer_shutdown,
     )
 }
 
@@ -375,14 +337,14 @@ async fn start_background_tasks(
 ///
 /// # Arguments
 ///
-/// * `task_controller` - The task controller to shut down
-async fn perform_shutdown(task_controller: Arc<task::TaskController>) {
+/// * `update_consumer` - The update consumer to shut down
+async fn perform_shutdown(update_consumer: Arc<Consumer>) {
     info!("Starting graceful shutdown procedure");
 
-    debug!("Shutting down task controller");
-    match task_controller.shutdown().await {
-        Ok(_) => info!("Task controller shut down successfully"),
-        Err(e) => error!(error = %e, "Failed to shutdown task input controller"),
+    debug!("Shutting down update consumer");
+    match update_consumer.shutdown().await {
+        Ok(_) => info!("Update consumer shut down successfully"),
+        Err(e) => error!(error = %e, "Failed to shutdown update consumer"),
     }
 
     info!("All components shut down, cleanup complete");
@@ -427,7 +389,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start all background tasks
     info!("Starting all background tasks and services");
-    let (task_cleanup_handle, task_handle, server_handle, task_controller_shutdown) =
+    let (task_cleanup_handle, update_consumer_handle, server_handle, update_consumer_shutdown) =
         start_background_tasks(components, shutdown_rx).await;
 
     info!("Relay service startup complete, now running");
@@ -438,8 +400,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         result = task_cleanup_handle => {
             warn!(task = "task_cleanup", result = ?result, "Task cleanup job shutdown unexpectedly");
         },
-        result = task_handle => {
-            warn!(task = "task_controller", result = ?result, "Task controller shutdown unexpectedly");
+        result = update_consumer_handle => {
+            warn!(task = "update_consumer", result = ?result, "Update consumer shutdown unexpectedly");
         },
         result = server_handle => {
             warn!(task = "http_server", result = ?result, "Server shutdown unexpectedly");
@@ -448,7 +410,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Perform graceful shutdown
     info!("Beginning shutdown sequence");
-    perform_shutdown(task_controller_shutdown).await;
+    perform_shutdown(update_consumer_shutdown).await;
     info!("Relay service shut down successfully");
 
     Ok(())

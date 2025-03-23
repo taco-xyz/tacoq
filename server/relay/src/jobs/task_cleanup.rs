@@ -2,16 +2,16 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, info_span, warn, Instrument};
 
-use crate::repo::{PgTaskRepository, TaskRepository};
+use crate::repo::TaskRepository;
 
 #[derive(Debug, Clone)]
 pub struct TaskCleanupJob {
-    task_repository: PgTaskRepository,
+    task_repository: TaskRepository,
     interval: Duration,
 }
 
 impl TaskCleanupJob {
-    pub fn new(task_repository: PgTaskRepository, interval_seconds: u64) -> Self {
+    pub fn new(task_repository: TaskRepository, interval_seconds: u64) -> Self {
         info!(
             interval_seconds = interval_seconds,
             "Creating task cleanup job"

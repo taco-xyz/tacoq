@@ -8,7 +8,7 @@ use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::models::Task;
-use crate::{repo::TaskRepository, AppState};
+use crate::AppState;
 
 pub fn routes() -> Router<AppState> {
     debug!("Setting up task API routes");
@@ -59,49 +59,11 @@ async fn get_task_by_id(
             }
         };
 
-    if let Ok(Some(task)) = &result {
-        debug!(
-            task_id = %id,
-            task_kind = %task.task_kind,
-            status = %task.status,
-            "Task found, checking expiration"
-        );
-
-        if task.is_expired() {
-            info!(
-                task_id = %id,
-                ttl_duration = ?task.ttl_duration,
-                completed_at = ?task.completed_at,
-                "Task is expired, deleting"
-            );
-
-            // Delete the task
-            if let Err(e) = state.task_repository.delete_task(&task.id).await {
-                error!(
-                    task_id = %id,
-                    error = %e,
-                    "Failed to delete expired task"
-                );
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to delete expired task: {}", e),
-                ));
-            }
-
-            debug!(task_id = %id, "Expired task deleted successfully");
-            return Err((
-                StatusCode::NOT_FOUND,
-                format!("Task with ID {} not found", id),
-            ));
-        }
-    }
-
     match result {
         Ok(Some(task)) => {
             info!(
                 task_id = %id,
-                task_kind = %task.task_kind,
-                status = %task.status,
+                task_kind = %task.clone().task_kind.unwrap_or("None".to_string()),
                 "Successfully retrieved task"
             );
             Ok(Json(task))
@@ -137,17 +99,14 @@ async fn get_task_by_id(
 
 #[cfg(test)]
 mod test {
-    use crate::models::{Task, TaskStatus};
+    use crate::models::Task;
     use axum::http::StatusCode;
     use chrono::Local;
     use sqlx::PgPool;
     use uuid::Uuid;
 
     use crate::{
-        repo::{
-            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
-            WorkerKindRepository,
-        },
+        repo::{PgRepositoryCore, TaskRepository},
         testing::test::{get_test_server, init_test_logger},
     };
 
@@ -162,7 +121,6 @@ mod test {
             .with_input_data(vec![1, 2, 3])
             .with_output_data(vec![4, 5, 6])
             .with_error(false)
-            .with_status(TaskStatus::Pending)
     }
 
     #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
@@ -178,47 +136,14 @@ mod test {
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
-        let task_instance_repository = PgTaskRepository::new(core.clone());
-        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+        let task_repository = TaskRepository::new(core.clone());
 
         let test_task = get_test_task();
 
-        worker_kind_repository
-            .get_or_create_worker_kind(&test_task.worker_kind)
-            .await
-            .unwrap();
+        task_repository.create_task(&test_task).await.unwrap();
 
-        let task = task_instance_repository
-            .update_task(&test_task)
-            .await
-            .unwrap();
-
-        let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
+        let response: axum_test::TestResponse =
+            server.get(&format!("/tasks/{}", test_task.id)).await;
         assert_eq!(response.status_code(), StatusCode::OK);
-    }
-
-    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
-    async fn test_delete_task_with_expired_status(db_pools: PgPool) {
-        let server = get_test_server(db_pools.clone()).await;
-        let core = PgRepositoryCore::new(db_pools.clone());
-        let task_instance_repository = PgTaskRepository::new(core.clone());
-        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
-
-        let mut test_task = get_test_task();
-        test_task.status = TaskStatus::Completed;
-        test_task.completed_at = Some(Local::now().naive_local() - chrono::Duration::days(1));
-
-        worker_kind_repository
-            .get_or_create_worker_kind(&test_task.worker_kind)
-            .await
-            .unwrap();
-
-        let task = task_instance_repository
-            .update_task(&test_task)
-            .await
-            .unwrap();
-
-        let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
-        assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
     }
 }

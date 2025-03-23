@@ -1,7 +1,5 @@
 pub mod core;
-pub mod impls;
-pub mod traits;
+pub mod task_repo;
 
 pub use core::PgRepositoryCore;
-pub use impls::*;
-pub use traits::*;
+pub use task_repo::*;
