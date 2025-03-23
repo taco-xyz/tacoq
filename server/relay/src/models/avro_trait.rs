@@ -1,7 +1,9 @@
 use apache_avro::{from_avro_datum, from_value, to_avro_datum, types::Value, Schema};
 use serde::{de::DeserializeOwned, Serialize};
+use std::error::Error;
 
-/// Converts a serializable type into a vector of key-value pairs suitable for Avro serialization.
+/// Converts a serializable type into a vector of key-value pairs suitable for
+/// Avro serialization.
 ///
 /// # Arguments
 /// * `val` - Reference to a value that implements `Serialize`
@@ -49,7 +51,6 @@ fn convert_to_avro_value<T: Serialize>(val: &T) -> Vec<(&'static str, Value)> {
 /// let avro_bytes = my_type.into_avro_bytes();
 /// let deserialized_my_type = MyType::from_avro_bytes(&avro_bytes);
 /// ```
-
 pub trait AvroSerializable: Sized + Serialize + DeserializeOwned {
     /// Returns the Avro schema for this type
     fn schema() -> &'static Schema;
@@ -58,14 +59,15 @@ pub trait AvroSerializable: Sized + Serialize + DeserializeOwned {
     ///
     /// # Returns
     /// A vector of bytes containing the Avro-encoded data
-    fn into_avro_bytes(&self) -> Vec<u8> {
+    fn try_into_avro_bytes(&self) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>> {
         let datum = Value::Record(
             convert_to_avro_value(self)
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect(),
         );
-        to_avro_datum(Self::schema(), datum).unwrap()
+        to_avro_datum(Self::schema(), datum)
+            .map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>)
     }
 
     /// Deserializes Avro binary data into an instance of the implementing type
@@ -75,14 +77,22 @@ pub trait AvroSerializable: Sized + Serialize + DeserializeOwned {
     ///
     /// # Returns
     /// An instance of the implementing type
-    fn from_avro_bytes(data: &[u8]) -> Self {
+    fn try_from_avro_bytes(data: &[u8]) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let mut reader = data;
-        let value = from_avro_datum(Self::schema(), &mut reader, None).unwrap();
-        from_value::<Self>(&value).unwrap()
+        let value = from_avro_datum(Self::schema(), &mut reader, None)
+            .map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>);
+
+        match value {
+            Ok(value) => {
+                from_value::<Self>(&value).map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>)
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
-/// Helper functions for serializing and deserializing datetime values in Avro format
+/// Helper functions for serializing and deserializing datetime values in Avro
+/// format.
 ///
 /// # Example
 /// ```rust
@@ -93,7 +103,6 @@ pub trait AvroSerializable: Sized + Serialize + DeserializeOwned {
 ///     field1: NaiveDateTime,
 /// }
 /// ```
-
 pub mod serde_avro_datetime {
     use chrono::{DateTime, NaiveDateTime};
     use serde::{de::Deserializer, Deserialize, Serializer};
@@ -102,7 +111,7 @@ pub mod serde_avro_datetime {
     where
         S: Serializer,
     {
-        let ts = dt.and_utc().timestamp();
+        let ts = dt.and_utc().timestamp_micros();
         serializer.serialize_i64(ts)
     }
 
@@ -111,13 +120,14 @@ pub mod serde_avro_datetime {
         D: Deserializer<'de>,
     {
         let ts = i64::deserialize(deserializer)?;
-        DateTime::from_timestamp_micros(ts * 1_000_000)
+        DateTime::from_timestamp_micros(ts)
             .map(|dt| dt.naive_utc())
             .ok_or_else(|| serde::de::Error::custom("Invalid timestamp"))
     }
 }
 
-/// Helper functions for serializing and deserializing optional datetime values in Avro format
+/// Helper functions for serializing and deserializing optional datetime
+/// values in Avro format.
 ///
 /// # Example
 /// ```rust
@@ -146,8 +156,6 @@ pub mod serde_avro_datetime_opt {
         D: Deserializer<'de>,
     {
         let ts: Option<i64> = Option::deserialize(deserializer)?;
-        Ok(ts.and_then(|ts| {
-            DateTime::from_timestamp_micros(ts * 1_000_000).map(|dt| dt.naive_utc())
-        }))
+        Ok(ts.and_then(|ts| DateTime::from_timestamp_micros(ts).map(|dt| dt.naive_utc())))
     }
 }
