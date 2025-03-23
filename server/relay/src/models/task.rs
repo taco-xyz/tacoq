@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Duration, Local, NaiveDateTime};
+use chrono::{Local, NaiveDateTime};
 use opentelemetry::propagation::{Extractor, TextMapPropagator};
 use opentelemetry::Context;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
@@ -22,79 +22,17 @@ pub enum Error {
     ContextExtractionError,
 }
 
-// Custom deserializer function
-fn deserialize_bytes<'de, D>(deserializer: D) -> Result<Option<Vec<u8>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let input: Option<String> = Option::deserialize(deserializer)?;
-    match input {
-        Some(bytes) => Ok(Some(bytes.into_bytes())),
-        None => Ok(None),
-    }
-}
-
-fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-
-    // Try parsing with different formats
-    if let Ok(dt) = DateTime::parse_from_rfc3339(&s) {
-        return Ok(dt.naive_local());
-    }
-
-    // Try parsing microseconds format like "2025-02-14T13:35:07.365122"
-    if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%.f%:z") {
-        return Ok(dt.naive_local());
-    }
-
-    // Try parsing without fractional seconds
-    if let Ok(dt) = DateTime::parse_from_str(&format!("{}+00:00", s), "%Y-%m-%dT%H:%M:%S%:z") {
-        return Ok(dt.naive_local());
-    }
-
-    Err(serde::de::Error::custom(format!(
-        "Unable to parse datetime: {}",
-        s
-    )))
-}
-
-fn deserialize_timestamp_optional<'de, D>(
-    deserializer: D,
-) -> Result<Option<NaiveDateTime>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    deserialize_timestamp(deserializer).map(Some).or(Ok(None))
-}
-
 // Task status enum
 /// # Possible Status:
 /// * `Pending`: Task is created but not yet assigned
 /// * `Processing`: Task has been assigned to a worker and sent to a queue
 /// * `Completed`: Task completed successfully or not
-#[derive(Display, EnumString, Debug, Serialize, Deserialize, PartialEq, ToSchema, Clone)]
+#[derive(Display, EnumString, Debug, PartialEq, ToSchema, Clone)]
 pub enum TaskStatus {
-    #[strum(serialize = "pending")]
-    #[serde(rename = "pending")]
-    Pending, // Task is created but not yet assigned
-    #[strum(serialize = "processing")]
-    #[serde(rename = "processing")]
+    Pending,    // Task is created but not yet assigned
     Processing, // Task has been assigned to a worker and sent to a queue
-    #[strum(serialize = "completed")]
-    #[serde(rename = "completed")]
-    Completed, // Task completed successfully or not
+    Completed,  // Task completed successfully or not
 }
-
-impl From<String> for TaskStatus {
-    fn from(s: String) -> Self {
-        s.parse().unwrap_or(TaskStatus::Pending)
-    }
-}
-
-// Task
 
 /// Tasks are sent to workers to be executed with a specific payload.
 /// Workers are eligble for receiving certain tasks depending on their
@@ -103,23 +41,20 @@ impl From<String> for TaskStatus {
 pub struct Task {
     pub id: Uuid,
     #[sqlx(rename = "task_kind_name")]
-    pub task_kind: String,
+    pub task_kind: Option<String>,
 
     // Task data
-    // #[serde(deserialize_with = "deserialize_bytes")]
     #[serde(with = "serde_avro_bytes_opt")]
     pub input_data: Option<Vec<u8>>, // byte array
-    // #[serde(deserialize_with = "deserialize_bytes")]
     #[serde(with = "serde_avro_bytes_opt")]
     pub output_data: Option<Vec<u8>>, // byte array
-    pub is_error: i32,
+    pub is_error: Option<i32>,
 
-    pub status: TaskStatus,
-    pub priority: i32,
+    pub priority: Option<i32>,
 
     // Relations
     #[sqlx(rename = "worker_kind_name")]
-    pub worker_kind: String,
+    pub worker_kind: Option<String>,
     pub executed_by: Option<String>, // worker that it is assigned to
 
     // Task status
@@ -128,7 +63,7 @@ pub struct Task {
     #[serde(with = "serde_avro_datetime_opt")]
     pub completed_at: Option<NaiveDateTime>,
 
-    pub ttl_duration: i64, // in seconds
+    pub ttl_duration: Option<i64>, // in seconds
 
     // Metadata
     #[serde(with = "serde_avro_datetime")]
@@ -150,17 +85,16 @@ impl Task {
     ) -> Self {
         Task {
             id: Uuid::new_v4(),
-            task_kind: task_kind_name.to_string(),
+            task_kind: Some(task_kind_name.to_string()),
             input_data: None,
             output_data: None,
-            is_error: 0,
-            status: TaskStatus::Pending,
-            priority,
-            worker_kind: worker_kind_name.to_string(),
+            is_error: Some(0),
+            priority: Some(priority),
+            worker_kind: Some(worker_kind_name.to_string()),
             executed_by: None,
             started_at: None,
             completed_at: None,
-            ttl_duration: ttl_duration,
+            ttl_duration: Some(ttl_duration),
             otel_ctx_carrier: None,
             created_at: Local::now().naive_local(),
             updated_at: Local::now().naive_local(),
@@ -187,13 +121,7 @@ impl Task {
 
     /// Sets the error status
     pub fn with_error(mut self, is_error: bool) -> Self {
-        self.is_error = if is_error { 1 } else { 0 };
-        self
-    }
-
-    /// Sets the task status
-    pub fn with_status(mut self, status: TaskStatus) -> Self {
-        self.status = status;
+        self.is_error = if is_error { Some(1) } else { Some(0) };
         self
     }
 
@@ -209,10 +137,18 @@ impl Task {
         self
     }
 
+    /// Returns the status of the task.
     pub fn status(&self) -> TaskStatus {
-        self.status.clone()
+        if self.completed_at.is_some() {
+            TaskStatus::Completed
+        } else if self.started_at.is_some() {
+            TaskStatus::Processing
+        } else {
+            TaskStatus::Pending
+        }
     }
 
+    /// Returns the context of the task.
     pub fn context(&self) -> Context {
         let carrier_value = self.otel_ctx_carrier.clone();
         match carrier_value {
@@ -220,15 +156,11 @@ impl Task {
             None => Context::new(),
         }
     }
-
-    pub fn is_expired(&self) -> bool {
-        self.completed_at.is_some()
-            && self.completed_at.unwrap() + Duration::seconds(self.ttl_duration as i64)
-                < Local::now().naive_local()
-    }
 }
 
+// ----------------------------------------------------------------------------
 // Avro Serialization
+// ----------------------------------------------------------------------------
 
 impl AvroSerializable for Task {
     fn schema() -> &'static Schema {
@@ -241,7 +173,9 @@ impl AvroSerializable for Task {
     }
 }
 
+// ----------------------------------------------------------------------------
 // Context Extraction (this was a motherfucker)
+// ----------------------------------------------------------------------------
 
 struct HashMapExtractor<'a>(&'a std::collections::HashMap<String, String>);
 
@@ -265,6 +199,7 @@ fn strip_map(map: &serde_json::Map<String, JsonValue>) -> HashMap<String, String
     hashmap
 }
 
+/// Extracts the context from the carrier.
 fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
     match carrier {
         JsonValue::Object(map) => {
@@ -287,10 +222,10 @@ mod tests {
             .with_output_data(b"".to_vec());
 
         // Serialize to Avro bytes
-        let avro_bytes = task.into_avro_bytes();
+        let avro_bytes = task.try_into_avro_bytes().unwrap();
 
         // Deserialize from Avro bytes
-        let deserialized = Task::from_avro_bytes(&avro_bytes);
+        let deserialized = Task::try_from_avro_bytes(&avro_bytes).unwrap();
 
         println!("avro_bytes: {:?}", avro_bytes.len());
 
@@ -298,7 +233,6 @@ mod tests {
         assert_eq!(task.worker_kind, deserialized.worker_kind);
         assert_eq!(task.task_kind, deserialized.task_kind);
         assert_eq!(task.input_data, deserialized.input_data);
-        assert_eq!(task.status, deserialized.status);
     }
 
     #[test]
@@ -312,7 +246,7 @@ mod tests {
         let start = std::time::Instant::now();
         let mut serialized_results = Vec::with_capacity(n);
         for _ in 0..n {
-            let result = task.into_avro_bytes();
+            let result = task.try_into_avro_bytes().unwrap();
             serialized_results.push(result);
         }
         let ser_duration = start.elapsed();
@@ -320,7 +254,7 @@ mod tests {
         // Benchmark deserialization
         let start = std::time::Instant::now();
         for result in serialized_results {
-            let _task_deserialized = Task::from_avro_bytes(&result);
+            let _task_deserialized = Task::try_from_avro_bytes(&result).unwrap();
         }
         let deser_duration = start.elapsed();
 
