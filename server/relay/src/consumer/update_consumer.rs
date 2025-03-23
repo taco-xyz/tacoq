@@ -166,7 +166,7 @@ impl Consumer {
                     Some(headers) => match headers.inner().get("message_type") {
                         Some(message_type) => message_type
                             .as_long_string()
-                            .ok_or_else(|| MessageConsumptionError::NoMessageTypeFound)
+                            .ok_or(MessageConsumptionError::NoMessageTypeFound)
                             .map(|s| s.to_string())
                             .and_then(|s| {
                                 s.try_into()
@@ -181,16 +181,14 @@ impl Consumer {
             // Handle errors and deserialize the payload based on the message type
             let result: Result<Message, Box<dyn Error + Send + Sync>> = match message_type {
                 Ok(message_type) => match message_type {
-                    MessageType::TaskCompleted => {
-                        TaskCompletedUpdate::try_from_avro_bytes(&payload)
-                            .map(Message::TaskCompleted)
+                    MessageType::Completed => {
+                        TaskCompletedUpdate::try_from_avro_bytes(&payload).map(Message::Completed)
                     }
-                    MessageType::TaskAssignment => {
-                        TaskAssignmentUpdate::try_from_avro_bytes(&payload)
-                            .map(Message::TaskAssignment)
+                    MessageType::Assignment => {
+                        TaskAssignmentUpdate::try_from_avro_bytes(&payload).map(Message::Assignment)
                     }
-                    MessageType::TaskRunning => {
-                        TaskRunningUpdate::try_from_avro_bytes(&payload).map(Message::TaskRunning)
+                    MessageType::Running => {
+                        TaskRunningUpdate::try_from_avro_bytes(&payload).map(Message::Running)
                     }
                 },
                 Err(e) => Err(e),
@@ -199,21 +197,21 @@ impl Consumer {
             // Handle the update
             match result {
                 Ok(update) => match update {
-                    Message::TaskAssignment(update) => {
+                    Message::Assignment(update) => {
                         info!(queue = %self.queue, delivery_tag = %delivery_tag, "Task assignment update received");
                         self.task_repository
                             .update_task_from_assignment_update(&update)
                             .await
                             .unwrap();
                     }
-                    Message::TaskCompleted(update) => {
+                    Message::Completed(update) => {
                         info!(queue = %self.queue, delivery_tag = %delivery_tag, "Task completed update received");
                         self.task_repository
                             .update_task_from_completed_update(&update)
                             .await
                             .unwrap();
                     }
-                    Message::TaskRunning(update) => {
+                    Message::Running(update) => {
                         info!(queue = %self.queue, delivery_tag = %delivery_tag, "Task running update received");
                         self.task_repository
                             .update_task_from_running_update(&update)

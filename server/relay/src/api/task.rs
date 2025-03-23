@@ -1,11 +1,11 @@
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Path, State},
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Router,
 };
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
 use crate::models::{AvroSerializable, Task};

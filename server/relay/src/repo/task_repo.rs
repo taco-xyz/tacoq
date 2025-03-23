@@ -238,16 +238,16 @@ mod tests {
         let id = Uuid::new_v4();
         let now = Local::now().naive_local();
 
-        let update = TaskAssignmentUpdate::new(
+        let update = TaskAssignmentUpdate {
             id,
-            "TestKind".to_string(),
-            "TestWorker".to_string(),
-            now,
-            Some(vec![1, 2, 3]),
-            1,
-            60,
-            HashMap::new(),
-        );
+            task_kind: "TestKind".to_string(),
+            worker_kind: "TestWorker".to_string(),
+            created_at: now,
+            input_data: Some(vec![1, 2, 3]),
+            priority: 1,
+            ttl_duration: 60,
+            otel_ctx_carrier: HashMap::new(),
+        };
 
         repo.update_task_from_assignment_update(&update)
             .await
@@ -309,16 +309,16 @@ mod tests {
         let now = Local::now().naive_local();
 
         // 1. Assignment
-        let assignment = TaskAssignmentUpdate::new(
+        let assignment = TaskAssignmentUpdate {
             id,
-            "test_task".to_string(),
-            "test_worker".to_string(),
-            now,
-            Some(vec![1, 2, 3]),
-            1,
-            3600000000, // 1 hour in microseconds
-            HashMap::new(),
-        );
+            task_kind: "test_task".to_string(),
+            worker_kind: "test_worker".to_string(),
+            created_at: now,
+            input_data: Some(vec![1, 2, 3]),
+            priority: 1,
+            ttl_duration: 3600000000, // 1 hour in microseconds
+            otel_ctx_carrier: HashMap::new(),
+        };
         repo.update_task_from_assignment_update(&assignment)
             .await
             .unwrap();

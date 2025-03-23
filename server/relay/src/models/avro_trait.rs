@@ -10,14 +10,21 @@ use std::error::Error;
 ///
 /// # Returns
 /// A vector of tuples containing static string field names and their corresponding Avro values
-fn convert_to_avro_value<T: Serialize>(val: &T) -> Vec<(&'static str, Value)> {
-    let value = apache_avro::to_value(val).unwrap().into();
-    match value {
-        Value::Record(map) => map
+fn convert_to_avro_value<T: Serialize>(
+    val: &T,
+) -> Result<Vec<(&'static str, Value)>, Box<dyn Error + Send + Sync>> {
+    let value = match apache_avro::to_value(val) {
+        Ok(value) => value,
+        Err(e) => return Err(Box::new(e) as Box<dyn Error + Send + Sync>),
+    };
+
+    if let Value::Record(map) = value {
+        Ok(map
             .into_iter()
             .map(|(k, v)| (Box::leak(k.into_boxed_str()) as &str, v))
-            .collect(),
-        _ => panic!("Expected Map type"),
+            .collect())
+    } else {
+        Err("Expected Map type".into())
     }
 }
 
@@ -60,8 +67,9 @@ pub trait AvroSerializable: Sized + Serialize + DeserializeOwned {
     /// # Returns
     /// A vector of bytes containing the Avro-encoded data
     fn try_into_avro_bytes(&self) -> Result<Vec<u8>, Box<dyn Error + Send + Sync>> {
+        let fields = convert_to_avro_value(self)?;
         let datum = Value::Record(
-            convert_to_avro_value(self)
+            fields
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect(),
@@ -138,7 +146,6 @@ pub mod serde_avro_datetime {
 /// }
 /// ```
 pub mod serde_avro_datetime_opt {
-    use super::serde_avro_datetime;
     use chrono::{DateTime, NaiveDateTime};
     use serde::{de::Deserializer, Deserialize, Serializer};
 

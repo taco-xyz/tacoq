@@ -32,94 +32,6 @@ pub struct TaskAssignmentUpdate {
 }
 
 // ----------------------------------------------------------------------------
-// Constructors
-// ----------------------------------------------------------------------------
-
-impl TaskAssignmentUpdate {
-    /// Creates a new TaskAssignmentUpdate with the specified parameters.
-    pub fn new(
-        id: Uuid,
-        task_kind: String,
-        worker_kind: String,
-        created_at: NaiveDateTime,
-        input_data: Option<Vec<u8>>,
-        priority: i32,
-        ttl_duration: i64,
-        otel_ctx_carrier: std::collections::HashMap<String, String>,
-    ) -> Self {
-        Self {
-            id,
-            task_kind,
-            worker_kind,
-            created_at,
-            input_data,
-            priority,
-            ttl_duration,
-            otel_ctx_carrier,
-        }
-    }
-
-    /// Creates a new TaskAssignmentUpdate with just the id.
-    pub fn with_id(id: Uuid) -> Self {
-        Self {
-            id,
-            task_kind: String::new(),
-            worker_kind: String::new(),
-            created_at: NaiveDateTime::MIN,
-            input_data: None,
-            priority: 0,
-            ttl_duration: 0,
-            otel_ctx_carrier: std::collections::HashMap::new(),
-        }
-    }
-
-    /// Sets the task_kind field.
-    pub fn with_task_kind(mut self, task_kind: String) -> Self {
-        self.task_kind = task_kind;
-        self
-    }
-
-    /// Sets the worker_kind field.
-    pub fn with_worker_kind(mut self, worker_kind: String) -> Self {
-        self.worker_kind = worker_kind;
-        self
-    }
-
-    /// Sets the created_at timestamp.
-    pub fn with_created_at(mut self, created_at: NaiveDateTime) -> Self {
-        self.created_at = created_at;
-        self
-    }
-
-    /// Sets the input_data field.
-    pub fn with_input_data(mut self, input_data: Option<Vec<u8>>) -> Self {
-        self.input_data = input_data;
-        self
-    }
-
-    /// Sets the priority field.
-    pub fn with_priority(mut self, priority: i32) -> Self {
-        self.priority = priority;
-        self
-    }
-
-    /// Sets the ttl_duration field.
-    pub fn with_ttl_duration(mut self, ttl_duration: i64) -> Self {
-        self.ttl_duration = ttl_duration;
-        self
-    }
-
-    /// Sets the otel_ctx_carrier field.
-    pub fn with_otel_ctx_carrier(
-        mut self,
-        otel_ctx_carrier: std::collections::HashMap<String, String>,
-    ) -> Self {
-        self.otel_ctx_carrier = otel_ctx_carrier;
-        self
-    }
-}
-
-// ----------------------------------------------------------------------------
 // Avro Serialization
 // ----------------------------------------------------------------------------
 
@@ -145,16 +57,16 @@ mod tests {
         otel_ctx.insert("trace_id".to_string(), "123".to_string());
         otel_ctx.insert("span_id".to_string(), "456".to_string());
 
-        let assignment = TaskAssignmentUpdate::new(
-            Uuid::new_v4(),
-            "test_task".to_string(),
-            "test_worker".to_string(),
-            Local::now().naive_local(),
-            Some(vec![1, 2, 3]),
-            1,
-            3600000000, // 1 hour in microseconds
-            otel_ctx.clone(),
-        );
+        let assignment = TaskAssignmentUpdate {
+            id: Uuid::new_v4(),
+            task_kind: "test_task".to_string(),
+            worker_kind: "test_worker".to_string(),
+            created_at: Local::now().naive_local(),
+            input_data: Some(vec![1, 2, 3]),
+            priority: 1,
+            ttl_duration: 3600000000, // 1 hour in microseconds
+            otel_ctx_carrier: otel_ctx.clone(),
+        };
 
         // Serialize to Avro bytes
         let avro_bytes = assignment.try_into_avro_bytes().unwrap();

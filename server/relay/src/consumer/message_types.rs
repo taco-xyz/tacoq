@@ -5,9 +5,9 @@ use tracing::error;
 /// The type of the message that comes in the header.
 #[derive(Debug, Clone, Copy)]
 pub enum MessageType {
-    TaskAssignment,
-    TaskCompleted,
-    TaskRunning,
+    Assignment,
+    Completed,
+    Running,
 }
 
 /// Errors that can occur when processing a message.
@@ -22,9 +22,9 @@ impl TryFrom<String> for MessageType {
 
     fn try_from(message_type: String) -> Result<Self, Self::Error> {
         match message_type.as_str() {
-            "TaskAssignment" => Ok(MessageType::TaskAssignment),
-            "TaskCompleted" => Ok(MessageType::TaskCompleted),
-            "TaskRunning" => Ok(MessageType::TaskRunning),
+            "TaskAssignment" => Ok(MessageType::Assignment),
+            "TaskCompleted" => Ok(MessageType::Completed),
+            "TaskRunning" => Ok(MessageType::Running),
             _ => Err(MessageProcessingError::UnknownMessageType(message_type)),
         }
     }
@@ -33,7 +33,7 @@ impl TryFrom<String> for MessageType {
 /// The type of the message that comes in the header.
 #[derive(Debug)]
 pub enum Message {
-    TaskAssignment(TaskAssignmentUpdate),
-    TaskCompleted(TaskCompletedUpdate),
-    TaskRunning(TaskRunningUpdate),
+    Assignment(TaskAssignmentUpdate),
+    Completed(TaskCompletedUpdate),
+    Running(TaskRunningUpdate),
 }
