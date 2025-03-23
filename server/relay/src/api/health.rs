@@ -20,7 +20,7 @@ pub fn routes() -> Router<AppState> {
     tag = "health"
 )]
 #[instrument(skip(state))]
-async fn health(State(state): State<AppState>) -> StatusCode {
+async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, String)> {
     info!("Health check requested");
 
     // Check if the database connection is still alive
@@ -28,16 +28,22 @@ async fn health(State(state): State<AppState>) -> StatusCode {
     let result = state.task_repository.health_check().await;
     if let Err(e) = result {
         error!(error = %e, "Database health check failed");
-        return StatusCode::SERVICE_UNAVAILABLE;
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Database is unavailable".to_string(),
+        ));
     }
 
     // Check if broker connection is still alive
     let result = state.task_producer.health_check().await;
     if let Err(e) = result {
         error!(error = %e, "Broker health check failed");
-        return StatusCode::SERVICE_UNAVAILABLE;
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Broker is unavailable".to_string(),
+        ));
     }
 
     debug!("Health check successful");
-    StatusCode::OK
+    Ok("Service is healthy".to_string())
 }
