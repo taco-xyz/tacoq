@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT \n                id, \n                task_kind_name AS \"task_kind!\", \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl_duration,\n                worker_kind_name AS \"worker_kind!\", \n                executed_by, \n                created_at, \n                updated_at,\n                status,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
+  "query": "SELECT \n                id, \n                task_kind_name AS task_kind, \n                input_data, \n                output_data, \n                is_error, \n                started_at, \n                completed_at, \n                ttl_duration,\n                worker_kind_name AS worker_kind, \n                executed_by, \n                created_at, \n                updated_at,\n                priority,\n                otel_ctx_carrier\n            FROM tasks WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -10,7 +10,7 @@
       },
       {
         "ordinal": 1,
-        "name": "task_kind!",
+        "name": "task_kind",
         "type_info": "Text"
       },
       {
@@ -45,7 +45,7 @@
       },
       {
         "ordinal": 8,
-        "name": "worker_kind!",
+        "name": "worker_kind",
         "type_info": "Text"
       },
       {
@@ -65,16 +65,11 @@
       },
       {
         "ordinal": 12,
-        "name": "status",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 13,
         "name": "priority",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 13,
         "name": "otel_ctx_carrier",
         "type_info": "Jsonb"
       }
@@ -86,21 +81,20 @@
     },
     "nullable": [
       false,
-      false,
       true,
       true,
-      false,
       true,
       true,
-      false,
-      false,
+      true,
+      true,
+      true,
+      true,
       true,
       false,
       false,
-      false,
-      false,
+      true,
       true
     ]
   },
-  "hash": "5f124dcdaec099fee7d6a760ef398499a7680297a70939edb5a6b1e3e495e652"
+  "hash": "0ab80677d75d44db48184d3da4d128d4199ce220badb97b9dac4e0e3d85b5fc7"
 }
