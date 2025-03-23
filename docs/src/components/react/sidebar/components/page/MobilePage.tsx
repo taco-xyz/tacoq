@@ -6,8 +6,8 @@ import React, { useRef } from "react";
 // Next Imports
 import Link from "next/link";
 
-// Heroicons Imports
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { ChevronRight } from "lucide-react";
 
 // Tailwind Imports
 import clsx from "clsx";
@@ -77,7 +77,7 @@ export default function MobilePageComponent({
             )}
             {sidebar?.title ?? title}
             {children && (
-              <ChevronRightIcon
+              <ChevronRight
                 onClick={(e) => {
                   // Prevent this form triggering the navigation to a new page
                   e.preventDefault();
@@ -128,7 +128,7 @@ export default function MobilePageComponent({
           )}
           {sidebar?.title ?? title}
           {children && (
-            <ChevronRightIcon
+            <ChevronRight
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

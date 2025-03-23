@@ -18,7 +18,7 @@ export function Footer() {
 
   return (
     <div className="items-center justify-center absolute flex flex-col w-full dark:border-t-white/10 border-t-zinc-200 border-t dark:bg-zinc-950/50 bg-white/50 transition-all ease-in-out duration-150">
-      <div className="flex flex-col w-full gap-y-10 px-8 md:py-20 py-10 relative overflow-hidden max-w-(--breakpoint-2xl) border-b border-zinc-200 dark:border-white/10">
+      <div className="flex flex-col w-full gap-y-10 px-8 md:py-20 py-10 relative overflow-hidden max-w-(--breakpoint-2xl) border-b border-zinc-200 dark:border-white/10 transition-colors duration-150 ease-in-out">
         <div
           className={clsx(
             "flex flex-row w-full gap-x-20 justify-between items-center "

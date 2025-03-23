@@ -3,8 +3,8 @@
 // Next Imports
 import Link from "next/link";
 
-// Heroicons Imports
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { ChevronRight } from "lucide-react";
 
 // Utils Imports
 import clsx from "clsx";
@@ -50,7 +50,7 @@ export default function Breadcrumbs() {
             {crumb.metadata.title}
           </Link>
           {index < breadcrumbs.length - 1 && (
-            <ChevronRightIcon className="size-3 mx-2 text-zinc-400 dark:text-zinc-600 flex-shrink-0 transition-colors duration-150 ease-in-out" />
+            <ChevronRight className="size-3 mx-2 text-zinc-400 dark:text-zinc-600 flex-shrink-0 transition-colors duration-150 ease-in-out" />
           )}
         </div>
       ))}
