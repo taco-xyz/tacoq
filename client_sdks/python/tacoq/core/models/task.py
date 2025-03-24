@@ -95,6 +95,9 @@ class Task(AvroSerializableBaseModel):
     completed_at: Optional[datetime] = Field(default=None)
     """ The time the task was completed at. """
 
+    updated_at: datetime = Field(default_factory=lambda: datetime.now())
+    """ The last time the task object was updated in the database. """
+
     # Data
 
     executed_by: Optional[str] = Field(default=None)
@@ -124,11 +127,6 @@ class Task(AvroSerializableBaseModel):
 
     otel_ctx_carrier: Optional[dict[str, str]] = Field(default=None)
     """ The OpenTelemetry context carrier for the task. """
-
-    # Fluff
-
-    updated_at: datetime = Field(default_factory=lambda: datetime.now())
-    """ The last time the task object was updated in the database. """
 
     @property
     def status(self: Self) -> TaskStatus:
