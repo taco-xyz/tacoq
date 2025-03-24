@@ -19,6 +19,12 @@ use tracing::{debug, error, info, warn};
 #[derive(Clone)]
 pub struct AppState {
     pub task_repository: TaskRepository,
+
+    // Health check variables
+    pub repository_core: PgRepositoryCore,
+    // Here I wanna pass a rabbitmq channel to verify if the connection is still alive
+    // For now I will leave it as is but in the future this will need to be abstracted away
+    pub broker_core: Option<Arc<lapin::Channel>>,
 }
 
 /// Application components that need to be started and shut down
@@ -102,12 +108,16 @@ fn create_repositories(pool: &PgPool) -> TaskRepository {
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-async fn setup_app_state(db_pools: &PgPool) -> AppState {
+async fn setup_app_state(db_pools: &PgPool, broker_core: Option<Arc<lapin::Channel>>) -> AppState {
     debug!("Setting up application state");
     let task_repository = create_repositories(db_pools);
 
     info!("Application state initialized successfully");
-    AppState { task_repository }
+    AppState {
+        task_repository,
+        repository_core: PgRepositoryCore::new(db_pools.clone()),
+        broker_core,
+    }
 }
 
 /// Initializes the application router
@@ -117,9 +127,9 @@ async fn setup_app_state(db_pools: &PgPool) -> AppState {
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app(db_pools: &PgPool) -> Router {
+pub async fn setup_app(db_pools: &PgPool, broker_core: Option<Arc<lapin::Channel>>) -> Router {
     debug!("Beginning app setup");
-    let app_state = setup_app_state(db_pools).await;
+    let app_state = setup_app_state(db_pools, broker_core).await;
     info!("App state created");
 
     // Create base router with routes and state
@@ -163,7 +173,7 @@ pub async fn setup_shutdown_signal() -> broadcast::Sender<()> {
 pub async fn initialize_system(
     config: &Config,
     shutdown_signal: broadcast::Sender<()>,
-) -> Result<AppComponents, Box<dyn std::error::Error>> {
+) -> Result<AppComponents, Box<dyn std::error::Error + Send + Sync>> {
     debug!("Initializing system components");
     let shutdown = Arc::new(AtomicBool::new(false));
 
@@ -233,9 +243,14 @@ pub async fn initialize_system(
 
     // Setup API server if enabled
     if config.enable_relay_api {
+        let broker_core = match components.update_consumer.as_ref() {
+            Some(consumer) => Some(Arc::new(consumer.channel().await?)),
+            None => None,
+        };
+
         // Setup axum app and state
         debug!("Setting up web application");
-        let app = setup_app(&db_pools).await;
+        let app = setup_app(&db_pools, broker_core).await;
 
         // Create server
         debug!("Creating HTTP server on port 3000");

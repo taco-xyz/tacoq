@@ -19,7 +19,7 @@ pub mod test {
     /// Creates and returns a test server instance with the application router.
     /// This provides a way to make test HTTP requests against the API endpoints.
     pub async fn get_test_server(db_pools: PgPool) -> TestServer {
-        let app = setup_app(&db_pools).await;
+        let app = setup_app(&db_pools, None).await;
         TestServer::new(app).unwrap()
     }
 }

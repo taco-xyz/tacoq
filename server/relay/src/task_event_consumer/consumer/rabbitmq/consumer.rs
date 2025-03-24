@@ -39,7 +39,7 @@ impl RabbitMQTaskEventConsumer {
     }
 
     /// Creates a new RabbitMQ channel.
-    async fn channel(&self) -> Result<Channel, Box<dyn Error + Send + Sync>> {
+    pub async fn channel(&self) -> Result<Channel, Box<dyn Error + Send + Sync>> {
         let connection =
             match Connection::connect(self.url_string.as_str(), ConnectionProperties::default())
                 .await
