@@ -2,7 +2,7 @@ use crate::constants::RELAY_QUEUE;
 use crate::jobs::TaskCleanupJob;
 use crate::repo::{PgRepositoryCore, TaskRepository};
 use crate::server::Server;
-use crate::task_event_consumer::{RabbitMQTaskEventConsumer, TaskEventConsumer};
+use crate::task_event_consumer::{RabbitMQTaskEventConsumer, TaskEventConsumer, TaskEventCore};
 use crate::{api, Config};
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
@@ -24,7 +24,7 @@ pub struct AppState {
     pub repository_core: PgRepositoryCore,
     // Here I wanna pass a rabbitmq channel to verify if the connection is still alive
     // For now I will leave it as is but in the future this will need to be abstracted away
-    pub broker_core: Option<Arc<lapin::Channel>>,
+    pub broker_core: Option<Arc<dyn TaskEventCore>>,
 }
 
 /// Application components that need to be started and shut down
@@ -108,7 +108,10 @@ fn create_repositories(pool: &PgPool) -> TaskRepository {
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-async fn setup_app_state(db_pools: &PgPool, broker_core: Option<Arc<lapin::Channel>>) -> AppState {
+async fn setup_app_state(
+    db_pools: &PgPool,
+    broker_core: Option<Arc<dyn TaskEventCore>>,
+) -> AppState {
     debug!("Setting up application state");
     let task_repository = create_repositories(db_pools);
 
@@ -127,7 +130,7 @@ async fn setup_app_state(db_pools: &PgPool, broker_core: Option<Arc<lapin::Chann
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app(db_pools: &PgPool, broker_core: Option<Arc<lapin::Channel>>) -> Router {
+pub async fn setup_app(db_pools: &PgPool, broker_core: Option<Arc<dyn TaskEventCore>>) -> Router {
     debug!("Beginning app setup");
     let app_state = setup_app_state(db_pools, broker_core).await;
     info!("App state created");
@@ -246,7 +249,7 @@ pub async fn initialize_system(
     // Setup API server if enabled
     if config.enable_relay_api {
         let broker_core = match components.update_consumer.as_ref() {
-            Some(consumer) => Some(Arc::new(consumer.channel().await?)),
+            Some(consumer) => Some(consumer.core().await?),
             None => None,
         };
 

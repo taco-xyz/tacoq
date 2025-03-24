@@ -36,13 +36,11 @@ async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, St
     // // Check if broker connection is still alive
     // TODO: change the implementation to use an abstracted broker core instead of a rabbitmq channel
     if let Some(broker_core) = &state.broker_core {
-        let status = broker_core.status();
-
-        if !status.connected() {
-            error!("Broker is not connected");
+        if let Err(e) = broker_core.health_check().await {
+            error!(error = %e, "Broker health check failed");
             return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
-                "Broker is unavailable".to_string(),
+                "Broker is unavailable\n".to_string(),
             ));
         }
     }

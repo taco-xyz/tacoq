@@ -1,7 +1,9 @@
 use crate::repo::task_repo::TaskRepository;
+use crate::task_event_consumer::consumer::TaskEventCore;
 use crate::task_event_consumer::{
     event_parsing::Event, handler::TaskEventHandler, TaskEventConsumer,
 };
+use async_trait::async_trait;
 use futures::StreamExt;
 use lapin::message::Delivery;
 use lapin::options::QueueDeclareOptions;
@@ -16,6 +18,35 @@ use tracing::{debug, error, info, warn};
 use super::connection::RabbitMQConnection;
 
 static QUEUE_NAME: &str = "tacoq_relay_queue";
+
+pub struct RabbitMQTaskEventCore {
+    channel: Channel,
+}
+
+#[async_trait]
+impl TaskEventCore for RabbitMQTaskEventCore {
+    async fn health_check(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if !self.channel.status().connected() {
+            return Err("RabbitMQ channel is not connected".into());
+        }
+
+        // Check if we can successfully perform a channel operation
+        match self
+            .channel
+            .basic_publish(
+                "",                    // default exchange
+                "health_check_target", // routing key
+                lapin::options::BasicPublishOptions::default(),
+                &[], // empty payload
+                lapin::BasicProperties::default(),
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to publish health check message: {}", e).into()),
+        }
+    }
+}
 
 /// A consumer that listens for task events from RabbitMQ and uploads
 /// them to the task repository.
@@ -39,11 +70,6 @@ impl RabbitMQTaskEventConsumer {
             event_handler: TaskEventHandler::new(task_repository),
             shutdown,
         })
-    }
-
-    /// Creates a new RabbitMQ channel.
-    pub async fn channel(&self) -> Result<Channel, Box<dyn Error + Send + Sync>> {
-        self.connection.create_channel().await
     }
 
     /// Creates a new RabbitMQ consumer based on a channel.
@@ -97,15 +123,22 @@ impl RabbitMQTaskEventConsumer {
     }
 }
 
+#[async_trait]
 impl TaskEventConsumer for RabbitMQTaskEventConsumer {
     fn event_handler(&self) -> &TaskEventHandler {
         &self.event_handler
     }
 
+    /// Creates a new RabbitMQ channel.
+    async fn core(&self) -> Result<Arc<dyn TaskEventCore>, Box<dyn Error + Send + Sync>> {
+        let channel = self.connection.create_channel().await?;
+        Ok(Arc::new(RabbitMQTaskEventCore { channel }) as Arc<dyn TaskEventCore>)
+    }
+
     async fn lifecycle(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         info!(queue = %QUEUE_NAME, "Starting message consumption");
 
-        let channel = match self.channel().await {
+        let channel = match self.connection.create_channel().await {
             Ok(ch) => ch,
             Err(e) => {
                 error!(error = %e, queue = %QUEUE_NAME, "Failed to create channel");
@@ -175,5 +208,9 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
         self.shutdown.store(true, Ordering::SeqCst);
         debug!(queue = %QUEUE_NAME, "Shutdown flag set");
         Ok(())
+    }
+
+    async fn handle_events(&self, events: Vec<Event>) -> Result<(), Box<dyn Error + Send + Sync>> {
+        self.event_handler().handle_batch_events(events).await
     }
 }
