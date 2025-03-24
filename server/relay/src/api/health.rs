@@ -30,20 +30,23 @@ async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, St
         error!(error = %e, "Database health check failed");
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
-            "Database is unavailable".to_string(),
+            "Database is unavailable\n".to_string(),
         ));
     }
 
     // // Check if broker connection is still alive
-    // let result = state.task_producer.health_check().await;
-    // if let Err(e) = result {
-    //     error!(error = %e, "Broker health check failed");
-    //     return Err((
-    //         StatusCode::SERVICE_UNAVAILABLE,
-    //         "Broker is unavailable".to_string(),
-    //     ));
-    // }
+    if let Some(broker_core) = &state.broker_core {
+        let status = broker_core.status();
+
+        if !status.connected() {
+            error!("Broker is not connected");
+            return Err((
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Broker is unavailable".to_string(),
+            ));
+        }
+    }
 
     debug!("Health check successful");
-    Ok("Service is healthy".to_string())
+    Ok("Service is healthy\n".to_string())
 }
