@@ -35,12 +35,6 @@ impl TryFrom<String> for EventType {
     }
 }
 
-impl From<EventType> for String {
-    fn from(value: EventType) -> Self {
-        value.into()
-    }
-}
-
 impl From<EventType> for &str {
     fn from(value: EventType) -> Self {
         match value {

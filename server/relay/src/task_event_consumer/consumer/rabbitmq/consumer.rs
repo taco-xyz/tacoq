@@ -95,7 +95,7 @@ impl RabbitMQTaskEventConsumer {
 
         let consumer = match channel
             .basic_consume(
-                &QUEUE_NAME,
+                QUEUE_NAME,
                 "relay",
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
