@@ -1,19 +1,19 @@
 mod api;
 mod config;
 mod constants;
-mod consumer;
 mod jobs;
 mod models;
 mod repo;
 mod server;
+mod task_event_consumer;
 mod testing;
 
-use consumer::update_consumer::Consumer;
 use init_tracing_opentelemetry::tracing_subscriber_ext::{
     build_level_filter_layer, build_otel_layer,
 };
 use server::Server;
 use std::sync::{atomic::AtomicBool, Arc};
+use task_event_consumer::{RabbitMQTaskEventConsumer, TaskEventConsumer};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info, info_span, warn};
 use tracing_subscriber::{layer::SubscriberExt, Layer};
@@ -38,7 +38,7 @@ pub struct AppState {
 /// Application components that need to be started and shut down
 struct AppComponents {
     server: Server,
-    update_consumer: Arc<Consumer>,
+    update_consumer: Arc<RabbitMQTaskEventConsumer>,
     task_cleanup_job: Arc<TaskCleanupJob>,
 }
 
@@ -223,14 +223,11 @@ async fn initialize_system(config: &Config) -> Result<AppComponents, Box<dyn std
         queue = %RELAY_QUEUE,
         "Setting up message broker consumer"
     );
-    let update_consumer = match Consumer::new(
+    let update_consumer = match RabbitMQTaskEventConsumer::new(
         &config.broker_url,
-        RELAY_QUEUE,
         Arc::new(task_repo),
         shutdown.clone(),
-    )
-    .await
-    {
+    ) {
         Ok(consumer) => {
             info!("Message broker consumer initialized successfully");
             consumer
@@ -284,7 +281,7 @@ async fn start_background_tasks(
     tokio::task::JoinHandle<()>,
     tokio::task::JoinHandle<()>,
     tokio::task::JoinHandle<()>,
-    Arc<Consumer>,
+    Arc<RabbitMQTaskEventConsumer>,
 ) {
     debug!("Starting background tasks");
 
@@ -306,7 +303,7 @@ async fn start_background_tasks(
     info!("Starting update consumer");
     let update_consumer_handle = tokio::spawn(async move {
         debug!("Update consumer started");
-        if let Err(e) = components.update_consumer.consume_messages().await {
+        if let Err(e) = components.update_consumer.lifecycle().await {
             error!(error = %e, "Update consumer failed");
         } else {
             info!("Update consumer completed successfully");
@@ -338,11 +335,11 @@ async fn start_background_tasks(
 /// # Arguments
 ///
 /// * `update_consumer` - The update consumer to shut down
-async fn perform_shutdown(update_consumer: Arc<Consumer>) {
+async fn perform_shutdown(update_consumer: Arc<RabbitMQTaskEventConsumer>) {
     info!("Starting graceful shutdown procedure");
 
     debug!("Shutting down update consumer");
-    match update_consumer.shutdown().await {
+    match update_consumer.shutdown() {
         Ok(_) => info!("Update consumer shut down successfully"),
         Err(e) => error!(error = %e, "Failed to shutdown update consumer"),
     }
