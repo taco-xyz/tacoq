@@ -21,6 +21,7 @@ from datetime import datetime
 from types import TracebackType
 from typing import Any, Coroutine, Optional, Self, Type
 from uuid import UUID, uuid4
+import asyncio
 
 import pytest
 from opentelemetry.trace import get_current_span
@@ -31,6 +32,7 @@ from tacoq.core.telemetry import StructuredMessage as _
 from tacoq.publisher import PublisherClient
 from tacoq.relay import RelayClient
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
+
 
 # =========================================
 # Tasks
@@ -122,6 +124,19 @@ async def failing_task(input_data: TaskInput) -> TaskOutput:
     raise ValueError("Task failed successfully")
 
 
+BENCHMARK_TASK = "benchmark_task"
+"""Task that uses a channel so we can know exactly how long it took to execute after it's emitted."""
+
+# Global variable to track when task starts executing
+BENCHMARK_TASK_STARTED = asyncio.Event()
+
+
+async def benchmark_task(input_data: TaskInput) -> TaskOutput:
+    """Benchmark task."""
+    BENCHMARK_TASK_STARTED.set()
+    return json.dumps({"message": "Task completed"}).encode("utf-8")
+
+
 # =========================================
 # Worker Context
 # This declares an async worker that runs
@@ -165,6 +180,7 @@ class WorkerContext:
         self._worker_app.register_task(FAILING_TASK, failing_task)
         self._worker_app.register_task(DELAYED_TASK_BLOCKING, delayed_task_blocking)
         self._worker_app.register_task(VARIABLE_TASK, variable_task)
+        self._worker_app.register_task(BENCHMARK_TASK, benchmark_task)
 
     async def __aenter__(self: Self) -> WorkerApplication:
         # Run worker in background
@@ -308,6 +324,8 @@ async def test_error_task_e2e(
 
     async with WorkerContext(broker_prefetch_count=10) as worker:
         current_span.set_attribute("worker.kind", worker.config.kind)
+
+        start = time.time()
         task = await publisher_client.publish_task(
             task_kind=FAILING_TASK,
             worker_kind=worker.config.kind,
@@ -315,6 +333,8 @@ async def test_error_task_e2e(
         )
 
         task_status = await get_completed_task(relay_client, task.id)
+        time_taken = time.time() - start
+        print(f"Time taken to retrieve task: {time_taken} seconds")
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
@@ -462,3 +482,52 @@ async def test_multiple_workers_execute_tasks_in_parallel(
     assert time_taken < TIME_EXPECTED, (
         f"Tasks were not executed in parallel. Time taken: {time_taken} seconds (expected {TIME_EXPECTED})"
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+@pytest.mark.benchmark
+async def test_benchmark_task(
+    publisher_client: PublisherClient, relay_client: RelayClient
+):
+    """Tests that a task that uses a channel can be benchmarked."""
+
+    current_span = get_current_span()
+
+    async with WorkerContext(broker_prefetch_count=10) as worker:
+        current_span.set_attribute("worker.kind", worker.config.kind)
+
+        # Fire one task to make sure the worker is ready
+        warmup_task = await publisher_client.publish_task(
+            task_kind=VARIABLE_TASK,
+            worker_kind=worker.config.kind,
+            input_data=json.dumps({"delay": 0.1}).encode("utf-8"),
+        )
+        await get_completed_task(relay_client, warmup_task.id)
+
+        # Reset the event before publishing
+        BENCHMARK_TASK_STARTED.clear()
+        publish_start = time.perf_counter_ns()
+        task = await publisher_client.publish_task(
+            task_kind=BENCHMARK_TASK,
+            worker_kind=worker.config.kind,
+            input_data=None,
+        )
+        publish_end = time.perf_counter_ns()
+        await BENCHMARK_TASK_STARTED.wait()
+        task_end = time.perf_counter_ns()
+
+        # Get the task from the relay
+        get_task_result_start = time.perf_counter_ns()
+        await get_completed_task(relay_client, task.id)
+        get_task_result_end = time.perf_counter_ns()
+
+        publish_time = (publish_end - publish_start) / 1e9
+        task_time = (task_end - publish_end) / 1e9
+        retrieval_time = (get_task_result_end - get_task_result_start) / 1e9
+        total_time = (get_task_result_end - publish_start) / 1e9
+
+        print(f"Publish time: {publish_time:.6f}s")
+        print(f"Task time: {task_time:.6f}s")
+        print(f"Retrieval time: {retrieval_time:.6f}s")
+        print(f"Total time: {total_time:.6f}s")
