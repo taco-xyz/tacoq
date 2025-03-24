@@ -13,7 +13,7 @@ use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
 use tracing::{debug, error, info, warn};
 
-static QUEUE_NAME: &str = "relay_queue";
+static QUEUE_NAME: &str = "tacoq_relay_queue";
 
 /// A consumer that listens for task events from RabbitMQ and uploads
 /// them to the task repository.

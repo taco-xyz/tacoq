@@ -30,10 +30,10 @@ from tacoq.core.models import (
 # must be consistent across all nodes.
 # =========================================
 
-TASK_EXCHANGE = "task_exchange"
+TASK_EXCHANGE = "tacoq_task_exchange"
 """ Single exchange for all task-related messages. """
 
-RELAY_QUEUE = "relay_queue"
+RELAY_QUEUE = "tacoq_relay_queue"
 """ Queue for relay to receive ALL tasks. """
 
 RELAY_ROUTING_KEY = "#"  # Wildcard to receive all messages
