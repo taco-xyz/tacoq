@@ -10,7 +10,7 @@ export default function Logo() {
   return (
     <Link
       href="/"
-      className="custom-tab-outline-offset-6 rounded-xs transition-all duration-150 ease-in-out"
+      className="custom-tab-outline-offset-6 rounded-xs transition-all duration-150 ease-in-out flex-shrink-0"
     >
       <Image
         src="/TacoQTextLogoLight.svg"
@@ -45,7 +45,7 @@ export default function Logo() {
  */
 export function DivisionLogo() {
   return (
-    <div>
+    <Link href="https://github.com/taco-xyz" className="custom-tab-outline-offset-6 rounded-xs transition-all duration-150 ease-in-out flex-shrink-0">
       <Image
         src="/TacoDivisionTextLogoLight.svg"
         alt="Logo"
@@ -70,6 +70,6 @@ export function DivisionLogo() {
         placeholder="blur"
         blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQtJSEkLUEwLi0tLTAtQFBGRkBQRi4tMCY4PTo+OTFFRkpLRk45OUVFRUX/2wBDAR"
       />
-    </div>
+    </Link>
   );
 }

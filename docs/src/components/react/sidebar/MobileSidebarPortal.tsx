@@ -58,7 +58,7 @@ export default function MobileSidebarPortal() {
         <div
           ref={dialogRef}
           className={clsx(
-            "dark:bg-zinc-950 bg-white fixed right-0 top-0 bottom-0 w-full sm:max-w-xs max-w-full transition-all duration-300 ease-in-out max-h-full h-full overflow-y-auto shadow-xl dark:shadow-zinc-950/30 shadow-zinc-500/10 border-l border-zinc-200 dark:border-white/5",
+            "dark:bg-zinc-950 bg-white fixed right-0 top-0 bottom-0 w-full sm:max-w-sm max-w-full transition-all duration-300 ease-in-out max-h-full h-full overflow-y-auto shadow-xl dark:shadow-zinc-950/30 shadow-zinc-500/10 border-l border-zinc-200 dark:border-white/5",
             isSidebarOpen ? "translate-x-0" : "translate-x-full"
           )}
         >
