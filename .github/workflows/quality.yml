@@ -5,12 +5,14 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
-  
   # ================================
   # Rust Formatting & Linting
   # ================================
-  
+
   rust-fmt:
     name: Rust Formatting
     runs-on: ubuntu-latest

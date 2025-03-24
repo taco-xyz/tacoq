@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  actions: read # Needed for artifact upload/download
+
 jobs:
   # =================================================
   # Build & Image Upload
