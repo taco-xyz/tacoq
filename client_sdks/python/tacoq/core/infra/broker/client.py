@@ -298,7 +298,7 @@ class WorkerBrokerClient(BaseBrokerClient):
         after they are processed.
 
         ### Yields:
-        tuple[task_assignment, AbstractIncomingMessage]: A tuple of the task and the message to be ACK'd or NACK'd.
+        tuple[TaskAssignmentUpdate, AbstractIncomingMessage]: A tuple of the task and the message to be ACK'd or NACK'd.
         """
         if not self._queue:
             raise RuntimeError("Queue not initialized")
