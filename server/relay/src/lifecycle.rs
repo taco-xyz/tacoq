@@ -1,12 +1,9 @@
-use crate::brokers::core::BrokerProducer;
-use crate::brokers::setup_consumer_broker;
-use crate::constants::{RELAY_EXCHANGE, RELAY_QUEUE};
-use crate::controller::task;
+use crate::constants::RELAY_QUEUE;
 use crate::jobs::TaskCleanupJob;
-use crate::models::Task;
-use crate::repo::{PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository};
+use crate::repo::{PgRepositoryCore, TaskRepository};
 use crate::server::Server;
-use crate::{AppState, Config};
+use crate::task_event_consumer::{RabbitMQTaskEventConsumer, TaskEventConsumer};
+use crate::{api, Config};
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use backoff::ExponentialBackoffBuilder;
@@ -16,10 +13,18 @@ use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 
-/// Represents components that may be initialized depending on configuration
+/// Represents the shared application state that can be accessed by all routes
+///
+/// Contains all the repositories used for the application logic and the broker
+#[derive(Clone)]
+pub struct AppState {
+    pub task_repository: TaskRepository,
+}
+
+/// Application components that need to be started and shut down
 pub struct AppComponents {
     pub server: Option<Server>,
-    pub task_controller: Option<Arc<task::TaskController>>,
+    pub update_consumer: Option<Arc<RabbitMQTaskEventConsumer>>,
     pub task_cleanup_job: Option<Arc<TaskCleanupJob>>,
 }
 
@@ -81,23 +86,15 @@ pub async fn setup_db_pools(config: &Config) -> Result<PgPool, sqlx::Error> {
 /// # Arguments
 ///
 /// * `pool` - The database connection pool
-pub fn create_repositories(
-    pool: &PgPool,
-) -> (PgTaskRepository, PgWorkerKindRepository, PgWorkerRepository) {
+fn create_repositories(pool: &PgPool) -> TaskRepository {
     debug!("Creating repository core");
     let core = PgRepositoryCore::new(pool.clone());
 
     debug!("Creating task repository");
-    let task_repository = PgTaskRepository::new(core.clone());
-
-    debug!("Creating worker kind repository");
-    let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
-
-    debug!("Creating worker repository");
-    let worker_repository = PgWorkerRepository::new(core.clone());
+    let task_repository = TaskRepository::new(core.clone());
 
     debug!("All repositories created successfully");
-    (task_repository, worker_kind_repository, worker_repository)
+    task_repository
 }
 
 /// Initializes the application state based on the given configuration
@@ -105,21 +102,12 @@ pub fn create_repositories(
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app_state(
-    db_pools: &PgPool,
-    task_producer: Arc<dyn BrokerProducer<Task>>,
-) -> AppState {
+async fn setup_app_state(db_pools: &PgPool) -> AppState {
     debug!("Setting up application state");
-    let (task_repository, worker_kind_repository, worker_repository) =
-        create_repositories(db_pools);
+    let task_repository = create_repositories(db_pools);
 
     info!("Application state initialized successfully");
-    AppState {
-        task_repository,
-        worker_kind_repository,
-        worker_repository,
-        task_producer,
-    }
+    AppState { task_repository }
 }
 
 /// Initializes the application router
@@ -129,15 +117,15 @@ pub async fn setup_app_state(
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app(db_pools: &PgPool, task_producer: Arc<dyn BrokerProducer<Task>>) -> Router {
+pub async fn setup_app(db_pools: &PgPool) -> Router {
     debug!("Beginning app setup");
-    let app_state = setup_app_state(db_pools, task_producer).await;
+    let app_state = setup_app_state(db_pools).await;
     info!("App state created");
 
     // Create base router with routes and state
     debug!("Creating router with OpenTelemetry layers");
     let router = Router::new()
-        .merge(crate::api::routes())
+        .merge(api::routes())
         .with_state(app_state)
         .layer(OtelInResponseLayer)
         .layer(OtelAxumLayer::default());
@@ -191,70 +179,51 @@ pub async fn initialize_system(
 
     // Create repositories
     debug!("Creating repositories for components");
-    let (task_repo, worker_kind_repo, worker_repo) = create_repositories(&db_pools);
+    let task_repo = create_repositories(&db_pools);
 
     // Initialize optional components based on configuration
     let mut components = AppComponents {
         server: None,
-        task_controller: None,
+        update_consumer: None,
         task_cleanup_job: None,
     };
 
-    // Setup task controller if enabled
+    // Setup task event consumer if enabled
     if config.enable_relay_task_consumer {
         debug!(
             broker_url = %config.broker_url,
             queue = %RELAY_QUEUE,
             "Setting up message broker consumer"
         );
-
-        // Since retries are now handled in setup_consumer_broker, just call the function directly
-        let new_task_consumer =
-            match setup_consumer_broker::<Task>(&config.broker_url, RELAY_QUEUE, shutdown.clone())
-                .await
-            {
-                Ok(consumer) => {
-                    info!("Message broker consumer initialized successfully");
-                    consumer
-                }
-                Err(e) => {
-                    error!(
-                        error = %e,
-                        broker_url = %config.broker_url,
-                        queue = %RELAY_QUEUE,
-                        "Failed to setup message broker consumer"
-                    );
-                    return Err(e);
-                }
-            };
-
-        debug!("Creating task controller");
-        match task::TaskController::new(
-            new_task_consumer,
-            worker_repo,
-            worker_kind_repo,
-            task_repo.clone(),
-        )
-        .await
-        {
-            Ok(controller) => {
-                info!("Task controller initialized successfully");
-                components.task_controller = Some(Arc::new(controller));
+        let update_consumer = match RabbitMQTaskEventConsumer::new(
+            &config.broker_url,
+            Arc::new(task_repo.clone()),
+            shutdown.clone(),
+        ) {
+            Ok(consumer) => {
+                info!("Message broker consumer initialized successfully");
+                consumer
             }
             Err(e) => {
-                error!(error = %e, "Failed to initialize task controller");
+                error!(
+                    error = %e,
+                    broker_url = %config.broker_url,
+                    queue = %RELAY_QUEUE,
+                    "Failed to setup message broker consumer"
+                );
                 return Err(e);
             }
-        }
+        };
+        components.update_consumer = Some(Arc::new(update_consumer));
     } else {
-        info!("Task consumer is disabled by configuration");
+        info!("Task event consumer is disabled by configuration");
     }
 
     // Setup cleanup job if enabled
     if config.enable_relay_cleanup {
         debug!("Creating task cleanup job with 5-minute interval");
         components.task_cleanup_job = Some(Arc::new(TaskCleanupJob::new(
-            PgTaskRepository::new(PgRepositoryCore::new(db_pools.clone())),
+            task_repo.clone(),
             300, // Every 5 minutes
         )));
         info!("Task cleanup job created with 300-second interval");
@@ -264,27 +233,9 @@ pub async fn initialize_system(
 
     // Setup API server if enabled
     if config.enable_relay_api {
-        // Create the task publisher for the API server -> currently only used for health checks
-        debug!("Setting up task publisher for API server");
-        let task_publisher = match crate::brokers::setup_publisher_broker::<Task>(
-            &config.broker_url,
-            RELAY_EXCHANGE,
-        )
-        .await
-        {
-            Ok(publisher) => {
-                info!("Task publisher initialized successfully");
-                publisher
-            }
-            Err(e) => {
-                error!(error = %e, "Failed to initialize task publisher");
-                return Err(e);
-            }
-        };
-
         // Setup axum app and state
         debug!("Setting up web application");
-        let app = setup_app(&db_pools, task_publisher).await;
+        let app = setup_app(&db_pools).await;
 
         // Create server
         debug!("Creating HTTP server on port 3000");
@@ -306,66 +257,46 @@ pub async fn initialize_system(
 /// # Arguments
 ///
 /// * `components` - The application components
-/// * `shutdown_signal` - Broadcast channel for shutdown coordination
+/// * `shutdown_rx` - Oneshot receiver for shutdown coordination
 pub async fn start_background_tasks(
     components: AppComponents,
-    shutdown_signal: broadcast::Sender<()>,
 ) -> (
     Vec<tokio::task::JoinHandle<()>>,
-    Option<Arc<task::TaskController>>,
+    Option<Arc<RabbitMQTaskEventConsumer>>,
 ) {
     debug!("Starting enabled background tasks");
     let mut handles = Vec::new();
-    let mut task_controller_shutdown = None;
+    let mut update_consumer_shutdown = None;
 
     // Start task cleanup job if enabled
     if let Some(cleanup_job) = components.task_cleanup_job {
         info!("Starting task cleanup job");
-        let mut shutdown_rx = shutdown_signal.subscribe();
-        let task_cleanup_handle = tokio::spawn(async move {
+        let cleanup_handle = tokio::spawn(async move {
             debug!("Task cleanup job started");
-            tokio::select! {
-                result = cleanup_job.run() => {
-                    if let Err(e) = result {
-                        error!(error = %e, "Task cleanup job failed");
-                    } else {
-                        info!("Task cleanup job completed successfully");
-                    }
-                }
-                _ = shutdown_rx.recv() => {
-                    info!("Task cleanup job received shutdown signal");
-                }
+            if let Err(e) = cleanup_job.run().await {
+                error!(error = %e, "Task cleanup job failed");
+            } else {
+                info!("Task cleanup job completed successfully");
             }
         });
-        handles.push(task_cleanup_handle);
+        handles.push(cleanup_handle);
     }
 
-    // Start task controller if enabled
-    if let Some(controller) = components.task_controller {
+    // Start update consumer if enabled
+    if let Some(consumer) = components.update_consumer {
         // Keep a reference for shutdown
-        task_controller_shutdown = Some(controller.clone());
+        update_consumer_shutdown = Some(consumer.clone());
 
-        info!("Starting task controller");
-        let mut shutdown_rx = shutdown_signal.subscribe();
-        let task_handle = tokio::spawn(async move {
-            debug!("Task controller started");
-            tokio::select! {
-                result = controller.clone().run() => {
-                    if let Err(e) = result {
-                        error!(error = %e, "Task input controller failed");
-                    } else {
-                        info!("Task controller completed successfully");
-                    }
-                }
-                _ = shutdown_rx.recv() => {
-                    info!("Task controller received shutdown signal");
-                    if let Err(e) = controller.shutdown().await {
-                        error!(error = %e, "Failed to shutdown task controller gracefully");
-                    }
-                }
+        info!("Starting update consumer");
+        let consumer_handle = tokio::spawn(async move {
+            debug!("Update consumer started");
+            if let Err(e) = consumer.lifecycle().await {
+                error!(error = %e, "Update consumer failed");
+            } else {
+                info!("Update consumer completed successfully");
             }
         });
-        handles.push(task_handle);
+        handles.push(consumer_handle);
     }
 
     // Start server if enabled
@@ -388,23 +319,21 @@ pub async fn start_background_tasks(
         info!("All enabled background tasks started");
     }
 
-    (handles, task_controller_shutdown)
+    (handles, update_consumer_shutdown)
 }
 
 /// Performs graceful shutdown of all components
 ///
 /// # Arguments
 ///
-/// * `task_controller` - The task controller to shut down (if running)
-pub async fn perform_shutdown(task_controller: Option<Arc<task::TaskController>>) {
+/// * `update_consumer` - The update consumer to shut down
+pub fn perform_shutdown(update_consumer: Arc<RabbitMQTaskEventConsumer>) {
     info!("Starting graceful shutdown procedure");
 
-    if let Some(controller) = task_controller {
-        debug!("Shutting down task controller");
-        match controller.shutdown().await {
-            Ok(_) => info!("Task controller shut down successfully"),
-            Err(e) => error!(error = %e, "Failed to shutdown task input controller"),
-        }
+    debug!("Shutting down update consumer");
+    match update_consumer.shutdown() {
+        Ok(_) => info!("Update consumer shut down successfully"),
+        Err(e) => error!(error = %e, "Failed to shutdown update consumer"),
     }
 
     info!("All components shut down, cleanup complete");
