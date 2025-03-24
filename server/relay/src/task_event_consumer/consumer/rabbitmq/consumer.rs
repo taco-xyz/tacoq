@@ -4,14 +4,16 @@ use crate::task_event_consumer::{
 };
 use futures::StreamExt;
 use lapin::message::Delivery;
+use lapin::options::QueueDeclareOptions;
 use lapin::options::{BasicAckOptions, BasicConsumeOptions};
 use lapin::types::FieldTable;
-use lapin::{options::QueueDeclareOptions, Connection, ConnectionProperties};
 use lapin::{Channel, Consumer};
 use std::error::Error;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
 use tracing::{debug, error, info, warn};
+
+use super::connection::RabbitMQConnection;
 
 static QUEUE_NAME: &str = "tacoq_relay_queue";
 
@@ -19,20 +21,21 @@ static QUEUE_NAME: &str = "tacoq_relay_queue";
 /// them to the task repository.
 pub struct RabbitMQTaskEventConsumer {
     event_handler: TaskEventHandler,
-    url_string: String,
+    connection: Arc<RabbitMQConnection>,
     shutdown: Arc<AtomicBool>,
 }
 
 impl RabbitMQTaskEventConsumer {
     /// Creates a new RabbitMQ task event consumer. Does not connect directly
     /// as that is instead done in the `lifecycle` method.
-    pub fn new(
+    pub async fn new(
         url_string: &str,
         task_repository: Arc<TaskRepository>,
         shutdown: Arc<AtomicBool>,
     ) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        let connection = RabbitMQConnection::new(url_string).await?;
         Ok(Self {
-            url_string: url_string.to_string(),
+            connection: Arc::new(connection),
             event_handler: TaskEventHandler::new(task_repository),
             shutdown,
         })
@@ -40,34 +43,12 @@ impl RabbitMQTaskEventConsumer {
 
     /// Creates a new RabbitMQ channel.
     pub async fn channel(&self) -> Result<Channel, Box<dyn Error + Send + Sync>> {
-        let connection =
-            match Connection::connect(self.url_string.as_str(), ConnectionProperties::default())
-                .await
-            {
-                Ok(conn) => {
-                    debug!("RabbitMQ connection established successfully");
-                    conn
-                }
-                Err(e) => {
-                    error!(error = %e, url = %self.url_string, "Failed to connect to RabbitMQ");
-                    return Err(Box::new(e));
-                }
-            };
-
-        let channel = match connection.create_channel().await {
-            Ok(ch) => ch,
-            Err(e) => {
-                error!(error = %e, "Failed to create RabbitMQ channel");
-                return Err(Box::new(e));
-            }
-        };
-
-        Ok(channel)
+        self.connection.create_channel().await
     }
 
     /// Creates a new RabbitMQ consumer based on a channel.
     async fn consumer(&self, channel: &Channel) -> Result<Consumer, Box<dyn Error + Send + Sync>> {
-        info!(url = %self.url_string, queue = %QUEUE_NAME, "Connecting to RabbitMQ for consumer");
+        info!(queue = %QUEUE_NAME, "Connecting to RabbitMQ for consumer");
 
         let mut arguments = FieldTable::default();
         arguments.insert("x-max-priority".into(), 255.into());

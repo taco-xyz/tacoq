@@ -24,7 +24,6 @@ async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, St
     info!("Health check requested");
 
     // Check if the database connection is still alive
-    // TODO: there is perhaps a better way to handle this without using a specific repository
     let result = state.repository_core.health_check().await;
     if let Err(e) = result {
         error!(error = %e, "Database health check failed");
@@ -35,6 +34,7 @@ async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, St
     }
 
     // // Check if broker connection is still alive
+    // TODO: change the implementation to use an abstracted broker core instead of a rabbitmq channel
     if let Some(broker_core) = &state.broker_core {
         let status = broker_core.status();
 

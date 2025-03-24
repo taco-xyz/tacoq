@@ -209,7 +209,9 @@ pub async fn initialize_system(
             &config.broker_url,
             Arc::new(task_repo.clone()),
             shutdown.clone(),
-        ) {
+        )
+        .await
+        {
             Ok(consumer) => {
                 info!("Message broker consumer initialized successfully");
                 consumer
