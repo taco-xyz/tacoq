@@ -5,10 +5,8 @@ refer to the `PublisherClient` and `WorkerClient` to publish tasks and consume
 results, respectively.
 """
 
-import json
 from typing import AsyncGenerator, Optional, Self
 from aio_pika import Message, connect_robust
-import aio_pika
 from pydantic import BaseModel
 
 from aio_pika.abc import (
@@ -20,7 +18,11 @@ from aio_pika.abc import (
 )
 
 from tacoq.core.infra.broker.config import BrokerConfig
-from tacoq.core.models.task import Task
+from tacoq.core.models import (
+    TaskAssignmentUpdate,
+    TaskRunningUpdate,
+    TaskCompletedUpdate,
+)
 
 # =========================================
 # Constants
@@ -28,10 +30,10 @@ from tacoq.core.models.task import Task
 # must be consistent across all nodes.
 # =========================================
 
-TASK_EXCHANGE = "task_exchange"
+TASK_EXCHANGE = "tacoq_task_exchange"
 """ Single exchange for all task-related messages. """
 
-RELAY_QUEUE = "relay_queue"
+RELAY_QUEUE = "tacoq_relay_queue"
 """ Queue for relay to receive ALL tasks. """
 
 RELAY_ROUTING_KEY = "#"  # Wildcard to receive all messages
@@ -216,7 +218,9 @@ class PublisherBrokerClient(BaseBrokerClient):
         # Purge the queue
         await queue.purge()
 
-    async def publish_task(self: Self, task: Task) -> None:
+    async def publish_task_assignment(
+        self: Self, task_assignment_update: TaskAssignmentUpdate
+    ) -> None:
         """Publish a task. The relay will receive it and workers of the correct kind will too."""
 
         if not self._task_exchange:
@@ -227,14 +231,16 @@ class PublisherBrokerClient(BaseBrokerClient):
             )
 
         # Ensure worker queue exists
-        await self._declare_worker_queue(task.worker_kind)
+        await self._declare_worker_queue(task_assignment_update.worker_kind)
 
         message = Message(
-            body=task.model_dump_json().encode(),
-            priority=task.priority,
-            delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+            headers={"message_type": "TaskAssignment"},
+            body=task_assignment_update.avro_bytes,
+            priority=task_assignment_update.priority,
         )
-        routing_key = WORKER_ROUTING_KEY.format(worker_kind=task.worker_kind)
+        routing_key = WORKER_ROUTING_KEY.format(
+            worker_kind=task_assignment_update.worker_kind
+        )
 
         await self._task_exchange.publish(message, routing_key=routing_key)
 
@@ -287,33 +293,59 @@ class WorkerBrokerClient(BaseBrokerClient):
 
     async def listen(
         self: Self,
-    ) -> AsyncGenerator[tuple[Task, AbstractIncomingMessage], None]:
+    ) -> AsyncGenerator[tuple[TaskAssignmentUpdate, AbstractIncomingMessage], None]:
         """Listen for tasks for this worker's kind. Only acknowledges tasks
         after they are processed.
 
         ### Yields:
-        tuple[Task, AbstractIncomingMessage]: A tuple of the task and the message to be ACK'd or NACK'd.
+        tuple[TaskAssignmentUpdate, AbstractIncomingMessage]: A tuple of the task and the message to be ACK'd or NACK'd.
         """
         if not self._queue:
             raise RuntimeError("Queue not initialized")
 
         async with self._queue.iterator(no_ack=False) as queue_iter:
             async for message in queue_iter:
-                task = Task(**json.loads(message.body))
-                yield (task, message)
+                task_assignment = TaskAssignmentUpdate.from_avro_bytes(message.body)
+                yield (task_assignment, message)
 
-    async def publish_task_result(self: Self, task: Task) -> None:
-        """Publish a task result to the shared results queue.
+    async def publish_task_running(
+        self: Self, task_running_update: TaskRunningUpdate
+    ) -> None:
+        """Publish a task running update to the shared results queue.
 
         ### Arguments:
-        - task: The task to publish the result of.
+        - task_running_update: The task running update to publish.
         """
 
         if self._task_exchange is None:
             raise ExchangeNotDeclaredError(
-                "Tried to publish task result, but exchange was not declared."
+                "Tried to publish task running update, but exchange was not declared."
             )
 
-        message = Message(body=task.model_dump_json().encode())
+        message = Message(
+            headers={"message_type": "TaskRunning"},
+            body=task_running_update.avro_bytes,
+        )
+
+        await self._task_exchange.publish(message, routing_key=TASK_EXCHANGE)
+
+    async def publish_task_completed(
+        self: Self, task_completed_update: TaskCompletedUpdate
+    ) -> None:
+        """Publish a task completed update to the shared results queue.
+
+        ### Arguments:
+        - task_completed_update: The task completed update to publish.
+        """
+
+        if self._task_exchange is None:
+            raise ExchangeNotDeclaredError(
+                "Tried to publish task completed update, but exchange was not declared."
+            )
+
+        message = Message(
+            headers={"message_type": "TaskCompleted"},
+            body=task_completed_update.avro_bytes,
+        )
 
         await self._task_exchange.publish(message, routing_key=TASK_EXCHANGE)

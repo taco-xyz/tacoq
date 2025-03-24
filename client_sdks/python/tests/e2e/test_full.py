@@ -21,6 +21,7 @@ from datetime import datetime
 from types import TracebackType
 from typing import Any, Coroutine, Optional, Self, Type
 from uuid import UUID, uuid4
+import asyncio
 
 import pytest
 from opentelemetry.trace import get_current_span
@@ -31,6 +32,7 @@ from tacoq.core.telemetry import StructuredMessage as _
 from tacoq.publisher import PublisherClient
 from tacoq.relay import RelayClient
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
+
 
 # =========================================
 # Tasks
@@ -79,7 +81,12 @@ async def delayed_instrumented_task(input_data: TaskInput) -> TaskOutput:
 
     await sleep(0.4)
 
-    return json.dumps({"message": "Task completed", "input": input_data})
+    return json.dumps(
+        {
+            "message": "Task completed",
+            "input": input_data.decode("utf-8") if input_data else None,
+        }
+    ).encode("utf-8")
 
 
 DELAYED_TASK_BLOCKING = "delayed_task_blocking"
@@ -89,7 +96,12 @@ DELAYED_TASK_BLOCKING = "delayed_task_blocking"
 async def delayed_task_blocking(input_data: TaskInput) -> TaskOutput:
     time.sleep(2)
 
-    return json.dumps({"message": "Task completed", "input": json.loads(input_data)})
+    return json.dumps(
+        {
+            "message": "Task completed",
+            "input": json.loads(input_data) if input_data else {},
+        }
+    ).encode("utf-8")
 
 
 VARIABLE_TASK = "variable_task"
@@ -97,10 +109,10 @@ VARIABLE_TASK = "variable_task"
 
 
 async def variable_task(input_data: TaskInput) -> TaskOutput:
-    input: dict[str, Any] = json.loads(input_data)
+    input: dict[str, Any] = json.loads(input_data) if input_data else {}
     await sleep(input.get("delay", 0.1))
 
-    return json.dumps({"message": "Task completed", "input": input})
+    return json.dumps({"message": "Task completed", "input": input}).encode("utf-8")
 
 
 FAILING_TASK = "failing_task"
@@ -110,6 +122,19 @@ FAILING_TASK = "failing_task"
 async def failing_task(input_data: TaskInput) -> TaskOutput:
     """Failing task."""
     raise ValueError("Task failed successfully")
+
+
+BENCHMARK_TASK = "benchmark_task"
+"""Task that uses a channel so we can know exactly how long it took to execute after it's emitted."""
+
+# Global variable to track when task starts executing
+BENCHMARK_TASK_STARTED = asyncio.Event()
+
+
+async def benchmark_task(input_data: TaskInput) -> TaskOutput:
+    """Benchmark task."""
+    BENCHMARK_TASK_STARTED.set()
+    return json.dumps({"message": "Task completed"}).encode("utf-8")
 
 
 # =========================================
@@ -155,6 +180,7 @@ class WorkerContext:
         self._worker_app.register_task(FAILING_TASK, failing_task)
         self._worker_app.register_task(DELAYED_TASK_BLOCKING, delayed_task_blocking)
         self._worker_app.register_task(VARIABLE_TASK, variable_task)
+        self._worker_app.register_task(BENCHMARK_TASK, benchmark_task)
 
     async def __aenter__(self: Self) -> WorkerApplication:
         # Run worker in background
@@ -221,21 +247,21 @@ async def test_delayed_instrumented_task_e2e(
         task = await publisher_client.publish_task(
             task_kind=DELAYED_INSTRUMENTED_TASK,
             worker_kind=worker.config.kind,
-            input_data=json.dumps(input_data),
+            input_data=json.dumps(input_data).encode("utf-8"),
         )
 
         print(f"Published task {task}")
 
         # Wait and check final status
-        task_status = await get_completed_task(relay_client, task.id)
-        assert task_status is not None, "Task status is None"
-        assert task_status.status == TaskStatus.COMPLETED, (
+        completed_task = await get_completed_task(relay_client, task.id)
+        assert completed_task is not None, "Task status is None"
+        assert completed_task.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
         )
-        assert task_status.is_error == 0
-        assert task_status.output_data is not None
+        assert completed_task.is_error == 0
+        assert completed_task.output_data is not None
 
-        output_data = json.loads(task_status.output_data)
+        output_data = json.loads(completed_task.output_data.decode("utf-8"))
 
         assert output_data["message"] == "Task completed"
         assert json.loads(output_data["input"]) == input_data
@@ -264,7 +290,9 @@ async def test_parallel_delayed_tasks(
                 publisher_client.publish_task(
                     task_kind=VARIABLE_TASK,
                     worker_kind=worker.config.kind,
-                    input_data=json.dumps({"delay": TIME_PER_TASK, "task_num": i}),
+                    input_data=json.dumps(
+                        {"delay": TIME_PER_TASK, "task_num": i}
+                    ).encode("utf-8"),
                 )
             )
 
@@ -296,23 +324,26 @@ async def test_error_task_e2e(
 
     async with WorkerContext(broker_prefetch_count=10) as worker:
         current_span.set_attribute("worker.kind", worker.config.kind)
+
+        start = time.time()
         task = await publisher_client.publish_task(
             task_kind=FAILING_TASK,
             worker_kind=worker.config.kind,
-            input_data="",
+            input_data="".encode("utf-8"),
         )
 
         task_status = await get_completed_task(relay_client, task.id)
+        time_taken = time.time() - start
+        print(f"Time taken to retrieve task: {time_taken} seconds")
         assert task_status is not None, "Task status is None"
         assert task_status.status == TaskStatus.COMPLETED, (
             f"Task {task.id} is not completed"
         )
         assert task_status.is_error == 1, f"Task {task.id} is not an error"
         assert task_status.output_data is not None
-        assert (
-            "Task failed successfully" in task_status.output_data
-            and "ValueError" in task_status.output_data
-        )
+        assert "Task failed successfully" in task_status.output_data.decode(
+            "utf-8"
+        ) and "ValueError" in task_status.output_data.decode("utf-8")
 
 
 @pytest.mark.e2e
@@ -341,7 +372,7 @@ async def test_priority_task(
         await publisher_client.publish_task(
             task_kind=VARIABLE_TASK,
             worker_kind=worker.config.kind,
-            input_data=json.dumps({"delay": 3}),
+            input_data=json.dumps({"delay": 3}).encode("utf-8"),
             priority=1,
         )
         print("Published initial task!")
@@ -355,7 +386,7 @@ async def test_priority_task(
                 publisher_client.publish_task(
                     task_kind=VARIABLE_TASK,
                     worker_kind=worker.config.kind,
-                    input_data=json.dumps({"delay": 0.1}),
+                    input_data=json.dumps({"delay": 0.1}).encode("utf-8"),
                     priority=priority,
                 )
             )
@@ -372,6 +403,7 @@ async def test_priority_task(
         priority_completed_at: dict[int, datetime] = {}
         for task in completed_tasks:
             assert task.completed_at is not None, "Task was not completed"
+            assert task.priority is not None, "Task priority is None"
             priority_completed_at[task.priority] = task.completed_at
 
         previous_completed_at: Optional[datetime] = None
@@ -430,7 +462,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
             publisher_client.publish_task(
                 task_kind=VARIABLE_TASK,
                 worker_kind=worker_contexts[0].worker_kind,
-                input_data=json.dumps({"delay": TIME_PER_TASK}),
+                input_data=json.dumps({"delay": TIME_PER_TASK}).encode("utf-8"),
             )
         )
 
@@ -450,3 +482,52 @@ async def test_multiple_workers_execute_tasks_in_parallel(
     assert time_taken < TIME_EXPECTED, (
         f"Tasks were not executed in parallel. Time taken: {time_taken} seconds (expected {TIME_EXPECTED})"
     )
+
+
+@pytest.mark.e2e
+@pytest.mark.asyncio
+@pytest.mark.benchmark
+async def test_benchmark_task(
+    publisher_client: PublisherClient, relay_client: RelayClient
+):
+    """Tests that a task that uses a channel can be benchmarked."""
+
+    current_span = get_current_span()
+
+    async with WorkerContext(broker_prefetch_count=10) as worker:
+        current_span.set_attribute("worker.kind", worker.config.kind)
+
+        # Fire one task to make sure the worker is ready
+        warmup_task = await publisher_client.publish_task(
+            task_kind=VARIABLE_TASK,
+            worker_kind=worker.config.kind,
+            input_data=json.dumps({"delay": 0.1}).encode("utf-8"),
+        )
+        await get_completed_task(relay_client, warmup_task.id)
+
+        # Reset the event before publishing
+        BENCHMARK_TASK_STARTED.clear()
+        publish_start = time.perf_counter_ns()
+        task = await publisher_client.publish_task(
+            task_kind=BENCHMARK_TASK,
+            worker_kind=worker.config.kind,
+            input_data=None,
+        )
+        publish_end = time.perf_counter_ns()
+        await BENCHMARK_TASK_STARTED.wait()
+        task_end = time.perf_counter_ns()
+
+        # Get the task from the relay
+        get_task_result_start = time.perf_counter_ns()
+        await get_completed_task(relay_client, task.id)
+        get_task_result_end = time.perf_counter_ns()
+
+        publish_time = (publish_end - publish_start) / 1e9
+        task_time = (task_end - publish_end) / 1e9
+        retrieval_time = (get_task_result_end - get_task_result_start) / 1e9
+        total_time = (get_task_result_end - publish_start) / 1e9
+
+        print(f"Publish time: {publish_time:.6f}s")
+        print(f"Task time: {task_time:.6f}s")
+        print(f"Retrieval time: {retrieval_time:.6f}s")
+        print(f"Total time: {total_time:.6f}s")
