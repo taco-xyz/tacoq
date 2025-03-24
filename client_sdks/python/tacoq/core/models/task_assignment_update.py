@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -28,7 +28,7 @@ class TaskAssignmentUpdate(AvroSerializableBaseModel):
     """ The kind of worker that will execute the task. Dictates the queue that 
     the task will be routed through. """
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
     """ The time the task was created at. """
 
     input_data: Optional[TaskInput] = Field(default=None)

@@ -5,7 +5,7 @@ across all other languages and the core service. `TaskInput` and `TaskOutput`
 are strings and are expected to be serialized and deserialized by the user."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional, Self
 from uuid import UUID
@@ -86,7 +86,7 @@ class Task(AvroSerializableBaseModel):
 
     # Timestamps
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
     """ The time the task was created at. """
 
     started_at: Optional[datetime] = Field(default=None)
@@ -127,7 +127,7 @@ class Task(AvroSerializableBaseModel):
 
     # Fluff
 
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now())
     """ The last time the task object was updated in the database. """
 
     @property
@@ -175,9 +175,9 @@ if __name__ == "__main__":
         id=uuid.uuid4(),
         task_kind="test",
         worker_kind="test",
-        created_at=datetime.now(timezone.utc),
-        started_at=datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        created_at=datetime.now(),
+        started_at=datetime.now(),
+        completed_at=datetime.now(),
         input_data=b"test input",
         output_data=b"test output",
     )
