@@ -13,6 +13,7 @@ use lapin::{Channel, Consumer};
 use std::error::Error;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
+use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
 use super::connection::RabbitMQConnection;
@@ -52,7 +53,7 @@ impl TaskEventCore for RabbitMQTaskEventCore {
 /// them to the task repository.
 pub struct RabbitMQTaskEventConsumer {
     event_handler: TaskEventHandler,
-    connection: Arc<RabbitMQConnection>,
+    connection: Arc<Mutex<RabbitMQConnection>>,
     shutdown: Arc<AtomicBool>,
 }
 
@@ -66,7 +67,7 @@ impl RabbitMQTaskEventConsumer {
     ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let connection = RabbitMQConnection::new(url_string).await?;
         Ok(Self {
-            connection: Arc::new(connection),
+            connection: Arc::new(Mutex::new(connection)),
             event_handler: TaskEventHandler::new(task_repository),
             shutdown,
         })
@@ -131,14 +132,14 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
 
     /// Creates a new RabbitMQ channel.
     async fn core(&self) -> Result<Arc<dyn TaskEventCore>, Box<dyn Error + Send + Sync>> {
-        let channel = self.connection.create_channel().await?;
+        let channel = self.connection.lock().await.create_channel().await?;
         Ok(Arc::new(RabbitMQTaskEventCore { channel }) as Arc<dyn TaskEventCore>)
     }
 
     async fn lifecycle(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         info!(queue = %QUEUE_NAME, "Starting message consumption");
 
-        let channel = match self.connection.create_channel().await {
+        let channel = match self.connection.lock().await.create_channel().await {
             Ok(ch) => ch,
             Err(e) => {
                 error!(error = %e, queue = %QUEUE_NAME, "Failed to create channel");
@@ -166,7 +167,40 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
                 Ok(msg) => msg,
                 Err(e) => {
                     error!(error = %e, "Error receiving message");
-                    continue;
+
+                    // Reconnect in case of an IO error aka RabbitMQ connection failure
+                    match e {
+                        lapin::Error::IOError(e) => {
+                            error!(error = %e, "Connection aborted, attempting to reconnect");
+
+                            // Attempt to reconnect
+                            let mut connection = self.connection.lock().await;
+                            *connection = match connection.reconnect().await {
+                                Ok(conn) => conn,
+                                Err(e) => {
+                                    error!(error = %e, "Failed to reconnect to RabbitMQ");
+                                    continue;
+                                }
+                            };
+
+                            let new_channel = match connection.create_channel().await {
+                                Ok(ch) => ch,
+                                Err(e) => {
+                                    error!(error = %e, "Failed to create channel");
+                                    continue;
+                                }
+                            };
+                            consumer = match self.consumer(&new_channel).await {
+                                Ok(consumer) => consumer,
+                                Err(e) => {
+                                    error!(error = %e, "Failed to create consumer");
+                                    continue;
+                                }
+                            };
+                            continue;
+                        }
+                        _ => continue,
+                    }
                 }
             };
             let delivery_tag = message.delivery_tag;
