@@ -11,9 +11,12 @@ impl PgRepositoryCore {
     }
 
     pub async fn health_check(&self) -> Result<(), sqlx::Error> {
-        sqlx::query("SELECT 1")
-            .fetch_one(&self.pool)
-            .await
-            .map(|_| ())
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            sqlx::query("SELECT 1").fetch_one(&self.pool),
+        )
+        .await
+        .map_err(|_| sqlx::Error::PoolTimedOut)?
+        .map(|_| ())
     }
 }
