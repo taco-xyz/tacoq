@@ -10,7 +10,7 @@ use crate::AppState;
     components(schemas(crate::models::Task)),
     info(
         title = "Task Queue API",
-        version = "0.1.0",
+        version = "0.3.0",
         description = "API for the Task Queue service. Supports both JSON and Avro formats for task data."
     )
 )]
