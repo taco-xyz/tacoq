@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO tasks (\n                id, completed_at, output_data, is_error\n            )\n            VALUES ($1, $2, $3, $4)\n            ON CONFLICT (id) DO UPDATE SET\n                completed_at = COALESCE(tasks.completed_at, EXCLUDED.completed_at),\n                output_data = COALESCE(tasks.output_data, EXCLUDED.output_data),\n                is_error = COALESCE(tasks.is_error, EXCLUDED.is_error)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamp",
+        "Bytea",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "570d2f4be085dc9327c125d29224d21f2892599f8f15d28d4aed3f3960db0952"
+}

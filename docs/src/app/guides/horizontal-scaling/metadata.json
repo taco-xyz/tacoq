@@ -1,5 +1,5 @@
 {
   "title": "Scaling TacoQ",
   "description": "Learn how to scale your TacoQ application horizontally on the cloud with multiple workers, auto-scaling, distributed Postgres, replicated relays, and more.",
-  "icon": "PresentationChartLineIcon"
+  "icon": "ChartNoAxesCombined"
 } 

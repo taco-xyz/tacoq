@@ -1,0 +1,112 @@
+{
+    "type": "record",
+    "name": "Task",
+    "namespace": "com.tacoq.task",
+    "fields": [
+      {
+        "name": "id",
+        "type": {
+          "type": "string",
+          "logicalType": "uuid"
+        }
+      },
+      {
+        "name": "task_kind",
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      {
+        "name": "worker_kind",
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      {
+        "name": "created_at",
+        "type": {
+          "type": "long",
+          "logicalType": "timestamp-micros"
+        }
+      },
+      {
+        "name": "started_at",
+        "type": [
+          "null",
+          {
+            "type": "long",
+            "logicalType": "timestamp-micros"
+          }
+        ]
+      },
+      {
+        "name": "completed_at",
+        "type": [
+          "null",
+          {
+            "type": "long",
+            "logicalType": "timestamp-micros"
+          }
+        ]
+      },
+      {
+        "name": "updated_at",
+        "type": {
+          "type": "long",
+          "logicalType": "timestamp-micros"
+        }
+      },
+      {
+        "name": "input_data",
+        "type": ["null", "bytes"]
+      },
+      {
+        "name": "output_data",
+        "type": [
+          "null",
+          "bytes"
+        ]
+      },
+      {
+        "name": "is_error",
+        "type": [
+          "null",
+          "int"
+        ]
+      },
+      {
+        "name": "priority",
+        "type": [
+          "null",
+          "int"
+        ]
+      },
+      {
+        "name": "ttl_duration",
+        "type": [
+          "null",
+          "long"
+        ]
+      },
+      {
+        "name": "executed_by",
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      {
+        "name": "otel_ctx_carrier",
+        "type": [
+          "null",
+          {
+            "type": "map",
+            "values": "string"
+          }
+        ]
+      }
+    ]
+}
+  

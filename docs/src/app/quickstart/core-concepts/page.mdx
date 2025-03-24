@@ -1,3 +1,51 @@
+export const metadata = {
+  title: "Core Concepts",
+  description:
+    "Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.",
+  keywords: [
+    "task queue",
+    "asynchronous execution",
+    "worker_kind",
+    "task_kind",
+    "task priority",
+    "task status",
+    "task ID",
+    "message broker",
+    "RabbitMQ",
+    "workers",
+    "Postgres",
+    "publishers",
+    "relay",
+    "REST API",
+    "task publishing",
+    "task results",
+    "horizontal scaling",
+    "multi-language",
+    "interoperability",
+    "Python SDK",
+    "Rust",
+    "JavaScript",
+    "async functions",
+    "pydantic",
+    "type safety",
+    "hot reloading",
+    "developer experience",
+    "observability",
+    "system architecture",
+    "task routing",
+    "task execution",
+    "database integration",
+    "service integration",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "Core Concepts | TacoQ Docs",
+    description:
+      "Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.",
+  },
+};
 
 # What is TacoQ?
 
@@ -6,8 +54,8 @@ asynchronously in workers outside your application. (e.g. in a different contain
 
 # Core Concepts: Rapid-fire Overview
 
-To properly use TacoQ, it is recommended that you have a basic understanding 
-of the core concepts of task queues. This section will provide a rapid-fire 
+To properly use TacoQ, it is recommended that you have a basic understanding
+of the core concepts of task queues. This section will provide a rapid-fire
 overview of the most important topics so you can hit the ground running.
 
 ## Tasks
@@ -29,9 +77,9 @@ Here are some core properties of tasks that you should know about:
 
 ## Message Broker
 
-The message broker carries task assignments, updates, and results across the 
+The message broker carries task assignments, updates, and results across the
 entire TacoQ system. The broker is also responsible for routing the tasks to the
-correct set of workers based on its properties. 
+correct set of workers based on its properties.
 
 <Note>
   TacoQ uses [RabbitMQ](https://www.rabbitmq.com/) as its message broker.
@@ -43,7 +91,7 @@ Workers receive task assignments from the message broker, execute them, and then
 send the result back through the message broker so they can be stored in the database.
 
 <Note>
-  TacoQ uses [Postgres](https://www.postgresql.org/) as its database.
+TacoQ uses [Postgres](https://www.postgresql.org/) as its database.
 </Note>
 
 ## Publishers
@@ -57,33 +105,33 @@ Publishers are services that publish tasks to the message broker.
 
 ## Relay
 
-The relay is a unique concept to TacoQ. It is a service that acts as TacoQ's 
+The relay is a unique concept to TacoQ. It is a service that acts as TacoQ's
 engine, and has the following characteristics:
 
-- Hosts a REST API that enables any SDK or even non-supported languages to 
+- Hosts a REST API that enables any SDK or even non-supported languages to
   retrieve a task's result and status. Task publishing is done through the
   message broker when possible, but the relay also allows for task publishing
   for languages without an SDK.
-- Acts as a permanent consumer of messages from the broker to update the 
+- Acts as a permanent consumer of messages from the broker to update the
   database with the latest task statuses and results.
 - Is horizontally scalable and can be replicated to run thousands of instances.
 
 # What makes TacoQ different?
 
-TacoQ aims to differentiate itself from other task queues by providing the 
+TacoQ aims to differentiate itself from other task queues by providing the
 following features:
 
-- Multi-language interoperability (e.g. schedule a CPU-intensive task to be 
+- Multi-language interoperability (e.g. schedule a CPU-intensive task to be
   executed by a Rust worker from a Python application, generate a cute PDF
   in a Javascript worker from a Rust API).
 - Modern SDKs for popular languages like Python, supporting async functions,
   `pydantic`, having a type safe API, built-in hot reloading, and more.
-- Integration via REST API, allowing languages without a dedicated SDK to 
+- Integration via REST API, allowing languages without a dedicated SDK to
   easily schedule and retrieve task results.
 - Great developer experience with a focus on programmer ergonomics, good
   documentation, and explainability (for example, with built-in observability).
 
 <Tip>
-  You can learn more about TacoQ's architecture and design in the 
-  [System Architecture](/technical-reference/system-architecture) section.
+  You can learn more about TacoQ's architecture and design in the [System
+  Architecture](/technical-reference/system-architecture) section.
 </Tip>

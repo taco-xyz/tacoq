@@ -6,8 +6,8 @@ import React, { useRef } from "react";
 // Next Imports
 import Link from "next/link";
 
-// Heroicons Imports
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+// Lucide Icons
+import { ChevronRight } from "lucide-react";
 
 // Tailwind Imports
 import clsx from "clsx";
@@ -68,7 +68,7 @@ export default function MobilePageComponent({
             {sidebar?.Icon && (
               <sidebar.Icon
                 className={clsx(
-                  "size-3.5 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                  "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
                   currentPageTitle === title
                     ? "text-zinc-950 dark:text-white/100"
                     : "text-zinc-500 dark:text-white/50"
@@ -77,7 +77,7 @@ export default function MobilePageComponent({
             )}
             {sidebar?.title ?? title}
             {children && (
-              <ChevronRightIcon
+              <ChevronRight
                 onClick={(e) => {
                   // Prevent this form triggering the navigation to a new page
                   e.preventDefault();
@@ -119,7 +119,7 @@ export default function MobilePageComponent({
           {sidebar?.Icon && (
             <sidebar.Icon
               className={clsx(
-                "size-3.5 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
                 currentPageTitle === title
                   ? "text-zinc-950 dark:text-white/100"
                   : "text-zinc-500 dark:text-white/50"
@@ -128,7 +128,7 @@ export default function MobilePageComponent({
           )}
           {sidebar?.title ?? title}
           {children && (
-            <ChevronRightIcon
+            <ChevronRight
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

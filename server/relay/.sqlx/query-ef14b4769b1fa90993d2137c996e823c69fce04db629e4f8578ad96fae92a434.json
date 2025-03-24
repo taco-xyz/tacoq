@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO tasks (\n                id, task_kind_name, worker_kind_name, input_data, \n                ttl_duration, priority, created_at, otel_ctx_carrier\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n            ON CONFLICT (id) DO UPDATE SET\n                task_kind_name = COALESCE(tasks.task_kind_name, EXCLUDED.task_kind_name),\n                worker_kind_name = COALESCE(tasks.worker_kind_name, EXCLUDED.worker_kind_name), \n                input_data = COALESCE(tasks.input_data, EXCLUDED.input_data),\n                ttl_duration = COALESCE(tasks.ttl_duration, EXCLUDED.ttl_duration),\n                priority = COALESCE(tasks.priority, EXCLUDED.priority),\n                created_at = COALESCE(tasks.created_at, EXCLUDED.created_at),\n                otel_ctx_carrier = COALESCE(tasks.otel_ctx_carrier, EXCLUDED.otel_ctx_carrier)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Bytea",
+        "Int8",
+        "Int4",
+        "Timestamp",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ef14b4769b1fa90993d2137c996e823c69fce04db629e4f8578ad96fae92a434"
+}

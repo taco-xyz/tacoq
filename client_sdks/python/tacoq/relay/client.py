@@ -176,6 +176,7 @@ class RelayClient(BaseModel):
             # Inject context into headers so we can trace the request back to the relay
             headers: dict[str, str] = {}
             inject(headers)
+            headers["Accept"] = "application/avro"
 
             session = await self.session
             retry_client = RetryClient(
@@ -190,6 +191,5 @@ class RelayClient(BaseModel):
                 if resp.status == 404:
                     return None
                 resp.raise_for_status()
-                data = await resp.json()
-
-                return Task(**data)
+                data = await resp.read()
+                return Task.from_avro_bytes(data)

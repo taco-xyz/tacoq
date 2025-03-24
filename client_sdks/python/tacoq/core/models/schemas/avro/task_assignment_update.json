@@ -1,0 +1,49 @@
+{
+    "type": "record",
+    "name": "TaskAssignmentUpdate",
+    "namespace": "com.tacoq.task",
+    "fields": [
+      {
+        "name": "id",
+        "type": {
+          "type": "string",
+          "logicalType": "uuid"
+        }
+      },
+      {
+        "name": "task_kind",
+        "type": "string"
+      },
+      {
+        "name": "worker_kind",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": {
+          "type": "long",
+          "logicalType": "timestamp-micros"
+        }
+      },
+      {
+        "name": "input_data",
+        "type": ["null", "bytes"]
+      },
+      {
+        "name": "priority",
+        "type": "int"
+      },
+      {
+        "name": "ttl_duration",
+        "type": "long"
+      },
+      {
+        "name": "otel_ctx_carrier",
+        "type": {
+            "type": "map",
+            "values": "string"
+        }
+      }
+    ]
+}
+  

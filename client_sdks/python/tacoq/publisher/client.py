@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from tacoq.core.infra.broker import BrokerConfig, PublisherBrokerClient
-from tacoq.core.models import Task, TaskInput
+from tacoq.core.models import Task, TaskAssignmentUpdate, TaskInput
 from tacoq.core.telemetry import TracerManager
 
 
@@ -59,7 +59,7 @@ class PublisherClient(BaseModel):
         self: Self,
         task_kind: str,
         worker_kind: str,
-        input_data: TaskInput = "",
+        input_data: TaskInput = b"",
         task_id: Optional[UUID] = None,
         priority: int = 0,
         ttl_duration: int = 60 * 60 * 24 * 7,
@@ -126,18 +126,30 @@ class PublisherClient(BaseModel):
                 otel_ctx_carrier=otel_ctx_carrier,
             )
 
+            task_assignment_update = TaskAssignmentUpdate(
+                id=task.id,
+                task_kind=task_kind,
+                worker_kind=worker_kind,
+                input_data=input_data,
+                priority=priority,
+                ttl_duration=ttl_duration,
+                otel_ctx_carrier=otel_ctx_carrier,
+            )
+
             # Set the attributes of the span so it can be identified
             span.set_attributes(
                 {
                     "task.id": str(task.id),
-                    "task.kind": task.task_kind,
-                    "worker.kind": task.worker_kind,
+                    "task.kind": task_kind,
+                    "worker.kind": worker_kind,
                 }
             )
 
             # Publish the task to the broker
             with tracer.start_as_current_span("publish_task"):
-                await self._broker_client.publish_task(task)
+                await self._broker_client.publish_task_assignment(
+                    task_assignment_update
+                )
 
             return task
 

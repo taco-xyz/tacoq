@@ -114,7 +114,6 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
             alt={alt}
             fill
             className={clsx("object-cover object-center", className)}
-            quality={100}
           />
         </span>
       </span>
@@ -170,7 +169,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
           // Code block
           "[pre_&]:py-4 [pre_&]:px-0 [pre_&]:bg-transparent",
           // Inline code
-          "py-0.5 px-1.5 rounded-[5px] bg-zinc-100 dark:bg-zinc-800 [&:not(pre_code)]:mx-1 [&:not(pre_code)]:whitespace-nowrap [blockquote_&]:text-inherit [blockquote_&]:bg-inherit [blockquote_&]:ring-1 [blockquote_&]:ring-inherit [blockquote_&]:ring-inset",
+          "py-0.5 px-1.5 rounded-[5px] bg-zinc-100 dark:bg-zinc-800 [&:not(pre_code)]:mx-1 [blockquote_&]:text-inherit [blockquote_&]:bg-inherit [blockquote_&]:ring-1 [blockquote_&]:ring-inherit [blockquote_&]:ring-inset",
           className
         )}
       >
@@ -194,7 +193,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <Link
         href={href}
         className={clsx(
-          "dark:text-white text-zinc-800 custom-tab-outline-offset-2 font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-[outline] ease-in-out duration-150",
+          "dark:text-white text-zinc-800 custom-tab-outline-offset-2 focus-visible:rounded-sm font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-[outline] ease-in-out duration-150",
           "[blockquote_&]:text-inherit [blockquote_&]:border-inherit",
           className
         )}

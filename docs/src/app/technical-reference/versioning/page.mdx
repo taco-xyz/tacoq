@@ -1,3 +1,37 @@
+export const metadata = {
+  title: "Versioning",
+  description: "Learn how TacoQ handles versioning for images and libraries.",
+  keywords: [
+    "Semantic Versioning",
+    "SemVer",
+    "version 1.0",
+    "major version",
+    "minor version",
+    "patch version",
+    "breaking changes",
+    "SDK versioning",
+    "image versioning",
+    "lockstep releases",
+    "Relay versioning",
+    "version compatibility",
+    "task object versioning",
+    "version upgrading",
+    "Avro",
+    "compatibility issues",
+    "NACK",
+    "worker compatibility",
+    "relay compatibility",
+    "version documentation",
+    "changelog",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "Versioning | TacoQ Docs",
+    description: "Learn how TacoQ handles versioning for images and libraries.",
+  },
+};
 
 # Semantic Versioning
 
@@ -11,25 +45,17 @@ Once we reach a stable 1.0, TacoQ will follow [Semantic versioning](https://semv
 
 # SDK and Image Lockstep Releases
 
-For the time being, SDKs and images always share the same minor version number.
-For example:
+For the time being, breaking changes in either the SDKs or the Relay image will
+result in a new minor version - they are released in lockstep.
 
-- If a breaking change happens in the Relay, both the Relay and SDKs are bumped
-  to a new minor version, even if nothing changed for the SDKs.
-- If a breaking change happens in the SDK, both the SDK and the Relay image are
-  bumped to a new minor version, even if nothing changed for the Relay.
-
-Patch versions are not locked, but always reset to 0 when a minor version is
-bumped.
+Patch versions are not locked.
 
 # Task Object
 
-Currently, changes to the task object can cause compatibility issues, preventing 
-your workers and relays from processing messages and NACK'ing them. To upgrade
-without compatibility issues, follow the [version upgrading guide](/guides/upgrading).
-
-Future releases will introduce Task object versioning using an Avro-like setup
-to improve compatibility and make upgrades more robust.
+Objects passed along queues are versioned using [Apache Avro](https://avro.apache.org/).
+They should always be backwards and forwards compatible, but we still recommend
+keeping an eye on the [changelog](/changelog) for any breaking changes and keeping
+your SDKs and the Relay image on the latest version.
 
 # Documentation
 

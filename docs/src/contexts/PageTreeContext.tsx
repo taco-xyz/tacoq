@@ -7,6 +7,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
 } from "react";
 
 // Next Imports
@@ -14,88 +15,45 @@ import { usePathname } from "next/navigation";
 
 // Type imports
 import type { Page, PageTree } from "@/types/PageTree";
-import type { Anchor } from "@/types/Anchor";
-import FooterContent from "@/types/FooterContent";
-
-// Heroicons Imports
-import {
-  HomeIcon,
-  NewspaperIcon,
-  CreditCardIcon,
-} from "@heroicons/react/24/solid";
-
-// Custom Icons Imports
-import {
-  GithubIcon,
-  XIcon,
-  DiscordIcon,
-} from "@/components/react/icons/social";
+//import type { Anchor } from "@/types/Anchor";
+import FooterContent, { Status } from "@/types/FooterContent";
 
 // Data imports
 import pageTreeJson from "@/page-tree.json";
 
-const pageTree = pageTreeJson as PageTree;
-
 // Utils
 import { getIcon } from "../utils/getIcon";
 
-const anchors: Anchor[] = [
-  {
-    title: "Home",
-    url: "/",
-    Icon: HomeIcon,
-  },
-  {
-    title: "Blog",
-    url: "/blog",
-    Icon: NewspaperIcon,
-  },
-  {
-    title: "Pricing",
-    url: "/pricing",
-    Icon: CreditCardIcon,
-  },
-];
+const pageTree = pageTreeJson as PageTree;
 
 const footerContent: FooterContent = {
   linkGroups: [
     {
-      groupName: "Product",
+      groupName: "Frameworks",
       links: [
-        { linkName: "Features", url: "/features" },
-        { linkName: "Pricing", url: "/pricing" },
-        { linkName: "Documentation", url: "/docs" },
+        { linkName: "TacoQ", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
+        { linkName: "TacoDocs", status: Status.WORK_IN_PROGRESS },
+        { linkName: "TacoFlow", status: Status.SOON },
+        { linkName: "TacoBI", status: Status.SOON },
+        { linkName: "TacoCI", status: Status.SOON },
       ],
     },
     {
-      groupName: "Resources",
+      groupName: "Taco Plus",
       links: [
-        { linkName: "Blog", url: "/blog" },
-        { linkName: "Support", url: "/support" },
-        { linkName: "API", url: "/api" },
+        { linkName: "Docs Templates", status: Status.WORK_IN_PROGRESS },
+        { linkName: "Early Access", status: Status.SOON },
+        { linkName: "Priority Support", status: Status.SOON },
+        { linkName: "BI Templates", status: Status.SOON },
       ],
     },
     {
-      groupName: "Company",
+      groupName: "Community",
       links: [
-        { linkName: "About", url: "/about" },
-        { linkName: "Careers", url: "/careers" },
-        { linkName: "Contact", url: "/contact" },
+        { linkName: "Discord", url: "https://discord.gg/NXwBEtZSUq", status: Status.COMPLETED },
+        { linkName: "Github", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
       ],
     },
-    {
-      groupName: "Legal",
-      links: [
-        { linkName: "Privacy", url: "/privacy" },
-        { linkName: "Terms", url: "/terms" },
-        { linkName: "Security", url: "/security" },
-      ],
-    },
-  ],
-  socialLinks: [
-    { Icon: GithubIcon, url: "https://github.com/your-repo" },
-    { Icon: XIcon, url: "https://twitter.com/your-handle" },
-    { Icon: DiscordIcon, url: "https://discord.gg/your-server" },
   ],
 };
 
@@ -120,7 +78,7 @@ interface PageTreeContextType {
   /** Nested array of all pages in the navigation tree */
   pages: Page[];
   /** Array of anchor links */
-  anchors: Anchor[];
+  // anchors: Anchor[];
   /** Footer content */
   footerContent: FooterContent;
   /** Array of pages that are the breadcrumbs for the current page */
@@ -288,6 +246,11 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     return addIconsToPages(pageTree.children);
   }, []);
 
+  useEffect(() => {
+    const parentPages = findPageAndParents(pageTree.children, pathname);
+    setExpandedPages((prev) => new Set([...prev, ...parentPages.slice(0, -1)]));
+  }, [pathname]);
+
   return (
     <PageTreeContext.Provider
       value={{
@@ -299,11 +262,11 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
         currentPageTitle,
         visiblePagesTitles,
         pages: pagesWithIcons,
-        anchors,
         footerContent,
         breadcrumbs,
         previousPage,
         nextPage,
+        //anchors
       }}
     >
       {children}

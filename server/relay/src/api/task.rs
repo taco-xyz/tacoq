@@ -1,14 +1,15 @@
 use axum::{
-    extract::{Json, Path, State},
-    http::StatusCode,
+    extract::{Path, State},
+    http::{header, HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
     routing::get,
     Router,
 };
 use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
-use crate::models::Task;
-use crate::{repo::TaskRepository, AppState};
+use crate::models::{AvroSerializable, Task};
+use crate::AppState;
 
 pub fn routes() -> Router<AppState> {
     debug!("Setting up task API routes");
@@ -21,7 +22,7 @@ pub fn routes() -> Router<AppState> {
 /// * `id` - UUID of the task to retrieve
 ///
 /// # Returns
-/// Returns a JSON response containing the task if found
+/// Returns a response containing the task if found, either in JSON or Avro format based on Accept header
 #[utoipa::path(
     get,
     description = "Get a task by its UUID",
@@ -31,16 +32,18 @@ pub fn routes() -> Router<AppState> {
     ),
     responses(
         (status = 200, description = "Task found", body = Task, content_type = "application/json"),
+        (status = 200, description = "Task found (Avro format)", content_type = "application/avro"),
         (status = 404, description = "Task not found", content_type = "text/plain"),
         (status = 500, description = "Internal server error", content_type = "text/plain")
     ),
     tag = "tasks"
 )]
-#[instrument(skip(state), fields(task_id = %id))]
+#[instrument(skip(state, headers), fields(task_id = %id))]
 async fn get_task_by_id(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Task>, (StatusCode, String)> {
+    headers: HeaderMap,
+) -> Result<TaskResponse, (StatusCode, String)> {
     info!(task_id = %id, "API request: Get task by ID");
 
     let result: Result<Option<Task>, sqlx::Error> =
@@ -59,52 +62,19 @@ async fn get_task_by_id(
             }
         };
 
-    if let Ok(Some(task)) = &result {
-        debug!(
-            task_id = %id,
-            task_kind = %task.task_kind,
-            status = %task.status,
-            "Task found, checking expiration"
-        );
-
-        if task.is_expired() {
-            info!(
-                task_id = %id,
-                ttl_duration = ?task.ttl_duration,
-                completed_at = ?task.completed_at,
-                "Task is expired, deleting"
-            );
-
-            // Delete the task
-            if let Err(e) = state.task_repository.delete_task(&task.id).await {
-                error!(
-                    task_id = %id,
-                    error = %e,
-                    "Failed to delete expired task"
-                );
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to delete expired task: {}", e),
-                ));
-            }
-
-            debug!(task_id = %id, "Expired task deleted successfully");
-            return Err((
-                StatusCode::NOT_FOUND,
-                format!("Task with ID {} not found", id),
-            ));
-        }
-    }
-
     match result {
         Ok(Some(task)) => {
             info!(
                 task_id = %id,
-                task_kind = %task.task_kind,
-                status = %task.status,
+                task_kind = %task.clone().task_kind.unwrap_or("None".to_string()),
                 "Successfully retrieved task"
             );
-            Ok(Json(task))
+
+            // Determine response format based on Accept header
+            let format = determine_response_format(&headers);
+            debug!(task_id = %id, format = ?format, "Determined response format");
+
+            Ok(TaskResponse { task, format })
         }
         Ok(None) => {
             debug!(task_id = %id, "Task not found");
@@ -117,37 +87,117 @@ async fn get_task_by_id(
     }
 }
 
-// #[utoipa::path(
-//     post,
-//     description = "Posts a new task to the consumers",
-//     path = "/tasks",
-//     request_body = Task,
-//     responses(
-//         (status = 201, description = "Task created", body = Task, content_type = "application/json"),
-//         (status = 500, description = "Internal server error", content_type = "text/plain")
-//     ),
-//     tag = "tasks"
-// )]
-// async fn publish_task(
-//     State(_state): State<AppState>,
-//     Json(task): Json<Task>,
-// ) -> Result<Json<Task>, (StatusCode, String)> {
-//     Ok(Json(task))
-// }
+/// Determines the response format based on the Accept header
+fn determine_response_format(headers: &HeaderMap) -> ResponseFormat {
+    // Default to JSON if no Accept header is present
+    let accept = match headers.get(header::ACCEPT) {
+        Some(value) => match value.to_str() {
+            Ok(s) => s,
+            Err(_) => return ResponseFormat::Json,
+        },
+        None => return ResponseFormat::Json,
+    };
+
+    // Parse accept header parts
+    let mut json_quality = 0.0;
+    let mut avro_quality = 0.0;
+
+    // Check for wildcard
+    if accept.contains("*/*") {
+        json_quality = 1.0;
+    }
+
+    // Look for quality values or defaults
+    for part in accept.split(',').map(|s| s.trim()) {
+        if part.starts_with("application/json") {
+            json_quality = extract_quality(part).unwrap_or(1.0);
+        } else if part.starts_with("application/avro") {
+            avro_quality = extract_quality(part).unwrap_or(1.0);
+        }
+    }
+
+    // Choose format based on quality values
+    if avro_quality > 0.0 && avro_quality >= json_quality {
+        ResponseFormat::Avro
+    } else if json_quality > 0.0 {
+        ResponseFormat::Json
+    } else {
+        // Default to JSON if no matching media type
+        ResponseFormat::Json
+    }
+}
+
+/// Extracts the quality value (q parameter) from an Accept header part
+fn extract_quality(part: &str) -> Option<f32> {
+    if let Some(q_idx) = part.find(";q=") {
+        let q_value = &part[(q_idx + 3)..];
+        if let Some(end_idx) = q_value.find(';') {
+            q_value[..end_idx].parse::<f32>().ok()
+        } else {
+            q_value.parse::<f32>().ok()
+        }
+    } else {
+        None
+    }
+}
+
+/// Response format enum
+#[derive(Debug)]
+enum ResponseFormat {
+    Json,
+    Avro,
+}
+
+/// Task response wrapper that handles content negotiation
+struct TaskResponse {
+    task: Task,
+    format: ResponseFormat,
+}
+
+impl IntoResponse for TaskResponse {
+    fn into_response(self) -> Response {
+        match self.format {
+            ResponseFormat::Json => {
+                // Return JSON response
+                (
+                    StatusCode::OK,
+                    [(header::CONTENT_TYPE, "application/json")],
+                    axum::Json(self.task),
+                )
+                    .into_response()
+            }
+            ResponseFormat::Avro => {
+                // Convert task to Avro binary format using the convenience method
+                match self.task.try_into_avro_bytes() {
+                    Ok(avro_bytes) => (
+                        StatusCode::OK,
+                        [(header::CONTENT_TYPE, "application/avro")],
+                        avro_bytes,
+                    )
+                        .into_response(),
+                    Err(e) => {
+                        error!(
+                            task_id = %self.task.id,
+                            error = %e,
+                            "Failed to convert task to Avro bytes"
+                        );
+                        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+                    }
+                }
+            }
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
-    use crate::models::{Task, TaskStatus};
-    use axum::http::StatusCode;
-    use chrono::Local;
+    use crate::models::{AvroSerializable, Task};
+    use axum::http::{HeaderMap, HeaderValue, StatusCode};
     use sqlx::PgPool;
     use uuid::Uuid;
 
     use crate::{
-        repo::{
-            PgRepositoryCore, PgTaskRepository, PgWorkerKindRepository, TaskRepository,
-            WorkerKindRepository,
-        },
+        repo::{PgRepositoryCore, TaskRepository},
         testing::test::{get_test_server, init_test_logger},
     };
 
@@ -162,7 +212,6 @@ mod test {
             .with_input_data(vec![1, 2, 3])
             .with_output_data(vec![4, 5, 6])
             .with_error(false)
-            .with_status(TaskStatus::Pending)
     }
 
     #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
@@ -178,47 +227,119 @@ mod test {
     async fn test_get_existing_task_by_id(db_pools: PgPool) {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
-        let task_instance_repository = PgTaskRepository::new(core.clone());
-        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+        let task_repository = TaskRepository::new(core.clone());
 
         let test_task = get_test_task();
 
-        worker_kind_repository
-            .get_or_create_worker_kind(&test_task.worker_kind)
-            .await
-            .unwrap();
+        task_repository.create_task(&test_task).await.unwrap();
 
-        let task = task_instance_repository
-            .update_task(&test_task)
-            .await
-            .unwrap();
-
-        let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
+        let response = server.get(&format!("/tasks/{}", test_task.id)).await;
         assert_eq!(response.status_code(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::CONTENT_TYPE)
+                .unwrap(),
+            "application/json"
+        );
+
+        let response_body = response.json::<Task>();
+        assert_eq!(response_body.id, test_task.id);
     }
 
     #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
-    async fn test_delete_task_with_expired_status(db_pools: PgPool) {
+    async fn test_get_existing_task_by_id_avro(db_pools: PgPool) {
         let server = get_test_server(db_pools.clone()).await;
         let core = PgRepositoryCore::new(db_pools.clone());
-        let task_instance_repository = PgTaskRepository::new(core.clone());
-        let worker_kind_repository = PgWorkerKindRepository::new(core.clone());
+        let task_repository = TaskRepository::new(core.clone());
 
-        let mut test_task = get_test_task();
-        test_task.status = TaskStatus::Completed;
-        test_task.completed_at = Some(Local::now().naive_local() - chrono::Duration::days(1));
+        let test_task = get_test_task();
 
-        worker_kind_repository
-            .get_or_create_worker_kind(&test_task.worker_kind)
-            .await
-            .unwrap();
+        task_repository.create_task(&test_task).await.unwrap();
 
-        let task = task_instance_repository
-            .update_task(&test_task)
-            .await
-            .unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            axum::http::header::ACCEPT,
+            HeaderValue::from_static("application/avro"),
+        );
 
-        let response: axum_test::TestResponse = server.get(&format!("/tasks/{}", task.id)).await;
-        assert_eq!(response.status_code(), StatusCode::NOT_FOUND);
+        let response = server
+            .get(&format!("/tasks/{}", test_task.id))
+            .add_header(
+                axum::http::header::ACCEPT,
+                HeaderValue::from_static("application/avro"),
+            )
+            .await;
+
+        assert_eq!(response.status_code(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::CONTENT_TYPE)
+                .unwrap(),
+            "application/avro"
+        );
+
+        let response_body = response.as_bytes().to_vec();
+        let expected_task = Task::try_from_avro_bytes(&response_body).unwrap();
+        assert_eq!(expected_task.id, test_task.id);
+    }
+
+    #[sqlx::test(migrator = "crate::testing::test::MIGRATOR")]
+    async fn test_content_negotiation_quality_values(db_pools: PgPool) {
+        let server = get_test_server(db_pools.clone()).await;
+        let core = PgRepositoryCore::new(db_pools.clone());
+        let task_repository = TaskRepository::new(core.clone());
+
+        let test_task = get_test_task();
+        task_repository.create_task(&test_task).await.unwrap();
+
+        // Test with higher quality for JSON
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            axum::http::header::ACCEPT,
+            HeaderValue::from_static("application/json;q=0.9, application/avro;q=0.8"),
+        );
+
+        let response = server
+            .get(&format!("/tasks/{}", test_task.id))
+            .add_header(
+                axum::http::header::ACCEPT,
+                HeaderValue::from_static("application/json;q=0.9, application/avro;q=0.8"),
+            )
+            .await;
+
+        assert_eq!(response.status_code(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::CONTENT_TYPE)
+                .unwrap(),
+            "application/json"
+        );
+
+        // Test with higher quality for Avro
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            axum::http::header::ACCEPT,
+            HeaderValue::from_static("application/json;q=0.7, application/avro;q=0.8"),
+        );
+
+        let response = server
+            .get(&format!("/tasks/{}", test_task.id))
+            .add_header(
+                axum::http::header::ACCEPT,
+                HeaderValue::from_static("application/json;q=0.7, application/avro;q=0.8"),
+            )
+            .await;
+
+        assert_eq!(response.status_code(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::CONTENT_TYPE)
+                .unwrap(),
+            "application/avro"
+        );
     }
 }

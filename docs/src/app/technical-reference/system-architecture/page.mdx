@@ -1,9 +1,59 @@
-
-import { LightBulbIcon } from "@heroicons/react/24/outline";
+export const metadata = {
+  title: "System Architecture",
+  description:
+    "Learn how services interact with each other and why they are structured the way they are.",
+  keywords: [
+    "system architecture",
+    "broker architecture",
+    "RabbitMQ",
+    "relay_queue",
+    "task_exchange",
+    "queue durability",
+    "task routing",
+    "task priority",
+    "Postgres database",
+    "sqlx",
+    "database architecture",
+    "relay service",
+    "task updates",
+    "REST API",
+    "Axum framework",
+    "horizontal scaling",
+    "task cleanup",
+    "worker architecture",
+    "worker_kind",
+    "task_kind",
+    "publisher client",
+    "relay client",
+    "message broker",
+    "task storage",
+    "service interaction",
+    "queue configuration",
+    "LISTEN NOTIFY",
+    "task TTL",
+    "load balancing",
+    "service replication",
+    "task execution",
+    "system services",
+    "user services",
+    "task routing strategy",
+    "service scalability",
+    "system observability",
+    "OTEL tracing",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "TacoQ Docs",
+    title: "System Architecture | TacoQ Docs",
+    description:
+      "Learn how services interact with each other and why they are structured the way they are.",
+  },
+};
 
 # System Services
 
-These are services that are part of the TacoQ core system. The user doesn't 
+These are services that are part of the TacoQ core system. The user doesn't
 use these directly in their code and they exist purely to transport and store
 task data.
 
@@ -12,8 +62,8 @@ task data.
 ### Broker Responsabilities
 
 The broker is responsible for transporting task objects between services. This
-works by having a central exchange that routes **all task objects to the 
-relay** and new tasks to be executed to the **appropriate worker**. 
+works by having a central exchange that routes **all task objects to the
+relay** and new tasks to be executed to the **appropriate worker**.
 
 ### RabbitMQ Implementation Details
 
@@ -32,11 +82,11 @@ Queues and exchanges are not customizable because RabbitMQ doesn't like it
 when different services declare different queue and exchange configurations
 (it crashes). Therefore:
 
-- All queues and exchanges are [durable](https://www.rabbitmq.com/docs/queues#durability) - 
-  they will survive a RabbitMQ server restart. 
-- All queues and exchanges are [do not auto-delete](https://www.rabbitmq.com/docs/queues#properties) - 
+- All queues and exchanges are [durable](https://www.rabbitmq.com/docs/queues#durability) -
+  they will survive a RabbitMQ server restart.
+- All queues and exchanges are [do not auto-delete](https://www.rabbitmq.com/docs/queues#properties) -
   they will not be deleted when the last consumer disconnects.
-- All queues have a default `{"x-max-priority": 255}` to allow for maximum 
+- All queues have a default `{"x-max-priority": 255}` to allow for maximum
   flexibility in [task priority](https://www.rabbitmq.com/docs/priority) and to
   have the priority feature available by default.
 
@@ -45,31 +95,33 @@ when different services declare different queue and exchange configurations
   but we are open to making the broker an abstract class and accepting 
   contributions for other message brokers if there is enough demand.
 
-  This is because we rely on RabbitMQ's routing and priorities features, which
-  are not always present in other brokers.
+This is because we rely on RabbitMQ's routing and priorities features, which
+are not always present in other brokers.
+
 </Note>
 
 ## Database
 
-The latest state of each task is stored in the database. The database is 
+The latest state of each task is stored in the database. The database is
 implemented in Postgres and managed via Rust's [sqlx](https://docs.rs/sqlx/latest/sqlx/)
 library by the relay.
 
 <Note>
   Some Postgres-backed task queues like [Hatchet](https://hatchet.run/) store 
   every event and use triggers to keep a materialized view with the latest state 
-  of each task up to date. 
+  of each task up to date.
 
-  We do not do this for a few reasons:
-  - As the Hatchet team has noted, it is no easy feat to get the triggers 
-    right.
-  - Unlike Hatchet, we are only a task queue, not a workflow orchestrator -
-    it is not as important for us to store information about every step of a
-    workflow.
-  - We already support OTEL tracing. We believe this is enough to get 
-    observability into the system. The task also has information about the
-    timeline of its execution.
-</Note> 
+We do not do this for a few reasons:
+
+- As the Hatchet team has noted, it is no easy feat to get the triggers
+  right.
+- Unlike Hatchet, we are only a task queue, not a workflow orchestrator -
+  it is not as important for us to store information about every step of a
+  workflow.
+- We already support OTEL tracing. We believe this is enough to get
+  observability into the system. The task also has information about the
+  timeline of its execution.
+</Note>
 
 <Note>
   We use some Postgres-specific features like `LISTEN` and `NOTIFY` to implement
@@ -79,7 +131,7 @@ library by the relay.
 
 ## Relay
 
-The relay, as the name implies, is responsible for relaying information 
+The relay, as the name implies, is responsible for relaying information
 between the core services and the user's application. It is implemented in Rust
 and has the following capabilities:
 
@@ -89,7 +141,7 @@ The relay consumes task updates from the broker and stores them in the database 
 
 ### 2. Data Retrieval
 
-The relay also serves a **REST API** for retrieving task data from the database. 
+The relay also serves a **REST API** for retrieving task data from the database.
 You can read the API swagger definition in [Relay Endpoints](/technical-reference/relay-endpoints).
 The REST API is implemented in [Axum](https://docs.rs/axum/latest/axum/).
 
@@ -108,15 +160,16 @@ rate of tasks.
 <Tip>
   The relay has a lot of features packaged into a single service for the sake of simplicity.
 
-  If you only want to scale the consuming rate of tasks horizontally but you don't need more APIs,
-  you can use the environment variables `ENABLE_RELAY_TASK_CONSUMER`, `ENABLE_RELAY_CLEANUP` and
-  `ENABLE_RELAY_API` to disable the features you don't need. Read more about environment variables
-  in the [Relay environment variables](/technical-reference/relay-environment-variables) section.
+If you only want to scale the consuming rate of tasks horizontally but you don't need more APIs,
+you can use the environment variables `ENABLE_RELAY_TASK_CONSUMER`, `ENABLE_RELAY_CLEANUP` and
+`ENABLE_RELAY_API` to disable the features you don't need. Read more about environment variables
+in the [Relay environment variables](/technical-reference/relay-environment-variables) section.
+
 </Tip>
 
 # User Services
 
-These are set up by the user himself and can safely go online and offline as 
+These are set up by the user himself and can safely go online and offline as
 needed.
 
 ## Worker
@@ -127,34 +180,36 @@ and multiple `task_kind`'s that it is capable of executing.
 <Note>
   Why are worker kinds a thing?
 
-  It is not uncommon for task queues to have all their workers consume from the
-  same queue. If you were to have two different workers with different task
-  capabilities, they would often consume tasks they are unable to execute, NACK
-  them, and send the task to the back of the queue. This could happen repeatedly
-  and cause the task to never be executed, or at least be greatly delayed.
+It is not uncommon for task queues to have all their workers consume from the
+same queue. If you were to have two different workers with different task
+capabilities, they would often consume tasks they are unable to execute, NACK
+them, and send the task to the back of the queue. This could happen repeatedly
+and cause the task to never be executed, or at least be greatly delayed.
 
-  Another possible implementation would be to have one queue per task kind, which
-  would allow workers to only consume the queues they know they are able to 
-  execute. This would, however, require the worker to have a strategy for 
-  determining which queue to prioritize consuming, increasing complexity and making
-  the behaviour more opaque.
+Another possible implementation would be to have one queue per task kind, which
+would allow workers to only consume the queues they know they are able to
+execute. This would, however, require the worker to have a strategy for
+determining which queue to prioritize consuming, increasing complexity and making
+the behaviour more opaque.
 
-  So, we make the user explicitely decide which worker to route their task to,
-  and we make the worker kind part of the task object.
+So, we make the user explicitely decide which worker to route their task to,
+and we make the worker kind part of the task object.
 
-  The drawbacks to the current approach are:
-  - Additional setup parameter that must be known pre-runtime.
-  - There cannot be two different worker kinds with the shared task kind 
-    capabilities. The user must always choose which worker kind to route a task to.
+The drawbacks to the current approach are:
 
-  Given these extremely specific drawbacks which apply to almost no one and can
-  easily be worked around, we've decided to use worker kinds to route tasks. If 
-  you have a better idea, please let us know! :)
+- Additional setup parameter that must be known pre-runtime.
+- There cannot be two different worker kinds with the shared task kind
+  capabilities. The user must always choose which worker kind to route a task to.
+
+Given these extremely specific drawbacks which apply to almost no one and can
+easily be worked around, we've decided to use worker kinds to route tasks. If
+you have a better idea, please let us know! :)
+
 </Note>
 
 ## Publisher Client
 
-A task publisher client isn't a service but a client for submitting tasks to your 
+A task publisher client isn't a service but a client for submitting tasks to your
 workers. It connects directly to the broker.
 
 ## Relay Client
@@ -163,3 +218,23 @@ As task results are completed, they get stored in the database. To access them,
 an application must communicate with the relay via REST API. So, the client SDKs
 have a **Relay Client** built in, whom is capable for retrieving task results via
 the REST API.
+
+---
+
+# Appendix
+
+## Task & Event Objects
+
+Services communicate with each other by sending `Task`, `TaskAssignmentUpdate`, 
+`TaskRunningUpdate`, and `TaskCompletedUpdate` objects. We split the updates
+into different objects so we can be as compact as possible when sending small
+updates.
+
+Objects are serialized and schematized using [Apache Avro](https://avro.apache.org/):
+
+- Schemata are defined in `schema/avro`
+- Correspondent idiomatic objects are defined in each SDK.
+- Avro helps us provide full backwards and forwards compatibility.
+
+
+
