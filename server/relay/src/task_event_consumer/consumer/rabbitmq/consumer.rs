@@ -196,22 +196,18 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
                 Err(e) => {
                     error!(error = %e, "Error receiving message");
 
-                    // Reconnect in case of an IO error aka RabbitMQ connection failure
-                    match e {
-                        lapin::Error::IOError(e) => {
-                            error!(error = %e, "Connection aborted, attempting to reconnect");
-
-                            consumer = match self.reconnect().await {
-                                Ok(consumer) => consumer,
-                                Err(e) => {
-                                    error!(error = %e, "Failed to reconnect to RabbitMQ");
-                                    continue;
-                                }
-                            };
-                            continue;
-                        }
-                        _ => continue,
+                    if let lapin::Error::IOError(e) = e {
+                        error!(error = %e, "Connection aborted, attempting to reconnect");
+                        consumer = match self.reconnect().await {
+                            Ok(consumer) => consumer,
+                            Err(e) => {
+                                error!(error = %e, "Failed to reconnect to RabbitMQ");
+                                continue;
+                            }
+                        };
                     }
+
+                    continue;
                 }
             };
             let delivery_tag = message.delivery_tag;
