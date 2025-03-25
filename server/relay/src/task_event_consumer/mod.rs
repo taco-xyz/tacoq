@@ -2,4 +2,6 @@ mod consumer;
 mod event_parsing;
 mod handler;
 
-pub use consumer::{RabbitMQTaskEventConsumer, TaskEventConsumer, TaskEventCore};
+pub use consumer::{
+    RabbitMQTaskEventConsumer, RabbitMQTaskEventCore, TaskEventConsumer, TaskEventCore,
+};

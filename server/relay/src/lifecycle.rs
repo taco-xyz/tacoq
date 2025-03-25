@@ -2,7 +2,9 @@ use crate::constants::RELAY_QUEUE;
 use crate::jobs::TaskCleanupJob;
 use crate::repo::{PgRepositoryCore, TaskRepository};
 use crate::server::Server;
-use crate::task_event_consumer::{RabbitMQTaskEventConsumer, TaskEventConsumer, TaskEventCore};
+use crate::task_event_consumer::{
+    RabbitMQTaskEventConsumer, RabbitMQTaskEventCore, TaskEventConsumer,
+};
 use crate::{api, Config};
 use axum::Router;
 use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
@@ -17,14 +19,14 @@ use tracing::{debug, error, info, warn};
 ///
 /// Contains all the repositories used for the application logic and the broker
 #[derive(Clone)]
-pub struct AppState {
+pub struct RESTServer {
     pub task_repository: TaskRepository,
 
     // Health check variables
     pub repository_core: PgRepositoryCore,
     // Here I wanna pass a rabbitmq channel to verify if the connection is still alive
     // For now I will leave it as is but in the future this will need to be abstracted away
-    pub broker_core: Option<Arc<dyn TaskEventCore>>,
+    pub broker_core: Option<Arc<RabbitMQTaskEventCore>>,
 }
 
 /// Application components that need to be started and shut down
@@ -110,13 +112,13 @@ fn create_repositories(pool: &PgPool) -> TaskRepository {
 /// * `db_pools` - The database connection pools
 async fn setup_app_state(
     db_pools: &PgPool,
-    broker_core: Option<Arc<dyn TaskEventCore>>,
-) -> AppState {
+    broker_core: Option<Arc<RabbitMQTaskEventCore>>,
+) -> RESTServer {
     debug!("Setting up application state");
     let task_repository = create_repositories(db_pools);
 
     info!("Application state initialized successfully");
-    AppState {
+    RESTServer {
         task_repository,
         repository_core: PgRepositoryCore::new(db_pools.clone()),
         broker_core,
@@ -130,7 +132,10 @@ async fn setup_app_state(
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
-pub async fn setup_app(db_pools: &PgPool, broker_core: Option<Arc<dyn TaskEventCore>>) -> Router {
+pub async fn setup_app(
+    db_pools: &PgPool,
+    broker_core: Option<Arc<RabbitMQTaskEventCore>>,
+) -> Router {
     debug!("Beginning app setup");
     let app_state = setup_app_state(db_pools, broker_core).await;
     info!("App state created");

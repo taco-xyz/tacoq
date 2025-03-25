@@ -8,10 +8,10 @@ use axum::{
 use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
-use crate::lifecycle::AppState;
+use crate::lifecycle::RESTServer;
 use crate::models::{AvroSerializable, Task};
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<RESTServer> {
     debug!("Setting up task API routes");
     Router::new().route("/{id}", get(get_task_by_id))
 }
@@ -40,7 +40,7 @@ pub fn routes() -> Router<AppState> {
 )]
 #[instrument(skip(state, headers), fields(task_id = %id))]
 async fn get_task_by_id(
-    State(state): State<AppState>,
+    State(state): State<RESTServer>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<TaskResponse, (StatusCode, String)> {

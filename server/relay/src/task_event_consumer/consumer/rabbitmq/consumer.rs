@@ -3,7 +3,6 @@ use crate::task_event_consumer::consumer::TaskEventCore;
 use crate::task_event_consumer::{
     event_parsing::Event, handler::TaskEventHandler, TaskEventConsumer,
 };
-use async_trait::async_trait;
 use futures::StreamExt;
 use lapin::message::Delivery;
 use lapin::options::QueueDeclareOptions;
@@ -24,7 +23,6 @@ pub struct RabbitMQTaskEventCore {
     channel: Channel,
 }
 
-#[async_trait]
 impl TaskEventCore for RabbitMQTaskEventCore {
     async fn health_check(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         if !self.channel.status().connected() {
@@ -124,16 +122,17 @@ impl RabbitMQTaskEventConsumer {
     }
 }
 
-#[async_trait]
 impl TaskEventConsumer for RabbitMQTaskEventConsumer {
+    type Core = RabbitMQTaskEventCore;
+
     fn event_handler(&self) -> &TaskEventHandler {
         &self.event_handler
     }
 
     /// Creates a new RabbitMQ channel.
-    async fn core(&self) -> Result<Arc<dyn TaskEventCore>, Box<dyn Error + Send + Sync>> {
+    async fn core(&self) -> Result<Arc<Self::Core>, Box<dyn Error + Send + Sync>> {
         let channel = self.connection.lock().await.create_channel().await?;
-        Ok(Arc::new(RabbitMQTaskEventCore { channel }) as Arc<dyn TaskEventCore>)
+        Ok(Arc::new(RabbitMQTaskEventCore { channel }))
     }
 
     async fn lifecycle(&self) -> Result<(), Box<dyn Error + Send + Sync>> {

@@ -3,9 +3,10 @@ use axum::http::StatusCode;
 use axum::{routing::get, Router};
 use tracing::{debug, error, info, instrument};
 
-use crate::lifecycle::AppState;
+use crate::lifecycle::RESTServer;
+use crate::task_event_consumer::TaskEventCore;
 
-pub fn routes() -> Router<AppState> {
+pub fn routes() -> Router<RESTServer> {
     debug!("Setting up health API routes");
     Router::new().route("/", get(health))
 }
@@ -20,7 +21,7 @@ pub fn routes() -> Router<AppState> {
     tag = "health"
 )]
 #[instrument(skip(state))]
-async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, String)> {
+async fn health(State(state): State<RESTServer>) -> Result<String, (StatusCode, String)> {
     info!("Health check requested");
 
     // Check if the database connection is still alive
