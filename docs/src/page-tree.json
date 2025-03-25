@@ -16,7 +16,7 @@
             "icon": "GraduationCap",
             "index": 0
           },
-          "rawContent": "export const metadata = {\r\n  title: \"Core Concepts\",\r\n  description:\r\n    \"Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.\",\r\n  keywords: [\r\n    \"task queue\",\r\n    \"asynchronous execution\",\r\n    \"worker_kind\",\r\n    \"task_kind\",\r\n    \"task priority\",\r\n    \"task status\",\r\n    \"task ID\",\r\n    \"message broker\",\r\n    \"RabbitMQ\",\r\n    \"workers\",\r\n    \"Postgres\",\r\n    \"publishers\",\r\n    \"relay\",\r\n    \"REST API\",\r\n    \"task publishing\",\r\n    \"task results\",\r\n    \"horizontal scaling\",\r\n    \"multi-language\",\r\n    \"interoperability\",\r\n    \"Python SDK\",\r\n    \"Rust\",\r\n    \"JavaScript\",\r\n    \"async functions\",\r\n    \"pydantic\",\r\n    \"type safety\",\r\n    \"hot reloading\",\r\n    \"developer experience\",\r\n    \"observability\",\r\n    \"system architecture\",\r\n    \"task routing\",\r\n    \"task execution\",\r\n    \"database integration\",\r\n    \"service integration\",\r\n  ],\r\n  openGraph: {\r\n    type: \"website\",\r\n    locale: \"en_US\",\r\n    siteName: \"TacoQ Docs\",\r\n    title: \"Core Concepts | TacoQ Docs\",\r\n    description:\r\n      \"Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.\",\r\n  },\r\n};\r\n\r\n# What is TacoQ?\r\n\r\nTacoQ is a task queue system that allows you to schedule tasks to be executed\r\nasynchronously in workers outside your application. (e.g. in a different container).\r\n\r\n# Core Concepts: Rapid-fire Overview\r\n\r\nTo properly use TacoQ, it is recommended that you have a basic understanding\r\nof the core concepts of task queues. This section will provide a rapid-fire\r\noverview of the most important topics so you can hit the ground running.\r\n\r\n## Tasks\r\n\r\nTasks are a unit of work that can be scheduled to be executed asynchronously.\r\nHere are some core properties of tasks that you should know about:\r\n\r\n- Tasks have a `worker_kind` and a `task_kind`, which are used to identify\r\n  which set of workers should execute each task (respectively). If you are\r\n  familiar with message queues, you can think of them as routing keys.\r\n- Tasks have a `priority` value, which is used to sort tasks and determine which\r\n  ones to assign to workers first. Once a task reaches a worker, its priority\r\n  will no longer matter and it will be executed no matter what its priority is.\r\n- When generated, tasks get an `id`, which is a unique identifier for the task\r\n  that can be later used to retrieve the task's status and results.\r\n- Tasks have a `status` that can be `PENDING`, `RUNNING`, or `COMPLETED`. If\r\n  the task has been completed, the `is_error` field will be set to either `true`\r\n  or `false` depending on the success of the task.\r\n\r\n## Message Broker\r\n\r\nThe message broker carries task assignments, updates, and results across the\r\nentire TacoQ system. The broker is also responsible for routing the tasks to the\r\ncorrect set of workers based on its properties.\r\n\r\n<Note>\r\n  TacoQ uses [RabbitMQ](https://www.rabbitmq.com/) as its message broker.\r\n</Note>\r\n\r\n## Workers\r\n\r\nWorkers receive task assignments from the message broker, execute them, and then\r\nsend the result back through the message broker so they can be stored in the database.\r\n\r\n<Note>TacoQ uses [Postgres](https://www.postgresql.org/) as its database.</Note>\r\n\r\n## Publishers\r\n\r\nPublishers are services that publish tasks to the message broker.\r\n\r\n<Tip>\r\n  The publisher does not need to be a dedicated application. Instead, any\r\n  service can embed the publisher in its code to publish tasks. (even workers!).\r\n</Tip>\r\n\r\n## Relay\r\n\r\nThe relay is a unique concept to TacoQ. It is a service that acts as TacoQ's\r\nengine, and has the following characteristics:\r\n\r\n- Hosts a REST API that enables any SDK or even non-supported languages to\r\n  retrieve a task's result and status. Task publishing is done through the\r\n  message broker when possible, but the relay also allows for task publishing\r\n  for languages without an SDK.\r\n- Acts as a permanent consumer of messages from the broker to update the\r\n  database with the latest task statuses and results.\r\n- Is horizontally scalable and can be replicated to run thousands of instances.\r\n\r\n# What makes TacoQ different?\r\n\r\nTacoQ aims to differentiate itself from other task queues by providing the\r\nfollowing features:\r\n\r\n- Multi-language interoperability (e.g. schedule a CPU-intensive task to be\r\n  executed by a Rust worker from a Python application, generate a cute PDF\r\n  in a Javascript worker from a Rust API).\r\n- Modern SDKs for popular languages like Python, supporting async functions,\r\n  `pydantic`, having a type safe API, built-in hot reloading, and more.\r\n- Integration via REST API, allowing languages without a dedicated SDK to\r\n  easily schedule and retrieve task results.\r\n- Great developer experience with a focus on programmer ergonomics, good\r\n  documentation, and explainability (for example, with built-in observability).\r\n\r\n<Tip>\r\n  You can learn more about TacoQ's architecture and design in the [System\r\n  Architecture](/technical-reference/system-architecture) section.\r\n</Tip>\r\n",
+          "rawContent": "export const metadata = {\r\n  title: \"Core Concepts\",\r\n  description:\r\n    \"Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.\",\r\n  keywords: [\r\n    \"task queue\",\r\n    \"asynchronous execution\",\r\n    \"worker_kind\",\r\n    \"task_kind\",\r\n    \"task priority\",\r\n    \"task status\",\r\n    \"task ID\",\r\n    \"message broker\",\r\n    \"RabbitMQ\",\r\n    \"workers\",\r\n    \"Postgres\",\r\n    \"publishers\",\r\n    \"relay\",\r\n    \"REST API\",\r\n    \"task publishing\",\r\n    \"task results\",\r\n    \"horizontal scaling\",\r\n    \"multi-language\",\r\n    \"interoperability\",\r\n    \"Python SDK\",\r\n    \"Rust\",\r\n    \"JavaScript\",\r\n    \"async functions\",\r\n    \"pydantic\",\r\n    \"type safety\",\r\n    \"hot reloading\",\r\n    \"developer experience\",\r\n    \"observability\",\r\n    \"system architecture\",\r\n    \"task routing\",\r\n    \"task execution\",\r\n    \"database integration\",\r\n    \"service integration\",\r\n  ],\r\n  openGraph: {\r\n    type: \"website\",\r\n    locale: \"en_US\",\r\n    siteName: \"TacoQ Docs\",\r\n    title: \"Core Concepts | TacoQ Docs\",\r\n    description:\r\n      \"Understand the core concepts of task queues, TacoQ, and how everything fits together at a basic level.\",\r\n  },\r\n};\r\n\r\n# What is TacoQ?\r\n\r\nTacoQ is a task queue system that allows you to schedule tasks to be executed\r\nasynchronously in workers outside your application. (e.g. in a different container).\r\n\r\n# Core Concepts: Rapid-fire Overview\r\n\r\nTo properly use TacoQ, it is recommended that you have a basic understanding\r\nof the core concepts of task queues. This section will provide a rapid-fire\r\noverview of the most important topics so you can hit the ground running.\r\n\r\n## Tasks\r\n\r\nTasks are a unit of work that can be scheduled to be executed asynchronously.\r\nHere are some core properties of tasks that you should know about:\r\n\r\n- Tasks have a `worker_kind` and a `task_kind`, which are used to identify\r\n  which set of workers should execute each task (respectively). If you are\r\n  familiar with message queues, you can think of them as routing keys.\r\n- Tasks have a `priority` value, which is used to sort tasks and determine which\r\n  ones to assign to workers first. Once a task reaches a worker, its priority\r\n  will no longer matter and it will be executed no matter what its priority is.\r\n- When generated, tasks get an `id`, which is a unique identifier for the task\r\n  that can be later used to retrieve the task's status and results.\r\n- Tasks have a `status` that can be `PENDING`, `RUNNING`, or `COMPLETED`. If\r\n  the task has been completed, the `is_error` field will be set to either `true`\r\n  or `false` depending on the success of the task.\r\n\r\n## Message Broker\r\n\r\nThe message broker carries task assignments, updates, and results across the\r\nentire TacoQ system. The broker is also responsible for routing the tasks to the\r\ncorrect set of workers based on its properties.\r\n\r\n<Note>\r\n  TacoQ uses [RabbitMQ](https://www.rabbitmq.com/) as its message broker.\r\n</Note>\r\n\r\n## Workers\r\n\r\nWorkers receive task assignments from the message broker, execute them, and then\r\nsend the result back through the message broker so they can be stored in the database.\r\n\r\n<Note>\r\nTacoQ uses [Postgres](https://www.postgresql.org/) as its database.\r\n</Note>\r\n\r\n## Publishers\r\n\r\nPublishers are services that publish tasks to the message broker.\r\n\r\n<Tip>\r\n  The publisher does not need to be a dedicated application. Instead, any\r\n  service can embed the publisher in its code to publish tasks. (even workers!).\r\n</Tip>\r\n\r\n## Relay\r\n\r\nThe relay is a unique concept to TacoQ. It is a service that acts as TacoQ's\r\nengine, and has the following characteristics:\r\n\r\n- Hosts a REST API that enables any SDK or even non-supported languages to\r\n  retrieve a task's result and status. Task publishing is done through the\r\n  message broker when possible, but the relay also allows for task publishing\r\n  for languages without an SDK.\r\n- Acts as a permanent consumer of messages from the broker to update the\r\n  database with the latest task statuses and results.\r\n- Is horizontally scalable and can be replicated to run thousands of instances.\r\n\r\n# What makes TacoQ different?\r\n\r\nTacoQ aims to differentiate itself from other task queues by providing the\r\nfollowing features:\r\n\r\n- Multi-language interoperability (e.g. schedule a CPU-intensive task to be\r\n  executed by a Rust worker from a Python application, generate a cute PDF\r\n  in a Javascript worker from a Rust API).\r\n- Modern SDKs for popular languages like Python, supporting async functions,\r\n  `pydantic`, having a type safe API, built-in hot reloading, and more.\r\n- Integration via REST API, allowing languages without a dedicated SDK to\r\n  easily schedule and retrieve task results.\r\n- Great developer experience with a focus on programmer ergonomics, good\r\n  documentation, and explainability (for example, with built-in observability).\r\n\r\n<Tip>\r\n  You can learn more about TacoQ's architecture and design in the [System\r\n  Architecture](/technical-reference/system-architecture) section.\r\n</Tip>\r\n",
           "headers": [
             {
               "title": "What is TacoQ?",
@@ -93,9 +93,9 @@
     {
       "metadata": {
         "title": "Technical Reference",
-        "description": "Learn about the technical details of TacoQ.",
+        "description": "Technical details about TacoQ.",
         "icon": "BookOpen",
-        "index": 2
+        "index": 1
       },
       "children": [
         {
@@ -244,6 +244,100 @@
           },
           "rawContent": "export const metadata = {\r\n  title: \"Benchmarks\",\r\n  description:\r\n    \"Learn how TacoQ compares to other task queues in terms of performance and scalability.\",\r\n  keywords: [\r\n    \"benchmarks\",\r\n    \"performance metrics\",\r\n    \"task queue comparison\",\r\n    \"scalability tests\",\r\n    \"performance testing\",\r\n    \"system performance\",\r\n    \"throughput\",\r\n    \"latency\",\r\n    \"comparative analysis\",\r\n    \"queue performance\",\r\n    \"system metrics\",\r\n    \"performance evaluation\",\r\n    \"task processing speed\",\r\n    \"scaling benchmarks\",\r\n  ],\r\n  openGraph: {\r\n    type: \"website\",\r\n    locale: \"en_US\",\r\n    siteName: \"TacoQ Docs\",\r\n    title: \"Benchmarks | TacoQ Docs\",\r\n    description:\r\n      \"Learn how TacoQ compares to other task queues in terms of performance and scalability.\",\r\n  },\r\n};\r\n\r\n<Warning>This section is under construction! Please check back soon :)</Warning>\r\n",
           "headers": []
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "title": "Guides",
+        "description": "Tutorials for common tasks using TacoQ.",
+        "icon": "Map",
+        "index": 2
+      },
+      "children": [
+        {
+          "url": "/guides/serialization",
+          "metadata": {
+            "title": "Serialization & Versioning",
+            "description": "Optimize your task size and make them backwards and forwards compatible.",
+            "icon": "Package",
+            "index": 1
+          },
+          "rawContent": "# Motivation\r\n\r\nPassing data between services raises two big issues: performance and versioning:\r\n\r\n- **Performance**: The size of the data you are sending through the broker can\r\n  have a significant impact on the performance of your system.\r\n- **Versioning**: If you wish to change the schema of the input data of your \r\n  task, you need to ensure it is backwards compatible with the previous schema.\r\n\r\nProper serialization, clear schemas, and versioning strategies solve both problems.\r\n\r\n# Serialization Strategies\r\n\r\n## Simple Formats\r\n\r\n### JSON\r\n\r\nJSON is easy, fast to set up, and widely supported. If you're doing something\r\nsmall or medium-sized, it's a great choice.\r\n\r\n<Tip>\r\n  This can also be optimized through the use of [MessagePack](https://msgpack.org/),\r\n  which is a binary format that is more compact than JSON and faster to parse.\r\n</Tip>\r\n\r\n### CSV\r\n\r\nYou can also communicate information with CSV format, which is especially handy\r\nif you're working with data using something like `pandas` or `polars`.\r\n\r\n<Note>\r\n  [Polars](https://pola.rs/) is a fast, modern alternative to `pandas`. If you haven't already, we recommend giving it a try!\r\n</Note>\r\n\r\n### Simple Compatibility\r\n\r\nIf using JSON or CSV, you can still implement a rudimentary form of backwards\r\ncompatibility by assuming a default value for missing fields, ignoring\r\nfields that are no longer present in the schema, and, in the case of changed\r\nfield names, you can still read the old data by using the old name (you are\r\nimplementing a subset of Avro's schema evolution).\r\n\r\nForwards compatibility (reading data created by a newer version of the schema)\r\nis more complex to do manually. It can be done, but we recommend using a more\r\nserious serialization strategy for this.\r\n\r\n### Testing for Compatibility\r\n\r\nIt is not trivial to ensure that a JSON generated by `pydantic` can be parsed \r\nby a `serde` application.\r\n\r\nIt is a good idea to have **end-to-end** or **contract tests** that validate \r\nthat the publisher and consumer can communicate. If you have a lot of moving \r\nparts all making use of the same data, we recommend looking at a tool like \r\n[Pact](https://pact.io/) to ensure that the data is being serialized and\r\ndeserialized correctly.\r\n\r\n<Tip>\r\n  There also exist schema validation tools like [JSON Schema](https://json-schema.org/),\r\n  but if you are going through the trouble of using a schema, we recommend just\r\n  skipping to something like Protocol Buffers or Avro, which provide better\r\n  support for schema evolution and optimized encoding.\r\n</Tip>\r\n\r\n## Schema-Based Formats\r\n\r\n### Apache Thrift & Protocol Buffers\r\n\r\n[Apache Thrift](https://thrift.apache.org/) and [Protocol Buffers](https://protobuf.dev/)\r\nare binary encoding formats that are quite similar: they both require the user \r\nto define an interface definition language (IDL) that defines the schema of the\r\ndata:\r\n- Thrift uses `.thrift` files\r\n- Protocol Buffers use `.proto` files\r\n\r\nThese IDLs support the definition of data types, services, data evolution, and \r\nmore. You can then use them to generate code for the language you are using,\r\nand encode and decode them in a binary format.\r\n\r\nThese tools have obvious synergies with TacoQ due to having the guarantee that\r\nthe publisher and consumer are using the same schema while having idiomatic\r\ncode generation for the language you are using.\r\n\r\n<Note>\r\n  At Taco, we generally avoid code generation due to its complexity and \r\n  maintenance cost, though we won't dive into the full rationale here. If you\r\n  prefer a lower overhead approach, Avro is a great alternative.\r\n</Note>\r\n\r\n### Apache Avro\r\n\r\n[Apache Avro](https://avro.apache.org/) is a binary format that is similar to\r\nProtocol Buffers and Thrift, but its IDL is instead written using JSON. You can\r\nthen use primitive libraries like `fastavro` to encode and decode the data into\r\nyour own objects in that language.\r\n\r\nIt is lower overhead and does not require code-gen (though it exists!). It also\r\nsupports dynamically updating schemas, which means you can share the schema at\r\nruntime, and the consumer can still read the data, either via an endpoint or\r\nattaching the schema directly to the message.\r\n\r\n<Tip>\r\n  Check out our [Python](https://github.com/taco-xyz/tacoq/blob/main/client_sdks/python/tacoq/core/models/avro_serializable_base_model.py) \r\n  implementation. We believe it is simple and robust.\r\n</Tip>\r\n\r\n# Breaking Changes\r\n\r\nIt is likely that you will eventually need to make breaking changes to the \r\nschema that cannot be versioned. In this case, you should create an entirely\r\nnew `task_kind_v2`.\r\n\r\n<Note>\r\n  **Pattern: Task Redirection** \r\n  \r\n  For breaking schema changes, create a new task (e.g., `task_kind_v2`) like you\r\n  would with a REST endpoint. Refactor the old V1 task to only transform and forward\r\n  data to new tasks. \r\n  \r\n  This way, you know for certain that V1 is consuming V1 data, and V2 is \r\n  consuming V2 data, without having to pollute the code with both versions in\r\n  the same function.\r\n  \r\n  Remember that you now need to maintain two tasks. This can get very painful \r\n  very quickly, so you should deprecate it as soon as you can.\r\n</Note>\r\n\r\n# Claim Check Pattern\r\n\r\nWhen dealing with large payloads, it's important to remember that message \r\nbrokers are optimized for small, fast messages-not large data blobs. For large\r\npayloads, avoid message brokers. Instead, store data separately and reference \r\nit by ID. This is called the [Claim Check Pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html).\r\n\r\n# Recommend Reading\r\n\r\nThis small guide can only do so much to explain the intricacies of \r\nserialization and versioning. If you want to do a deep dive into how to version\r\nyour tasks, we recommend the following resources:\r\n\r\n- [Designing Data-Intensive Applications](https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/), \r\n  Martin Kleppmann - **Chapter 4. Encoding and Evolution**\r\n- [Building Microservices](https://www.oreilly.com/library/view/building-microservices-2nd/9781492034018/), \r\n  Sam Newman - **Chapter 5. Implemeting Microservice Communication**\r\n\r\n<Tip>\r\n    These are also great books in general, and we recommend them wholeheartedly!\r\n</Tip>\r\n\r\n\r\n\r\n",
+          "headers": [
+            {
+              "title": "Motivation",
+              "type": "h1"
+            },
+            {
+              "title": "Serialization Strategies",
+              "type": "h1"
+            },
+            {
+              "title": "Simple Formats",
+              "type": "h2"
+            },
+            {
+              "title": "JSON",
+              "type": "h3"
+            },
+            {
+              "title": "CSV",
+              "type": "h3"
+            },
+            {
+              "title": "Simple Compatibility",
+              "type": "h3"
+            },
+            {
+              "title": "Testing for Compatibility",
+              "type": "h3"
+            },
+            {
+              "title": "Schema-Based Formats",
+              "type": "h2"
+            },
+            {
+              "title": "Apache Thrift & Protocol Buffers",
+              "type": "h3"
+            },
+            {
+              "title": "Apache Avro",
+              "type": "h3"
+            },
+            {
+              "title": "Breaking Changes",
+              "type": "h1"
+            },
+            {
+              "title": "Claim Check Pattern",
+              "type": "h1"
+            },
+            {
+              "title": "Recommend Reading",
+              "type": "h1"
+            }
+          ]
+        },
+        {
+          "url": "/guides/same-app-worker-pattern",
+          "metadata": {
+            "title": "Same-app Worker",
+            "description": "Set up a worker and publisher in the same application to make your life easier.",
+            "icon": "Layers2",
+            "index": 2
+          },
+          "rawContent": "# Hot Reloading\r\nYou can develop your worker with hot reloading by running it in the same\r\n\r\n# Implementation\r\n\r\nYou can set up the worker to run along with the rest of your application\r\nby running it in the background in an idiomatic way:\r\n\r\n```python\r\n# Set up your application as normal\r\nworker_app = WorkerApplication(...)\r\n\r\n# Instead of running the worker app via the CLI or a dedicated \r\n# entrypoint, run it the background as a co-routine.\r\nasyncio.create_task(worker_app.entrypoint())\r\n\r\n# When you are done using your worker, you can stop it \r\n# by calling the shutdown method.\r\nworker_app.shutdown()\r\n\r\n# If you want to wait for the worker to finish cleaning up the remaining \r\n# tasks, you can await the `wait_for_shutdown` method.\r\nawait worker_app.wait_for_shutdown()\r\n```\r\n\r\n<Warning>\r\n    This pattern is **not recommended for production use** because:\r\n    - It is important to separate the resources used by your worker and your \r\n      application.\r\n    - You cannot horizontally scale your worker by running multiple instances.\r\n    - Your worker may have blocking tasks that will interfere with your \r\n      application's performance.\r\n    \r\n    If you are using an asynchronous runtime like `tokio`, the impact of blocking\r\n    tasks may not be as pronounced due to the multiple threads available. In \r\n    `asyncio`, however, a blocking task in your worker will block the entire \r\n    process.\r\n</Warning>\r\n\r\n\r\n",
+          "headers": [
+            {
+              "title": "Hot Reloading",
+              "type": "h1"
+            },
+            {
+              "title": "Implementation",
+              "type": "h1"
+            }
+          ]
         }
       ]
     }

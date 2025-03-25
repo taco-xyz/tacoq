@@ -13,6 +13,10 @@ import {
   ChartNoAxesCombined,
   Rocket,
   Cog,
+  Layers2,
+  Map,
+  Coffee,
+  Package,
 } from "lucide-react";
 
 const icons = {
@@ -30,6 +34,10 @@ const icons = {
   ChartNoAxesCombined,
   Rocket,
   Cog,
+  Layers2,
+  Map,
+  Coffee,
+  Package,
 };
 
 export function getIcon(iconName: string) {
