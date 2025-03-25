@@ -16,6 +16,9 @@ import React, {
 import { usePageNavigation } from "./PageNavigationContext";
 import { usePageTree } from "../../../../contexts/PageTreeContext";
 
+// Next Imports
+import { usePathname } from "next/navigation";
+
 /** Content to display in the tooltip */
 export interface TooltipContent {
   /** Title text shown in tooltip */
@@ -35,8 +38,8 @@ export interface TooltipAppearance {
   arrowPosition: "top" | "bottom" | null;
   /** Horizontal position relative to parent container */
   leftPosition: number | null;
-  /** Whether the tooltip should be visible */
-  visible: boolean;
+  /** Opacity of the tooltip */
+  opacity: 100 | 50 | 0;
   /** Direction of the tooltip animation */
   animationDirection: "up" | "down" | null;
 }
@@ -81,12 +84,19 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  * ```
  */
 export function TooltipProvider({ children }: { children: React.ReactNode }) {
+  // Extract the pathname
+  const pathname = usePathname();
+
   // Extract the page tree context
   const { getPageByTitle, visiblePagesTitles } = usePageTree();
 
   // Extract the page navigation context
-  const { focusedPageTitle, sidebarContainerRef, currentFocusedPageRef } =
-    usePageNavigation();
+  const {
+    focusedPageTitle,
+    sidebarContainerRef,
+    currentFocusedPageRef,
+    endKeyboardFocus,
+  } = usePageNavigation();
 
   // State to manage the tooltip content, including both current and previous content
   const [contentState, setContentState] = useState<{
@@ -105,7 +115,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     leftPosition: null,
     topPosition: null,
     arrowPosition: null,
-    visible: false,
+    opacity: 0,
     animationDirection: null,
   });
 
@@ -138,9 +148,10 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
       previous: prev.current,
       current: newContent,
     }));
+
     setAppearanceState((prev) => ({
       ...prev,
-      visible: true,
+      opacity: 100,
     }));
   }, []);
 
@@ -154,7 +165,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
       // Hide tooltip
       setAppearanceState((prev) => ({
         ...prev,
-        visible: false,
+        opacity: 0,
       }));
     }, 150);
   }, []);
@@ -167,11 +178,13 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     // Hide tooltip immediately
     setAppearanceState((prev) => ({
       ...prev,
-      visible: false,
+      opacity: 0,
     }));
-  }, []);
+    // End keyboard focus mode
+    endKeyboardFocus();
+  }, [endKeyboardFocus]);
 
-  // Hide the tooltip when scrolling the whole page or wheelling the sidebar container to avoid weird overlapping behavior
+  // Hide the tooltip instantly when scrolling the whole page or wheelling the sidebar container to avoid weird overlapping behavior
   useEffect(() => {
     const sidebarRef = sidebarContainerRef.current;
     sidebarRef?.addEventListener("wheel", hideTooltipInstantly);
@@ -183,7 +196,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     };
   }, [hideTooltipInstantly, sidebarContainerRef]);
 
-  // Transform the tooltip when the focused page changes
+  // Show/Hide the tooltip when the focused page changes
   useEffect(() => {
     if (!focusedPageTitle) {
       hideTooltip();
@@ -204,6 +217,15 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     });
   }, [focusedPageTitle, showTooltip, hideTooltip, getPageByTitle]);
 
+  // Set the tooltip opacity to 50 when the pathname changes in order to better see the new page
+  // If the tooltip was hidden, keep it hidden
+  useEffect(() => {
+    setAppearanceState((prev) => ({
+      ...prev,
+      opacity: prev.opacity === 0 ? 0 : 50,
+    }));
+  }, [pathname]);
+
   // Update tooltip appearance when it's content changes or when it's set to visible
   useLayoutEffect(() => {
     if (!currentContentContainerRef.current) return;
@@ -215,7 +237,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
         !currentFocusedPageRef.current ||
         !sidebarContainerRef.current ||
         !contentContainerRef.current ||
-        !appearanceState.visible
+        appearanceState.opacity === 0
       ) {
         return;
       }
@@ -282,7 +304,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
     return () => resizeObserver.disconnect();
   }, [
     contentState,
-    appearanceState.visible,
+    appearanceState.opacity,
     currentFocusedPageRef,
     sidebarContainerRef,
     visiblePagesTitles,
