@@ -81,7 +81,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={clsx(geistSans.variable, geistMono.variable, "dark custom-body-scrollbar")}
+      className={clsx(
+        geistSans.variable,
+        geistMono.variable,
+        "dark custom-body-scrollbar"
+      )}
       suppressHydrationWarning
     >
       <head>

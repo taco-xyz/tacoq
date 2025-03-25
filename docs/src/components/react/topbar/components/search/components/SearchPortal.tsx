@@ -63,7 +63,7 @@ export default function SearchDialog() {
               : "opacity-0 md:scale-[0.97] scale-100 md:translate-y-[2px] translate-y-full"
           )}
         >
-          <div className="py-4 px-5 border-b-[1.5px] gap-x-6 dark:border-zinc-950 border-zinc-200 flex flex-row items-center justify-between">
+          <div className="py-4 px-5 gap-x-6 flex flex-row items-center justify-between">
             <input
               ref={inputRef}
               type="text"
@@ -86,7 +86,7 @@ export default function SearchDialog() {
               <X className="size-6" />
             </button>
           </div>
-          <div className="border-t-[1.5px] dark:border-white/10 border-zinc-100 py-4 px-5">
+          <div className="border-t-[1.5px] dark:border-white/10 border-zinc-200 py-4 px-5">
             <div className="text-sm dark:text-white/60 text-zinc-500">
               No recent searches
             </div>

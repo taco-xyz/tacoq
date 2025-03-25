@@ -169,7 +169,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
           // Code block
           "[pre_&]:py-4 [pre_&]:px-0 [pre_&]:bg-transparent",
           // Inline code
-          "py-0.5 px-1.5 rounded-[5px] bg-zinc-100 dark:bg-zinc-800 [&:not(pre_code)]:mx-1 [blockquote_&]:text-inherit [blockquote_&]:bg-inherit [blockquote_&]:ring-1 [blockquote_&]:ring-inherit [blockquote_&]:ring-inset",
+          "py-0.5 px-1.5 rounded-[5px] bg-zinc-100 dark:bg-zinc-800 [&:not(pre_code)]:mx-1 [&:not(pre_code)]:break-words",
+          // If the code is inside a blockquote, it should inherit the blockquote styles
+          "[blockquote_&]:text-inherit [blockquote_&]:bg-inherit [blockquote_&]:ring-1 [blockquote_&]:ring-inherit [blockquote_&]:ring-inset",
           className
         )}
       >

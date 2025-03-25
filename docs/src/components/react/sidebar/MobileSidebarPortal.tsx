@@ -80,8 +80,8 @@ export default function MobileSidebarPortal() {
               </div>
 
               {/* Decorative Background gradient */}
-              <div className="absolute overflow-hidden h-full mx-auto left-1/2 -translate-x-1/2 -bottom-6 z-[-1]">
-                <div className="bg-radial origin-center h-20 w-[20rem] dark:opacity-3 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+              <div className="absolute overflow-hidden h-full mx-auto left-1/2 -translate-x-1/2 -bottom-6 z-[-1] pointer-events-none">
+                <div className="bg-radial origin-center h-20 w-[20rem] dark:opacity-3 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
               </div>
             </div>
           </div>

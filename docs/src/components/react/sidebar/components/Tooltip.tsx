@@ -17,7 +17,7 @@ export default function Tooltip() {
         topPosition,
         arrowPosition,
         leftPosition,
-        visible,
+        opacity,
         animationDirection,
       },
       content,
@@ -32,9 +32,11 @@ export default function Tooltip() {
       className={clsx(
         "fixed dark:bg-zinc-900 z-50 bg-white rounded-md flex w-fit flex-col items-center justify-center min-w-72 ring-1 ring-zinc-200 dark:ring-white/10 shadow-sm shadow-zinc-900/10 dark:shadow-white/5",
         "transition-all duration-100 ease-in-out",
-        visible
-          ? "opacity-100 pointer-events-auto"
-          : "opacity-0 pointer-events-none"
+        {
+          "opacity-100 pointer-events-auto": opacity === 100,
+          "opacity-50 pointer-events-auto": opacity === 50,
+          "opacity-0 pointer-events-none": opacity === 0,
+        }
       )}
       style={{
         top: topPosition ?? undefined,
@@ -53,7 +55,7 @@ export default function Tooltip() {
       {/* Tooltip content */}
       <div className="flex flex-col w-full">
         {/* Page preview */}
-        <div className="w-full px-2.5 justify-start gap-y-1 py-2 border-b-[1.5px] dark:border-zinc-950 border-zinc-200 overflow-hidden relative">
+        <div className="w-full px-2.5 justify-start gap-y-1 py-2 overflow-hidden relative">
           {/* Content container with dynamic height */}
           <div
             ref={contentContainerRef}
@@ -105,7 +107,7 @@ export default function Tooltip() {
         </div>
 
         {/* Hot-key Info */}
-        <div className="flex flex-row items-center justify-start px-2.5 py-2.5 border-t-[1.5px] dark:border-white/10 border-zinc-100 w-full overflow-hidden">
+        <div className="flex flex-row items-center justify-start px-2.5 py-2.5 border-t-[1.5px] dark:border-white/10 border-zinc-200 w-full overflow-hidden">
           <div className="flex flex-row items-center gap-x-1.5 pr-10">
             <div className="dark:text-white/70 flex items-center justify-center text-zinc-500 dark:bg-zinc-950/70 ring-1 ring-zinc-200 dark:ring-white/5   bg-zinc-200/40 transition-all ease-in-out duration-150 cursor-pointer p-1 rounded-md">
               <ArrowUp className="size-3" />
