@@ -41,8 +41,8 @@ export function TopBar() {
             </SearchModalProvider>
           </div>
 
-          <div className="flex flex-row items-center sm:gap-x-8 gap-x-6">
-            <div className="h-fit sm:w-[300px] md:w-[400px] w-fit my-auto mx-auto inset-0 lg:hidden flex relative justify-center">
+          <div className="flex flex-row items-center md:gap-x-8 gap-x-6">
+            <div className="h-fit sm:w-[300px] w-fit my-auto mx-auto inset-0 lg:hidden flex relative justify-center">
               {/* Decorative Background gradient */}
               <div className="absolute overflow-hidden h-full -bottom-5 hidden md:block z-[-1] pointer-events-none">
                 <div className="bg-radial origin-center h-36 md:w-[55rem] dark:opacity-20 opacity-30 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
@@ -61,7 +61,7 @@ export function TopBar() {
             </div>
 
             {/* Theme Toggle and GitHub Link */}
-            <div className="lg:flex w-[100px] hidden flex-row items-center justify-end gap-x-8">
+            <div className="md:flex lg:w-[100px] hidden flex-row items-center justify-end gap-x-8">
               <ThemeToggle />
               <GitHubLink />
             </div>
