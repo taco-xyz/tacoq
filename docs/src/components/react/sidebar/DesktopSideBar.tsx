@@ -84,8 +84,9 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
               startKeyboardFocus();
             }}
             onBlur={(e) => {
-              // End keyboard focus only on tab navigation
+              // End keyboard focus when tab navigation ends
               if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                console.log("Tab navigation ended");
                 endKeyboardFocus();
               }
             }}

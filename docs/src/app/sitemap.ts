@@ -50,8 +50,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const pageTree = pageTreeJson as PageTree;
   const urls = getAllUrls(pageTree.children);
 
-  console.log(urls);
-
   return [
     {
       url: "https://www.tacodivision.com",
