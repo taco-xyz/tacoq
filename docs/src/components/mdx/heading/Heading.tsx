@@ -15,6 +15,7 @@ import CopyLinkButton from "./components/CopyLinkButton";
 // Utils Imports
 import clsx from "clsx";
 
+// Interface for the Heading component props
 interface HeadingProps {
   id: string;
   Level: HeadingTypes;
@@ -22,6 +23,7 @@ interface HeadingProps {
   className: string;
 }
 
+// Styles for different heading levels
 const headingStyles = {
   [HeadingTypes.H1]:
     "text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-4",
@@ -37,7 +39,13 @@ const headingStyles = {
     "text-base font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start",
 };
 
-export default function Heading({ id, Level, children, className }: HeadingProps) {
+// Heading component
+export default function Heading({
+  id,
+  Level,
+  children,
+  className,
+}: HeadingProps) {
   const router = useRouter();
 
   // Clicking on a heading title will scroll to it
@@ -54,26 +62,21 @@ export default function Heading({ id, Level, children, className }: HeadingProps
     }
   }, [id, router]);
 
+  // Render the Heading component
   return (
-    <button
+    <Level
+      id={id}
       onClick={handleClick}
-      // Don't focus this element on tab navigation
-      tabIndex={-1}
-      className="relative group flex flex-row items-center w-fit cursor-pointer outline-hidden"
+      className={clsx(
+        headingStyles[Level],
+        "transition-colors relative duration-150 ease-in-out scroll-mt-[94px] w-fit cursor-pointer outline-hidden group", // 94px scroll offset to account for the topbar
+        className
+      )}
     >
-      <Level
-        id={id}
-        className={clsx(
-          headingStyles[Level],
-          "transition-colors duration-150 ease-in-out scroll-mt-[94px]", // 94px scroll offset to account for the topbar
-          className
-        )}
-      >
-        {children}
-      </Level>
-      <div className="absolute md:block hidden right-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-in-out pr-3">
+      {children}
+      <div className="absolute md:flex items-center justify-center h-full top-0 bottom-0 hidden right-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-in-out pr-3">
         <CopyLinkButton headerId={id} />
       </div>
-    </button>
+    </Level>
   );
 }
