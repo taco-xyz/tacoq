@@ -120,6 +120,35 @@ impl RabbitMQTaskEventConsumer {
 
         Ok(consumer)
     }
+
+    async fn reconnect(&self) -> Result<Consumer, Box<dyn Error + Send + Sync>> {
+        // Attempt to reconnect
+        let mut connection = self.connection.lock().await;
+        *connection = match connection.reconnect().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                error!(error = %e, "Failed to reconnect to RabbitMQ");
+                return Err(e);
+            }
+        };
+
+        let new_channel = match connection.create_channel().await {
+            Ok(ch) => ch,
+            Err(e) => {
+                error!(error = %e, "Failed to create channel");
+                return Err(e);
+            }
+        };
+        let consumer = match self.consumer(&new_channel).await {
+            Ok(consumer) => consumer,
+            Err(e) => {
+                error!(error = %e, "Failed to create consumer");
+                return Err(e);
+            }
+        };
+
+        return Ok(consumer);
+    }
 }
 
 impl TaskEventConsumer for RabbitMQTaskEventConsumer {
@@ -172,27 +201,10 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
                         lapin::Error::IOError(e) => {
                             error!(error = %e, "Connection aborted, attempting to reconnect");
 
-                            // Attempt to reconnect
-                            let mut connection = self.connection.lock().await;
-                            *connection = match connection.reconnect().await {
-                                Ok(conn) => conn,
-                                Err(e) => {
-                                    error!(error = %e, "Failed to reconnect to RabbitMQ");
-                                    continue;
-                                }
-                            };
-
-                            let new_channel = match connection.create_channel().await {
-                                Ok(ch) => ch,
-                                Err(e) => {
-                                    error!(error = %e, "Failed to create channel");
-                                    continue;
-                                }
-                            };
-                            consumer = match self.consumer(&new_channel).await {
+                            consumer = match self.reconnect().await {
                                 Ok(consumer) => consumer,
                                 Err(e) => {
-                                    error!(error = %e, "Failed to create consumer");
+                                    error!(error = %e, "Failed to reconnect to RabbitMQ");
                                     continue;
                                 }
                             };
