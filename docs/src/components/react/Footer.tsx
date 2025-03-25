@@ -69,13 +69,13 @@ export function Footer() {
         </div>
 
         {/* Decorative Background gradient */}
-        <div className="bg-radial absolute origin-center left-1/2 -translate-x-1/2 -bottom-20 h-36 w-[100rem] opacity-10 dark:opacity-4 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+        <div className="bg-radial absolute origin-center left-1/2 -translate-x-1/2 -bottom-20 h-36 w-[100rem] opacity-10 dark:opacity-4 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
       </div>
 
       {/* Copyright */}
       <div className="flex flex-row items-center justify-center w-full max-w-(--breakpoint-2xl) py-8 px-8">
-        <p className="text-zinc-400 dark:text-white/40 text-xs font-mono">
-          &copy; {new Date().getFullYear()} Taco Division. All rights reserved.
+        <p className="text-zinc-400 dark:text-white/40 text-xs font-mono text-center">
+          &copy; {new Date().getFullYear()} Taco Division.<br className="sm:hidden block" /> All rights reserved.
         </p>
       </div>
     </div>

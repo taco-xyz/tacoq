@@ -30,8 +30,8 @@ export function TopBar() {
 
           <div className="h-fit w-[500px] my-auto mx-auto inset-0 hidden lg:flex relative justify-center">
             {/* Decorative Background gradient */}
-            <div className="absolute overflow-hidden h-full -bottom-5 z-[-1]">
-              <div className="bg-radial origin-center h-36 w-[100rem] opacity-25 dark:opacity-15 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+            <div className="absolute overflow-hidden h-full -bottom-5 z-[-1] pointer-events-none">
+              <div className="bg-radial origin-center h-36 w-[100rem] opacity-25 dark:opacity-15 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
             </div>
 
             {/* Desktop Search */}
@@ -44,8 +44,8 @@ export function TopBar() {
           <div className="flex flex-row items-center sm:gap-x-8 gap-x-6">
             <div className="h-fit sm:w-[300px] md:w-[400px] w-fit my-auto mx-auto inset-0 lg:hidden flex relative justify-center">
               {/* Decorative Background gradient */}
-              <div className="absolute overflow-hidden h-full -bottom-5 hidden md:block z-[-1]">
-                <div className="bg-radial origin-center h-36 md:w-[55rem] dark:opacity-20 opacity-30 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+              <div className="absolute overflow-hidden h-full -bottom-5 hidden md:block z-[-1] pointer-events-none">
+                <div className="bg-radial origin-center h-36 md:w-[55rem] dark:opacity-20 opacity-30 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
               </div>
 
               {/* Tablet and Mobile Search */}
@@ -83,8 +83,8 @@ export function TopBar() {
       <div className="md:hidden w-full relative flex items-center justify-center">
         <Breadcrumbs />
         {/* Decorative Background gradient */}
-        <div className="absolute overflow-hidden h-[50px] md:hidden z-[-1] -bottom-7 w-full flex items-center justify-center">
-          <div className="bg-radial origin-center h-20 w-[40rem] dark:opacity-4 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% " />
+        <div className="absolute overflow-hidden h-[50px] md:hidden z-[-1] -bottom-7 w-full flex items-center justify-center pointer-events-none">
+          <div className="bg-radial origin-center h-20 w-[40rem] dark:opacity-4 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
         </div>
       </div>
     </div>
