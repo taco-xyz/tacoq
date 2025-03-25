@@ -4,7 +4,6 @@ use axum::{routing::get, Router};
 use tracing::{debug, error, info, instrument};
 
 use crate::lifecycle::RESTServer;
-use crate::task_event_consumer::TaskEventCore;
 
 pub fn routes() -> Router<RESTServer> {
     debug!("Setting up health API routes");
@@ -24,26 +23,21 @@ pub fn routes() -> Router<RESTServer> {
 async fn health(State(state): State<RESTServer>) -> Result<String, (StatusCode, String)> {
     info!("Health check requested");
 
-    // Check if the database connection is still alive
-    let result = state.repository_core.health_check().await;
-    if let Err(e) = result {
-        error!(error = %e, "Database health check failed");
+    let (is_healthy, reports) = state.health_probe.check_health().await;
+
+    if !is_healthy {
+        let error_message = reports
+            .iter()
+            .filter(|report| !report.is_healthy)
+            .map(|report| format!("{}: {}", report.component, report.message))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        error!("Health check failed: {}", error_message);
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
-            "Database is unavailable\n".to_string(),
+            format!("{}\n", error_message),
         ));
-    }
-
-    // // Check if broker connection is still alive
-    // TODO: change the implementation to use an abstracted broker core instead of a rabbitmq channel
-    if let Some(broker_core) = &state.broker_core {
-        if let Err(e) = broker_core.health_check().await {
-            error!(error = %e, "Broker health check failed");
-            return Err((
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Broker is unavailable\n".to_string(),
-            ));
-        }
     }
 
     debug!("Health check successful");

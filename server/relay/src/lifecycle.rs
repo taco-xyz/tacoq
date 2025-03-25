@@ -1,4 +1,5 @@
 use crate::constants::RELAY_QUEUE;
+use crate::health_probe::ServiceHealthProbe;
 use crate::jobs::TaskCleanupJob;
 use crate::repo::{PgRepositoryCore, TaskRepository};
 use crate::server::Server;
@@ -21,12 +22,7 @@ use tracing::{debug, error, info, warn};
 #[derive(Clone)]
 pub struct RESTServer {
     pub task_repository: TaskRepository,
-
-    // Health check variables
-    pub repository_core: PgRepositoryCore,
-    // Here I wanna pass a rabbitmq channel to verify if the connection is still alive
-    // For now I will leave it as is but in the future this will need to be abstracted away
-    pub broker_core: Option<Arc<RabbitMQTaskEventCore>>,
+    pub health_probe: ServiceHealthProbe,
 }
 
 /// Application components that need to be started and shut down
@@ -110,18 +106,21 @@ fn create_repositories(pool: &PgPool) -> TaskRepository {
 /// # Arguments
 ///
 /// * `db_pools` - The database connection pools
+/// * `broker_core` - The broker core for the message queue (used in health check)
 async fn setup_app_state(
     db_pools: &PgPool,
     broker_core: Option<Arc<RabbitMQTaskEventCore>>,
 ) -> RESTServer {
     debug!("Setting up application state");
     let task_repository = create_repositories(db_pools);
+    let repository_core = PgRepositoryCore::new(db_pools.clone());
+
+    let health_probe = ServiceHealthProbe::new(repository_core, broker_core);
 
     info!("Application state initialized successfully");
     RESTServer {
         task_repository,
-        repository_core: PgRepositoryCore::new(db_pools.clone()),
-        broker_core,
+        health_probe,
     }
 }
 

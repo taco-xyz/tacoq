@@ -1,6 +1,7 @@
 mod api;
 mod config;
 mod constants;
+mod health_probe;
 mod jobs;
 mod lifecycle;
 mod models;
