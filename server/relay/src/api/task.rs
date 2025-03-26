@@ -8,8 +8,8 @@ use axum::{
 use tracing::{debug, error, info, instrument};
 use uuid::Uuid;
 
+use crate::lifecycle::AppState;
 use crate::models::{AvroSerializable, Task};
-use crate::AppState;
 
 pub fn routes() -> Router<AppState> {
     debug!("Setting up task API routes");

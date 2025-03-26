@@ -24,6 +24,7 @@ pub struct TaskRunningUpdate {
 // Constructors
 // ----------------------------------------------------------------------------
 
+#[cfg(test)]
 impl TaskRunningUpdate {
     /// Creates a new TaskRunningUpdate with the specified parameters.
     ///
@@ -49,7 +50,7 @@ impl TaskRunningUpdate {
     ///
     /// # Returns
     /// A new TaskRunningUpdate instance
-    pub fn with_id(id: Uuid) -> Self {
+    pub fn _with_id(id: Uuid) -> Self {
         Self {
             id,
             started_at: NaiveDateTime::MIN,
@@ -64,7 +65,7 @@ impl TaskRunningUpdate {
     ///
     /// # Returns
     /// A new TaskRunningUpdate instance
-    pub fn with_started_at(mut self, started_at: NaiveDateTime) -> Self {
+    pub fn _with_started_at(mut self, started_at: NaiveDateTime) -> Self {
         self.started_at = started_at;
         self
     }
@@ -76,7 +77,7 @@ impl TaskRunningUpdate {
     ///
     /// # Returns
     /// A new TaskRunningUpdate instance
-    pub fn with_executed_by(mut self, executed_by: String) -> Self {
+    pub fn _with_executed_by(mut self, executed_by: String) -> Self {
         self.executed_by = executed_by;
         self
     }

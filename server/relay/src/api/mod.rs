@@ -1,6 +1,6 @@
 use axum::Router;
 
-use crate::AppState;
+use crate::lifecycle::AppState;
 
 mod health;
 mod openapi_docs;

@@ -2,7 +2,7 @@ use axum::{routing::get, Json, Router};
 use tracing::{debug, instrument};
 use utoipa::OpenApi;
 
-use crate::AppState;
+use crate::lifecycle::AppState;
 
 #[derive(OpenApi)]
 #[openapi(

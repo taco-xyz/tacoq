@@ -4,6 +4,9 @@ use tracing::{debug, error, info, warn};
 pub struct Config {
     pub broker_url: String,
     pub db_url: String,
+    pub enable_relay_task_consumer: bool,
+    pub enable_relay_cleanup: bool,
+    pub enable_relay_api: bool,
 }
 
 fn load_env() {
@@ -46,7 +49,42 @@ impl Config {
             }
         };
 
+        // If the env var is there log in debug else do nothing
+        let enable_relay_task_consumer = std::env::var("TACOQ_ENABLE_RELAY_TASK_CONSUMER")
+            .ok()
+            .map(|val| {
+                debug!(enable_relay_task_consumer = %val, "Loaded enable relay task consumer");
+                val.parse::<bool>()
+                    .expect("Invalid value for TACOQ_ENABLE_RELAY_TASK_CONSUMER")
+            })
+            .unwrap_or(true);
+
+        let enable_relay_cleanup = std::env::var("TACOQ_ENABLE_RELAY_CLEANUP")
+            .ok()
+            .map(|val| {
+                debug!(enable_relay_cleanup = %val, "Loaded enable relay cleanup");
+                val.parse::<bool>()
+                    .expect("Invalid value for TACOQ_ENABLE_RELAY_CLEANUP")
+            })
+            .unwrap_or(true);
+
+        let enable_relay_api = std::env::var("TACOQ_ENABLE_RELAY_API")
+            .ok()
+            .map(|val| {
+                debug!(enable_relay_api = %val, "Loaded enable relay API");
+                val.parse::<bool>()
+                    .expect("Invalid value for TACOQ_ENABLE_RELAY_API")
+            })
+            .unwrap_or(true);
+
         info!("Application configuration initialized successfully");
-        Config { broker_url, db_url }
+
+        Config {
+            broker_url,
+            db_url,
+            enable_relay_task_consumer,
+            enable_relay_cleanup,
+            enable_relay_api,
+        }
     }
 }
