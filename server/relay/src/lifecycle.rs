@@ -20,14 +20,14 @@ use tracing::{debug, error, info, warn};
 ///
 /// Contains all the repositories used for the application logic and the broker
 #[derive(Clone)]
-pub struct RESTServer {
+pub struct AppState {
     pub task_repository: TaskRepository,
     pub health_probe: ServiceHealthProbe,
 }
 
 /// Application components that need to be started and shut down
 pub struct AppComponents {
-    pub server: Option<Server>,
+    pub rest_server: Option<Server>,
     pub update_consumer: Option<Arc<RabbitMQTaskEventConsumer>>,
     pub task_cleanup_job: Option<Arc<TaskCleanupJob>>,
 }
@@ -110,7 +110,7 @@ fn create_repositories(pool: &PgPool) -> TaskRepository {
 async fn setup_app_state(
     db_pools: &PgPool,
     broker_core: Option<Arc<RabbitMQTaskEventCore>>,
-) -> RESTServer {
+) -> AppState {
     debug!("Setting up application state");
     let task_repository = create_repositories(db_pools);
     let repository_core = PgRepositoryCore::new(db_pools.clone());
@@ -118,7 +118,7 @@ async fn setup_app_state(
     let health_probe = ServiceHealthProbe::new(repository_core, broker_core);
 
     info!("Application state initialized successfully");
-    RESTServer {
+    AppState {
         task_repository,
         health_probe,
     }
@@ -200,7 +200,7 @@ pub async fn initialize_system(
 
     // Initialize optional components based on configuration
     let mut components = AppComponents {
-        server: None,
+        rest_server: None,
         update_consumer: None,
         task_cleanup_job: None,
     };
@@ -264,7 +264,7 @@ pub async fn initialize_system(
         // Create server
         debug!("Creating HTTP server on port 3000");
         let shutdown_rx = shutdown_signal.subscribe();
-        components.server = Some(Server::new(app, 3000, shutdown_rx));
+        components.rest_server = Some(Server::new(app, 3000, shutdown_rx));
         info!(port = 3000, "HTTP server created");
     } else {
         info!("API server is disabled by configuration");
@@ -324,7 +324,7 @@ pub async fn start_background_tasks(
     }
 
     // Start server if enabled
-    if let Some(server) = components.server {
+    if let Some(server) = components.rest_server {
         info!("Starting HTTP server");
         let server_handle = tokio::spawn(async move {
             debug!("HTTP server started");

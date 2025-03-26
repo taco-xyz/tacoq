@@ -121,8 +121,8 @@ impl RabbitMQTaskEventConsumer {
         Ok(consumer)
     }
 
+    /// Reconnects to RabbitMQ and returns a new consumer.
     async fn reconnect(&self) -> Result<Consumer, Box<dyn Error + Send + Sync>> {
-        // Attempt to reconnect
         let mut connection = self.connection.lock().await;
         *connection = match connection.reconnect().await {
             Ok(conn) => conn,
@@ -147,7 +147,7 @@ impl RabbitMQTaskEventConsumer {
             }
         };
 
-        return Ok(consumer);
+        Ok(consumer)
     }
 }
 

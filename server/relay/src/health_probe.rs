@@ -3,7 +3,15 @@ use crate::task_event_consumer::{RabbitMQTaskEventCore, TaskEventCore};
 use std::sync::Arc;
 
 /// Represents the health status of an individual service component
+///
 #[derive(Debug, Clone)]
+/// Represents the health status of a service component
+///
+/// # Fields
+///
+/// * `is_healthy` - Boolean indicating whether the service component is functioning properly
+/// * `component` - Name or identifier of the service component being monitored
+/// * `message` - Detailed status message or description of the current health state
 pub struct ServiceHealth {
     pub is_healthy: bool,
     pub component: String,

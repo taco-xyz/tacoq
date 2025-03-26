@@ -3,9 +3,9 @@ use axum::http::StatusCode;
 use axum::{routing::get, Router};
 use tracing::{debug, error, info, instrument};
 
-use crate::lifecycle::RESTServer;
+use crate::lifecycle::AppState;
 
-pub fn routes() -> Router<RESTServer> {
+pub fn routes() -> Router<AppState> {
     debug!("Setting up health API routes");
     Router::new().route("/", get(health))
 }
@@ -20,7 +20,7 @@ pub fn routes() -> Router<RESTServer> {
     tag = "health"
 )]
 #[instrument(skip(state))]
-async fn health(State(state): State<RESTServer>) -> Result<String, (StatusCode, String)> {
+async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, String)> {
     info!("Health check requested");
 
     let (is_healthy, reports) = state.health_probe.check_health().await;

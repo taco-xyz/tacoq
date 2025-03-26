@@ -2,7 +2,7 @@ use axum::{routing::get, Json, Router};
 use tracing::{debug, instrument};
 use utoipa::OpenApi;
 
-use crate::lifecycle::RESTServer;
+use crate::lifecycle::AppState;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -16,7 +16,7 @@ use crate::lifecycle::RESTServer;
 )]
 struct ApiDoc;
 
-pub fn routes() -> Router<RESTServer> {
+pub fn routes() -> Router<AppState> {
     debug!("Setting up OpenAPI documentation routes");
     Router::new().route("/openapi.json", get(openapi))
 }
