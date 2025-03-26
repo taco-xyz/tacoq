@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{Local, NaiveDateTime};
+use chrono::NaiveDateTime;
 use opentelemetry::propagation::{Extractor, TextMapPropagator};
 use opentelemetry::Context;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
@@ -8,18 +8,22 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 use strum_macros::{Display, EnumString};
-use thiserror::Error; // Add thiserror
+use thiserror::Error;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::{serde_avro_datetime, serde_avro_datetime_opt, AvroSerializable};
 use apache_avro::{serde_avro_bytes_opt, Schema};
 
+// This is currently like this as it is only used for methods used in testing
+#[cfg(test)]
+use chrono::Local;
+
 /// Task-related errors
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Context extraction failed")]
-    ContextExtractionError,
+    _ContextExtractionError,
 }
 
 // Task status enum
@@ -75,6 +79,7 @@ pub struct Task {
     pub otel_ctx_carrier: Option<JsonValue>,
 }
 
+#[cfg(test)]
 impl Task {
     /// Creates a new task with minimal required parameters
     pub fn new(
@@ -101,12 +106,6 @@ impl Task {
         }
     }
 
-    /// Creates a new task with specific ID
-    pub fn with_id(mut self, id: Uuid) -> Self {
-        self.id = id;
-        self
-    }
-
     /// Sets the input data
     pub fn with_input_data(mut self, input_data: Vec<u8>) -> Self {
         self.input_data = Some(input_data);
@@ -126,19 +125,19 @@ impl Task {
     }
 
     /// Sets the assigned worker
-    pub fn executed_by(mut self, worker_name: String) -> Self {
+    pub fn _executed_by(mut self, worker_name: String) -> Self {
         self.executed_by = Some(worker_name);
         self
     }
 
     /// Sets the OpenTelemetry context
-    pub fn with_otel_context(mut self, ctx: JsonValue) -> Self {
+    pub fn _with_otel_context(mut self, ctx: JsonValue) -> Self {
         self.otel_ctx_carrier = Some(ctx);
         self
     }
 
     /// Returns the status of the task.
-    pub fn status(&self) -> TaskStatus {
+    pub fn _status(&self) -> TaskStatus {
         if self.completed_at.is_some() {
             TaskStatus::Completed
         } else if self.started_at.is_some() {
@@ -149,10 +148,10 @@ impl Task {
     }
 
     /// Returns the context of the task.
-    pub fn context(&self) -> Context {
+    pub fn _context(&self) -> Context {
         let carrier_value = self.otel_ctx_carrier.clone();
         match carrier_value {
-            Some(carrier) => extract_context(&carrier).unwrap_or_else(|_| Context::new()),
+            Some(carrier) => _extract_context(&carrier).unwrap_or_else(|_| Context::new()),
             None => Context::new(),
         }
     }
@@ -177,9 +176,9 @@ impl AvroSerializable for Task {
 // Context Extraction (this was a motherfucker)
 // ----------------------------------------------------------------------------
 
-struct HashMapExtractor<'a>(&'a std::collections::HashMap<String, String>);
+struct _HashMapExtractor<'a>(&'a std::collections::HashMap<String, String>);
 
-impl Extractor for HashMapExtractor<'_> {
+impl Extractor for _HashMapExtractor<'_> {
     fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).map(|v| v.as_str())
     }
@@ -191,7 +190,7 @@ impl Extractor for HashMapExtractor<'_> {
 
 /// Removes all non-string values from the map. Basically ensures that
 /// the map is a valid OpenTelemetry context carrier.
-fn strip_map(map: &serde_json::Map<String, JsonValue>) -> HashMap<String, String> {
+fn _strip_map(map: &serde_json::Map<String, JsonValue>) -> HashMap<String, String> {
     let hashmap: HashMap<String, String> = map
         .iter()
         .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
@@ -200,14 +199,14 @@ fn strip_map(map: &serde_json::Map<String, JsonValue>) -> HashMap<String, String
 }
 
 /// Extracts the context from the carrier.
-fn extract_context(carrier: &JsonValue) -> Result<Context, Error> {
+fn _extract_context(carrier: &JsonValue) -> Result<Context, Error> {
     match carrier {
         JsonValue::Object(map) => {
             let propagator = TraceContextPropagator::new();
-            let otel_cx = propagator.extract(&HashMapExtractor(&strip_map(map)));
+            let otel_cx = propagator.extract(&_HashMapExtractor(&_strip_map(map)));
             Ok(otel_cx)
         }
-        _ => Err(Error::ContextExtractionError),
+        _ => Err(Error::_ContextExtractionError),
     }
 }
 
