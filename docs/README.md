@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+![TacoQ Banner](https://raw.githubusercontent.com/taco-xyz/tacoq/7f5a946229a3bdd63e94d7306720d0bccadd2f6e/TacoQBanner.png)
 
-## Getting Started
+# TacoQ Documentation
 
-First, run the development server:
+![Git Tag](https://img.shields.io/github/v/tag/taco-xyz/tacoq)
+![CI](https://img.shields.io/github/actions/workflow/status/taco-xyz/tacoq/.github%2Fworkflows%2Ftest.yml)
+![Github Stars](https://img.shields.io/github/stars/taco-xyz/tacoq)
+
+This is the official documentation website for TacoQ, a multi-language distributed task queue with built-in observability, low latency, and first-class idiomatic support.
+
+## About TacoQ
+
+TacoQ is a task queue system that allows you to schedule tasks to be executed asynchronously in workers outside your application. Key features include:
+
+- Multi-language interoperability
+- Built-in observability
+- Low latency
+- First-class idiomatic support
+- REST API integration
+
+## Development
+
+This documentation site is built with [Next.js](https://nextjs.org) and uses MDX for content management.
+
+To run the development server:
 
 ```bash
-npm run dev
-# or
+# Install dependencies
+yarn install
+
+# Start development server
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the documentation.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Documentation Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Quickstart**
+  - Core Concepts
+  - Setup Guide
+- **Technical Reference**
+  - System Architecture
+  - Versioning
+  - Relay Configuration
+  - Benchmarks
+- **Guide**
+  - Horizontal-Scaling
+  - Hot-Reloading
+  - Maximizing-Performance
+  - Same-App-Worker-Pattern
+  - Serialization
+  - Task-Versioning
 
-## Learn More
+## Contributing
 
-To learn more about Next.js, take a look at the following resources:
+The documentation uses:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- MDX for content
+- Tailwind CSS for styling
+- Next.js App Router
+- Custom components for interactive examples
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
+This documentation is deployed on Vercel. Any changes to the main branch will automatically trigger a new deployment.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Local Development
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Clone the repository
+2. Install dependencies: `yarn install`
+3. Start development server: `yarn dev`
+4. Visit `http://localhost:3000`
+
+## License
+
+This project is licensed under the MIT License.
+For more details, please refer to the [MIT License](https://opensource.org/licenses/MIT).
