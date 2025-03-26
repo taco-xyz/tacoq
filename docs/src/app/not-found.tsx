@@ -1,14 +1,10 @@
-"use client";
-
 // Next Imports
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // Lucide Icons
 import { ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
-  const router = useRouter();
-
   return (
     <div className="flex flex-col items-start justify-start gap-y-6 border-b border-zinc-200 dark:border-zinc-800 pb-9 transition-colors duration-150 ease-in-out">
       <div className="flex flex-col items-start justify-start gap-y-3">
@@ -25,13 +21,13 @@ export default function NotFound() {
         We couldn&apos;t find the page you were looking for.
       </h5>
 
-      <button
-        onClick={() => router.back()}
-        className=" text-zinc-600 hover:bg-zinc-800/5 dark:hover:bg-white/5 hover:dark:text-white hover:text-zinc-800 py-1 px-1.5 dark:text-zinc-300 transition-all duration-150 ease-in-out flex flex-row items-center gap-x-2 rounded-lg custom-tab-outline-offset-4 cursor-pointer"
+      <Link
+        href=".."
+        className="text-zinc-600 hover:bg-zinc-800/5 dark:hover:bg-white/5 hover:dark:text-white hover:text-zinc-800 py-1 px-1.5 dark:text-zinc-300 transition-all duration-150 ease-in-out flex flex-row items-center gap-x-2 rounded-lg custom-tab-outline-offset-4 cursor-pointer"
       >
-        <ArrowLeft className="size-3.5" />{" "}
+        <ArrowLeft className="size-3.5" />
         <p className="text-sm font-medium">Go back</p>
-      </button>
+      </Link>
     </div>
   );
 }
