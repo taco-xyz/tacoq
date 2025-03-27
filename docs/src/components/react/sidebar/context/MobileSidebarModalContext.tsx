@@ -9,6 +9,7 @@ import {
   useState,
   RefObject,
   useRef,
+  PropsWithChildren,
 } from "react";
 
 /**
@@ -34,13 +35,9 @@ const MobileSidebarModalContext = createContext<
 
 /**
  * Provider component for the MobileSidebarContext
- * @param {React.ReactNode} children - The children components to render within the context
+ * @param {PropsWithChildren} children - The children components to render within the context
  */
-export function MobileSidebarModalProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function MobileSidebarModalProvider({ children }: PropsWithChildren) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 

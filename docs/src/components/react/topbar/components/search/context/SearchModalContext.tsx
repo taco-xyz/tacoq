@@ -9,6 +9,7 @@ import {
   useState,
   useRef,
   RefObject,
+  PropsWithChildren,
 } from "react";
 
 /**
@@ -36,13 +37,9 @@ const SearchModalContext = createContext<SearchModalContextType | undefined>(
 
 /**
  * Provider component for the SearchModalContext
- * @param {React.ReactNode} children - The children components to be wrapped by the provider
+ * @param {PropsWithChildren} children - The children components to be wrapped by the provider
  */
-export function SearchModalProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function SearchModalProvider({ children }: PropsWithChildren) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Ref for the dialog element, used to listen for click events outside of it

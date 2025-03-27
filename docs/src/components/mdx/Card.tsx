@@ -1,4 +1,4 @@
-import { FC, ComponentType } from "react";
+import { FC, ComponentType, PropsWithChildren } from "react";
 import clsx from "clsx";
 import Link from "next/link";
 
@@ -75,10 +75,12 @@ const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
 
 interface CardGroupProps {
   columns: 2 | 3 | 4;
-  children: React.ReactNode;
 }
 
-const CardGroup: FC<CardGroupProps> = ({ columns, children }) => {
+const CardGroup = ({
+  columns,
+  children,
+}: PropsWithChildren<CardGroupProps>) => {
   return (
     <div
       className={clsx(

@@ -1,7 +1,13 @@
 "use client";
 
 // React Imports
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  PropsWithChildren,
+} from "react";
 
 type PlatformContextType = {
   isMacOS: boolean;
@@ -9,7 +15,7 @@ type PlatformContextType = {
 
 const PlatformContext = createContext<PlatformContextType>({ isMacOS: false });
 
-export function PlatformProvider({ children }: { children: React.ReactNode }) {
+export function PlatformProvider({ children }: PropsWithChildren) {
   const [isMacOS, setIsMacOS] = useState(false);
 
   useEffect(() => {

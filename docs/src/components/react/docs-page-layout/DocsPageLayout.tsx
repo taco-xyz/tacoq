@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { useMemo } from "react";
+import { useMemo, PropsWithChildren } from "react";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
@@ -10,11 +10,7 @@ import Link from "next/link";
 // Lucide Icons
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export interface DocsPageLayoutProps {
-  children: React.ReactNode;
-}
-
-export function DocsPageLayout({ children }: DocsPageLayoutProps) {
+export function DocsPageLayout({ children }: PropsWithChildren) {
   const { breadcrumbs, previousPage, nextPage, parentPageTitle } =
     usePageTree();
 

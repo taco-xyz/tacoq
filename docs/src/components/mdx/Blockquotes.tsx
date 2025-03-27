@@ -1,5 +1,5 @@
 // React Imports
-import { type ReactNode } from "react";
+import { type PropsWithChildren } from "react";
 
 // Lucide Icons
 import {
@@ -40,10 +40,7 @@ import clsx from "clsx";
 export function Note({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+}: PropsWithChildren<{ className?: string }>) {
   return (
     <blockquote
       className={clsx(
@@ -66,10 +63,7 @@ export function Note({
 export function Tip({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+}: PropsWithChildren<{ className?: string }>) {
   return (
     <blockquote
       className={clsx(
@@ -92,10 +86,7 @@ export function Tip({
 export function Important({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+}: PropsWithChildren<{ className?: string }>) {
   return (
     <blockquote
       className={clsx(
@@ -118,10 +109,7 @@ export function Important({
 export function Warning({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+}: PropsWithChildren<{ className?: string }>) {
   return (
     <blockquote
       className={clsx(
@@ -144,10 +132,7 @@ export function Warning({
 export function Caution({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+}: PropsWithChildren<{ className?: string }>) {
   return (
     <blockquote
       className={clsx(
@@ -170,10 +155,7 @@ export function Caution({
 export function Blockquote({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+}: PropsWithChildren<{ className?: string }>) {
   return (
     <blockquote
       className={clsx(

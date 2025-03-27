@@ -10,6 +10,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   useMemo,
+  PropsWithChildren,
 } from "react";
 
 // Context Imports
@@ -83,7 +84,7 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  * </TooltipProvider>
  * ```
  */
-export function TooltipProvider({ children }: { children: React.ReactNode }) {
+export function TooltipProvider({ children }: PropsWithChildren) {
   // Extract the pathname
   const pathname = usePathname();
 

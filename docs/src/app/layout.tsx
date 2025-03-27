@@ -1,12 +1,15 @@
 // Global Styles Imports
 import "./globals.css";
 
+// React Imports
+import { PropsWithChildren } from "react";
+
 // Components Imports
 import { TopBar } from "../components/react/topbar/TopBar";
 import { Footer } from "../components/react/Footer";
-import DesktopSideBar from "../components/react/sidebar/DesktopSideBar";
-import DocsPageLayout from "../components/react/docs-page-layout/DocsPageLayout";
-import PageLinksBar from "../components/react/PageLinksBar";
+import { DesktopSideBar } from "../components/react/sidebar/DesktopSideBar";
+import { DocsPageLayout } from "../components/react/docs-page-layout/DocsPageLayout";
+import { PageLinksBar } from "../components/react/PageLinksBar";
 
 // Context imports
 import { TooltipProvider } from "@/components/react/sidebar/context/TooltipContext";
@@ -73,11 +76,7 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: PropsWithChildren) {
   return (
     <html
       lang="en"

@@ -8,6 +8,7 @@ import {
   useCallback,
   useMemo,
   useEffect,
+  PropsWithChildren,
 } from "react";
 
 // Next Imports
@@ -161,7 +162,7 @@ function getFlattenedPages(pages: Page[]): Page[] {
   return flattened;
 }
 
-export function PageTreeProvider({ children }: { children: React.ReactNode }) {
+export function PageTreeProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
 
   const [expandedPages, setExpandedPages] = useState<Set<string>>(() => {

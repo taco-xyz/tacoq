@@ -10,6 +10,7 @@ import {
   useRef,
   RefObject,
   useLayoutEffect,
+  PropsWithChildren,
 } from "react";
 
 // Next Imports
@@ -44,11 +45,7 @@ const PageNavigationContext = createContext<PageNavigationContextType | null>(
   null,
 );
 
-export function PageNavigationProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function PageNavigationProvider({ children }: PropsWithChildren) {
   const router = useRouter();
 
   const pageContainerRef = useRef<HTMLDivElement>(null);

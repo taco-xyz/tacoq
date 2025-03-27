@@ -8,8 +8,9 @@ import { HeadingTypes, getHeaderId } from "@/types/page/Heading";
 import { Card, CardGroup } from "@/components/mdx/Card";
 
 // Components Imports
-import Heading from "@/components/mdx/heading/Heading";
-import Blockquote, {
+import { Heading } from "@/components/mdx/heading/Heading";
+import {
+  Blockquote,
   Important,
   Note,
   Tip,

@@ -1,6 +1,7 @@
 "use client";
 
 // React Imports
+import { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 
 // Next Imports
@@ -16,14 +17,12 @@ import clsx from "clsx";
 import { useSearchModal } from "../context/SearchModalContext";
 
 // Dynamic Components Imports
-const SearchPortal = dynamic<{ children: React.ReactNode }>(
+const SearchPortal = dynamic<PropsWithChildren>(
   () =>
-    Promise.resolve(({ children }: { children: React.ReactNode }) =>
+    Promise.resolve(({ children }: PropsWithChildren) =>
       createPortal(children, document.body),
     ),
-  {
-    ssr: false,
-  },
+  { ssr: false },
 );
 
 /**

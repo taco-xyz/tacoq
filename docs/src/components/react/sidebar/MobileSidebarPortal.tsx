@@ -1,6 +1,7 @@
 "use client";
 
 // React Imports
+import { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 
 // Next Imports
@@ -23,9 +24,9 @@ import { Logo } from "../Logo";
 //import AnchorComponent from "./components/Anchor";
 
 // Dynamic Components Imports
-const SidebarPortal = dynamic<{ children: React.ReactNode }>(
+const SidebarPortal = dynamic<PropsWithChildren>(
   () =>
-    Promise.resolve(({ children }: { children: React.ReactNode }) =>
+    Promise.resolve(({ children }: PropsWithChildren) =>
       createPortal(children, document.body),
     ),
   { ssr: false },
