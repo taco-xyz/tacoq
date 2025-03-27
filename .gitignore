@@ -1,7 +1,5 @@
 **/target/
 **/node_modules/
-.vscode/
-
 
 # Python related files
 .venv
