@@ -8,7 +8,7 @@ import { GithubIcon } from "../../icons/social";
  * GitHub link component that links to the repository
  * Opens in a new tab when clicked
  */
-export default function GitHubLink() {
+export function GitHubLink() {
   return (
     <Link
       href="https://github.com/taco-xyz/tacoq"

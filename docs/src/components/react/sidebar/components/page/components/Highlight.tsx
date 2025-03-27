@@ -10,7 +10,7 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 // Types Imports
 import type { Page } from "@/types/page/Page";
 
-export default function Highlight({
+export function Highlight({
   title,
   children,
   parentElementRef,

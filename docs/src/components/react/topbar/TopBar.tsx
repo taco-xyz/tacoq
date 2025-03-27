@@ -1,13 +1,13 @@
 // Component Imports
-import Logo from "../Logo";
-import ThemeToggle from "./components/ThemeToggle";
-import GitHubLink from "./components/GitHubLink";
-import DesktopSearchButton from "./components/search/components/DesktopSearchButton";
-import SearchDialog from "./components/search/components/SearchPortal";
-import MobileSearchButton from "./components/search/components/MobileSearchButton";
-import MobileSidebarPortal from "../sidebar/MobileSidebarPortal";
-import MobileSidebarButton from "../sidebar/MobileSidebarButton";
-import Breadcrumbs from "../docs-page-layout/breadcrumbs/Breadcrumbs";
+import { Logo } from "../Logo";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { GitHubLink } from "./components/GitHubLink";
+import { DesktopSearchButton } from "./components/search/components/DesktopSearchButton";
+import { SearchDialog } from "./components/search/components/SearchPortal";
+import { MobileSearchButton } from "./components/search/components/MobileSearchButton";
+import { MobileSidebarPortal } from "../sidebar/MobileSidebarPortal";
+import { MobileSidebarButton } from "../sidebar/MobileSidebarButton";
+import { Breadcrumbs } from "../docs-page-layout/breadcrumbs/Breadcrumbs";
 
 // Context Imports
 import { MobileSidebarModalProvider } from "../sidebar/context/MobileSidebarModalContext";

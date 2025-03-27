@@ -12,7 +12,7 @@ import clsx from "clsx";
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 
-export default function Breadcrumbs() {
+export function Breadcrumbs() {
   // Extract the breadcrumbs from the page tree context
   const { breadcrumbs } = usePageTree();
 

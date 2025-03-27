@@ -14,7 +14,7 @@ export interface DocsPageLayoutProps {
   children: React.ReactNode;
 }
 
-export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
+export function DocsPageLayout({ children }: DocsPageLayoutProps) {
   const { breadcrumbs, previousPage, nextPage, parentPageTitle } =
     usePageTree();
 

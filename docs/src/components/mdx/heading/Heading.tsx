@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { HeadingTypes } from "@/types/page/Heading";
 
 // Components Imports
-import CopyLinkButton from "./components/CopyLinkButton";
+import { CopyLinkButton } from "./components/CopyLinkButton";
 
 // Utils Imports
 import clsx from "clsx";
@@ -40,7 +40,7 @@ const headingStyles = {
 };
 
 // Heading component
-export default function Heading({
+export function Heading({
   id,
   Level,
   children,

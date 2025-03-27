@@ -51,7 +51,7 @@ export function PriorityImage({
 }
 
 // Default Export for Priority Image With Theme Component
-export default function PriorityImageWithTheme({
+export function PriorityImageWithTheme({
   darkSrc,
   lightSrc,
   alt,

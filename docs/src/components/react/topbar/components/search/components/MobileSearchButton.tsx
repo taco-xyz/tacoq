@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 // Context Imports
 import { useSearchModal } from "../context/SearchModalContext";
 
-export default function MobileSearchButton() {
+export function MobileSearchButton() {
   // Extract the Search Context
   const { openSearch } = useSearchModal();
 

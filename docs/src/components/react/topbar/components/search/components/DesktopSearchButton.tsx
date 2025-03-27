@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 // Context Imports
 import { useSearchModal } from "../context/SearchModalContext";
 import { usePlatform } from "@/contexts/PlatformContext";
-export default function DesktopSearchButton() {
+export function DesktopSearchButton() {
   // Extract the Search Context
   const { openSearch } = useSearchModal();
 

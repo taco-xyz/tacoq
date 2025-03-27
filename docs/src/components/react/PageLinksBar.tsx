@@ -7,7 +7,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { usePageTree } from "@/contexts/PageTreeContext";
 
 // Types Imports
-import getHeaderId from "@/utils/getHeaderId";
+import { getHeaderId } from "@/utils/getHeaderId";
 
 // Utils Imports
 import clsx from "clsx";
@@ -28,7 +28,7 @@ interface PageLinksBarProps {
  * Scrolls to the corresponding heading when clicked
  * Highlights the current section based on scroll position
  */
-export default function PageLinksBar({ className }: PageLinksBarProps) {
+export function PageLinksBar({ className }: PageLinksBarProps) {
   const router = useRouter();
 
   // Extract the page tree context

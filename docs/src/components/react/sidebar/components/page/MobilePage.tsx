@@ -20,13 +20,13 @@ import { useMobileSidebarModal } from "../../context/MobileSidebarModalContext";
 import type { Page } from "@/types/page/Page";
 
 // Components Imports
-import Highlight from "./components/Highlight";
+import { Highlight } from "./components/Highlight";
 
 export interface PageComponentProps extends Page {
   childOf: string;
 }
 
-export default function MobilePageComponent({
+export function MobilePageComponent({
   childOf,
   url,
   children,

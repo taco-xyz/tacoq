@@ -6,7 +6,7 @@ import { Text } from "lucide-react";
 // Context Imports
 import { useMobileSidebarModal } from "./context/MobileSidebarModalContext";
 
-export default function MobileSidebarButton() {
+export function MobileSidebarButton() {
   // Extract the mobile sidebar context
   const { openSidebar } = useMobileSidebarModal();
 

@@ -33,7 +33,7 @@ const SearchPortal = dynamic<{ children: React.ReactNode }>(
  * - Search results
  * - Search suggestions
  */
-export default function SearchDialog() {
+export function SearchDialog() {
   // Extract the Search Context
   const { isSearchOpen, closeSearch, dialogRef, inputRef } = useSearchModal();
 

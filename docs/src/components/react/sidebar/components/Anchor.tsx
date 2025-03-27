@@ -4,7 +4,7 @@ import Link from "next/link";
 // Types Imports
 import type { Anchor } from "@/types/Anchor";
 
-export default function AnchorComponent({ url, title, Icon }: Anchor) {
+export function AnchorComponent({ url, title, Icon }: Anchor) {
   return (
     <Link
       href={url}

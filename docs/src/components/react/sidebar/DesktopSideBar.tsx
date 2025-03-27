@@ -6,8 +6,8 @@ import { usePageNavigation } from "@/components/react/sidebar/context/PageNaviga
 import { usePlatform } from "@/contexts/PlatformContext";
 
 // Components Imports
-import Tooltip from "@/components/react/sidebar/components/Tooltip";
-import PageComponent from "@/components/react/sidebar/components/page/DesktopPage";
+import { Tooltip } from "@/components/react/sidebar/components/Tooltip";
+import { DesktopPageComponent } from "@/components/react/sidebar/components/page/DesktopPage";
 // import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
 // Utils Imports
@@ -18,7 +18,7 @@ interface DesktopSideBarProps {
   className?: string;
 }
 
-export default function DesktopSideBar({ className }: DesktopSideBarProps) {
+export function DesktopSideBar({ className }: DesktopSideBarProps) {
   // Extract the page tree context
   const { pages } = usePageTree();
 
@@ -94,7 +94,7 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
 
             {/* Pages */}
             {pages.map((page) => (
-              <PageComponent
+              <DesktopPageComponent
                 key={page.metadata.title}
                 childOf="root"
                 {...page}

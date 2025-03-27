@@ -1,12 +1,14 @@
 // Next Imports
 import Link from "next/link";
-import PriorityImageWithTheme from "./PriorityImageWithTheme";
+
+// Components Imports
+import { PriorityImageWithTheme } from "./PriorityImageWithTheme";
 
 /**
  * Logo component that displays the application logo and title
  * Links to the home page when clicked
  */
-export default function Logo() {
+export function Logo() {
   return (
     <Link
       href="/"

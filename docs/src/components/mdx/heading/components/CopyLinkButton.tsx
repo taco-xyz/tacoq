@@ -15,7 +15,7 @@ interface CopyLinkButtonProps {
 }
 
 // CopyLinkButton component
-export default function CopyLinkButton({ headerId }: CopyLinkButtonProps) {
+export function CopyLinkButton({ headerId }: CopyLinkButtonProps) {
   const [isCopied, setIsCopied] = useState(false);
 
   // Handle the click event on the CopyLinkButton

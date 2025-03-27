@@ -10,7 +10,7 @@ import { Sun, MoonStar } from "lucide-react";
  * Theme toggle component that switches between light and dark modes
  * Uses localStorage to persist theme preference
  */
-export default function ThemeToggle() {
+export function ThemeToggle() {
   const toggleTheme = useCallback(() => {
     if (document.documentElement.classList.contains("dark")) {
       localStorage.setItem("theme", "light");

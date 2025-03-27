@@ -23,6 +23,6 @@ export interface FooterLinkGroup {
   links: (CompletedFooterLink | SoonFooterLink)[];
 }
 
-export default interface FooterContent {
+export interface FooterContent {
   linkGroups: FooterLinkGroup[];
 }

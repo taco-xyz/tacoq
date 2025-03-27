@@ -16,7 +16,7 @@ import { usePathname } from "next/navigation";
 // Type imports
 import type { Page, PageTree } from "@/types/PageTree";
 //import type { Anchor } from "@/types/Anchor";
-import FooterContent, { Status } from "@/types/FooterContent";
+import { FooterContent, Status } from "@/types/FooterContent";
 
 // Data imports
 import pageTreeJson from "@/page-tree.json";

@@ -17,9 +17,9 @@ import { useMobileSidebarModal } from "./context/MobileSidebarModalContext";
 import { usePageTree } from "@/contexts/PageTreeContext";
 
 // Components Imports
-import ThemeToggle from "../topbar/components/ThemeToggle";
-import MobilePageComponent from "./components/page/MobilePage";
-import Logo from "../Logo";
+import { ThemeToggle } from "../topbar/components/ThemeToggle";
+import { MobilePageComponent } from "./components/page/MobilePage";
+import { Logo } from "../Logo";
 //import AnchorComponent from "./components/Anchor";
 
 // Dynamic Components Imports
@@ -31,7 +31,7 @@ const SidebarPortal = dynamic<{ children: React.ReactNode }>(
   { ssr: false },
 );
 
-export default function MobileSidebarPortal() {
+export function MobileSidebarPortal() {
   // Extract the Mobile Sidebar Modal Context
   const { isSidebarOpen, closeSidebar, dialogRef } = useMobileSidebarModal();
 

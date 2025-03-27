@@ -20,13 +20,13 @@ import { usePageNavigation } from "@/components/react/sidebar/context/PageNaviga
 import type { Page } from "@/types/page/Page";
 
 // Components Imports
-import Highlight from "./components/Highlight";
+import { Highlight } from "./components/Highlight";
 
 export interface PageComponentProps extends Page {
   childOf: string;
 }
 
-export default function DesktopPageComponent({
+export function DesktopPageComponent({
   childOf,
   url,
   children,

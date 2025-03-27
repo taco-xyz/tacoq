@@ -9,7 +9,7 @@ import clsx from "clsx";
 // Context Imports
 import { useTooltip } from "@/components/react/sidebar/context/TooltipContext";
 
-export default function Tooltip() {
+export function Tooltip() {
   // Extract the tooltip context
   const {
     tooltipProps: {

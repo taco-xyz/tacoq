@@ -167,7 +167,7 @@ export function Caution({
  * Default blockquote component for standard quotes.
  * Uses neutral gray styling with information icon.
  */
-export default function Blockquote({
+export function Blockquote({
   children,
   className,
 }: {
