@@ -32,7 +32,7 @@ export function DesktopSideBar({ className }: DesktopSideBarProps) {
   } = usePageNavigation();
 
   // Extract the platform context
-  const { isMacOS } = usePlatform();
+  const { isAppleDevice } = usePlatform();
 
   return (
     <div className="relative h-full w-full">
@@ -60,7 +60,7 @@ export function DesktopSideBar({ className }: DesktopSideBarProps) {
                   : "pointer-events-auto opacity-100"
               }`}
             >
-              {isMacOS ? "⌘" : "Ctrl"} 0
+              {isAppleDevice ? "Cmd" : "Ctrl"} 0
             </button>
 
             <button

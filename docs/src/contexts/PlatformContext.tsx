@@ -1,6 +1,5 @@
 "use client";
 
-// React Imports
 import {
   createContext,
   useContext,
@@ -10,26 +9,25 @@ import {
 } from "react";
 
 type PlatformContextType = {
-  isMacOS: boolean;
+  isAppleDevice: boolean;
 };
 
-const PlatformContext = createContext<PlatformContextType>({ isMacOS: false });
+const PlatformContext = createContext<PlatformContextType>({
+  isAppleDevice: false,
+});
 
 export function PlatformProvider({ children }: PropsWithChildren) {
-  const [isMacOS, setIsMacOS] = useState(false);
+  const [isAppleDevice, setIsAppleDevice] = useState(false);
 
   useEffect(() => {
-    // Check if running on macOS/iOS
-    const platform = window.navigator.platform.toLowerCase();
-    setIsMacOS(
-      platform.includes("mac") ||
-        platform.includes("iphone") ||
-        platform.includes("ipad"),
-    );
+    const ua = navigator.userAgent.toLowerCase();
+    const isApple =
+      /macintosh|macintel|macppc|mac68k|mac os x|iphone|ipad|ipod/.test(ua);
+    setIsAppleDevice(isApple);
   }, []);
 
   return (
-    <PlatformContext.Provider value={{ isMacOS }}>
+    <PlatformContext.Provider value={{ isAppleDevice }}>
       {children}
     </PlatformContext.Provider>
   );

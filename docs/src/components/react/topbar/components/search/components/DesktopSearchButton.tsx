@@ -11,7 +11,7 @@ export function DesktopSearchButton() {
   const { openSearch } = useSearchModal();
 
   // Extract the platform context
-  const { isMacOS } = usePlatform();
+  const { isAppleDevice } = usePlatform();
 
   return (
     <button
@@ -23,7 +23,7 @@ export function DesktopSearchButton() {
         Search documentation...
       </p>
       <p className="ml-auto cursor-pointer rounded-lg bg-zinc-200/40 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-150 ease-in-out group-hover:bg-zinc-200/60 group-hover:text-zinc-700 group-hover:ring-zinc-300 dark:bg-zinc-950/80 dark:text-white/70 dark:ring-white/5 dark:group-hover:bg-zinc-950/90 dark:group-hover:text-white/90 dark:group-hover:ring-white/10">
-        {isMacOS ? "⌘" : "Ctrl"} K
+        {isAppleDevice ? "Cmd" : "Ctrl"} K
       </p>
     </button>
   );
