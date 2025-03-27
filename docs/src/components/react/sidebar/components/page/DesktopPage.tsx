@@ -52,7 +52,7 @@ export default function DesktopPageComponent({
       data-child-of={childOf}
       ref={elementRef}
       className={clsx(
-        "flex flex-col text-sm relative outline-hidden overflow-hidden"
+        "relative flex flex-col overflow-hidden text-sm outline-hidden",
       )}
     >
       {/* If the item has a url, it's a link */}
@@ -67,27 +67,27 @@ export default function DesktopPageComponent({
             className={clsx(
               focusedPageTitle === title &&
                 currentPageTitle === title &&
-                "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+                "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
               focusedPageTitle === title &&
                 currentPageTitle !== title &&
-                "dark:bg-white/5 bg-zinc-800/5 text-zinc-800 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
+                "bg-zinc-800/5 text-zinc-800 hover:bg-zinc-800/5 dark:bg-white/5 dark:text-white dark:hover:bg-white/5",
               focusedPageTitle !== title &&
                 currentPageTitle === title &&
-                "text-zinc-800 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+                "bg-zinc-800/5 font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/5 dark:text-white dark:hover:bg-white/[0.075]",
               focusedPageTitle !== title &&
                 currentPageTitle !== title &&
-                "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-              "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
+                "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
+              "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden select-none",
             )}
             tabIndex={-1}
           >
             {sidebar?.Icon && (
               <sidebar.Icon
                 className={clsx(
-                  "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                  "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
                   currentPageTitle === title
                     ? "text-zinc-950 dark:text-white/100"
-                    : "text-zinc-500 dark:text-white/50"
+                    : "text-zinc-500 dark:text-white/50",
                 )}
               />
             )}
@@ -105,8 +105,8 @@ export default function DesktopPageComponent({
                   }
                 }}
                 className={clsx(
-                  "size-3 mt-[3px] transition-all duration-150 ease-in-out opacity-50 text-zinc-700 dark:text-zinc-300",
-                  isPageExpanded(title) && "rotate-90"
+                  "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
+                  isPageExpanded(title) && "rotate-90",
                 )}
               />
             )}
@@ -130,26 +130,26 @@ export default function DesktopPageComponent({
           className={clsx(
             focusedPageTitle === title &&
               currentPageTitle === title &&
-              "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+              "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
             focusedPageTitle === title &&
               currentPageTitle !== title &&
-              "dark:bg-white/5 bg-zinc-800/5 text-zinc-800 dark:text-white dark:hover:bg-white/5 hover:bg-zinc-800/5",
+              "bg-zinc-800/5 text-zinc-800 hover:bg-zinc-800/5 dark:bg-white/5 dark:text-white dark:hover:bg-white/5",
             focusedPageTitle !== title &&
               currentPageTitle === title &&
-              "text-zinc-800 dark:text-white font-semibold bg-zinc-800/5 dark:bg-white/5 dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+              "bg-zinc-800/5 font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/5 dark:text-white dark:hover:bg-white/[0.075]",
             focusedPageTitle !== title &&
               currentPageTitle !== title &&
-              "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-            "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap"
+              "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
+            "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden select-none",
           )}
         >
           {sidebar?.Icon && (
             <sidebar.Icon
               className={clsx(
-                "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
                 currentPageTitle === title
                   ? "text-zinc-950 dark:text-white/100"
-                  : "text-zinc-500 dark:text-white/50"
+                  : "text-zinc-500 dark:text-white/50",
               )}
             />
           )}
@@ -166,8 +166,8 @@ export default function DesktopPageComponent({
                 }
               }}
               className={clsx(
-                "size-3 mt-[3px] transition-all duration-150 ease-in-out opacity-50 text-zinc-700 dark:text-zinc-300",
-                isPageExpanded(title) && "rotate-90"
+                "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
+                isPageExpanded(title) && "rotate-90",
               )}
             />
           )}
@@ -177,11 +177,11 @@ export default function DesktopPageComponent({
       {children && (
         <div
           className={clsx(
-            "pl-2.5 ml-3.5 border-l-[1px] border-zinc-300 dark:border-zinc-700",
+            "ml-3.5 border-l-[1px] border-zinc-300 pl-2.5 dark:border-zinc-700",
             "grid transition-all duration-300 ease-in-out",
             isPageExpanded(title)
-              ? "grid-rows-[1fr] opacity-100 mt-1.5"
-              : "grid-rows-[0fr] opacity-0"
+              ? "mt-1.5 grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0",
           )}
         >
           {/* Selected highlight */}

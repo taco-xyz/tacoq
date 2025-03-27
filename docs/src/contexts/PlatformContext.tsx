@@ -18,7 +18,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     setIsMacOS(
       platform.includes("mac") ||
         platform.includes("iphone") ||
-        platform.includes("ipad")
+        platform.includes("ipad"),
     );
   }, []);
 

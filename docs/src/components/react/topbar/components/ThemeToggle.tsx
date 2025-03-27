@@ -24,15 +24,15 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="flex relative flex-row gap-x-4 group cursor-pointer items-center p-2 rounded-full ring-1 ring-inset ring-zinc-200 hover:ring-zinc-200/90 dark:ring-zinc-800 hover:dark:ring-zinc-700 flex-shrink-0 transition-all ease-in-out duration-150 custom-tab-outline-offset-2"
+      className="group custom-tab-outline-offset-2 relative flex flex-shrink-0 cursor-pointer flex-row items-center gap-x-4 rounded-full p-2 ring-1 ring-zinc-200 transition-all duration-150 ease-in-out ring-inset hover:ring-zinc-200/90 dark:ring-zinc-800 hover:dark:ring-zinc-700"
     >
-      <div className="dark:group-hover:text-white/90 flex-shrink-0 text-zinc-500 group-hover:text-zinc-400 dark:text-white/70 transition-all ease-in-out duration-150">
+      <div className="flex-shrink-0 text-zinc-500 transition-all duration-150 ease-in-out group-hover:text-zinc-400 dark:text-white/70 dark:group-hover:text-white/90">
         <Sun className="size-5" />
       </div>
-      <div className="dark:group-hover:text-white/90 flex-shrink-0 text-zinc-500 group-hover:text-zinc-400 dark:text-white/70 transition-all ease-in-out duration-150">
+      <div className="flex-shrink-0 text-zinc-500 transition-all duration-150 ease-in-out group-hover:text-zinc-400 dark:text-white/70 dark:group-hover:text-white/90">
         <MoonStar className="size-5" />
       </div>
-      <div className="size-7 rounded-full bg-zinc-200 dark:bg-zinc-800  group-hover:bg-zinc-200/90 dark:group-hover:bg-zinc-700 absolute -z-1 left-1 dark:translate-x-9 transition-all ease-in-out duration-150" />
+      <div className="absolute left-1 -z-1 size-7 rounded-full bg-zinc-200 transition-all duration-150 ease-in-out group-hover:bg-zinc-200/90 dark:translate-x-9 dark:bg-zinc-800 dark:group-hover:bg-zinc-700" />
     </button>
   );
 }

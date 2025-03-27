@@ -19,11 +19,11 @@ export default function Breadcrumbs() {
   // If there are no breadcrumbs, render the home breadcrumb
   if (!breadcrumbs.length)
     return (
-      <nav className="flex flex-wrap items-center gap-y-3 py-4 w-full px-8">
-        <div className="flex items-center flex-row">
+      <nav className="flex w-full flex-wrap items-center gap-y-3 px-8 py-4">
+        <div className="flex flex-row items-center">
           <Link
             href={"/"}
-            className="text-xs whitespace-nowrap transition-colors duration-150 ease-in-out text-zinc-800 dark:text-white font-medium pointer-events-none"
+            className="pointer-events-none text-xs font-medium whitespace-nowrap text-zinc-800 transition-colors duration-150 ease-in-out dark:text-white"
           >
             Home
           </Link>
@@ -32,25 +32,25 @@ export default function Breadcrumbs() {
     );
 
   return (
-    <nav className="flex flex-wrap items-center gap-y-3 py-4 w-full px-8">
+    <nav className="flex w-full flex-wrap items-center gap-y-3 px-8 py-4">
       {breadcrumbs.map((crumb, index) => (
-        <div key={crumb.metadata.title} className="flex items-center flex-row">
+        <div key={crumb.metadata.title} className="flex flex-row items-center">
           <Link
             href={crumb.url ?? "#"}
             className={clsx(
               "text-xs whitespace-nowrap transition-colors duration-150 ease-in-out",
               index === breadcrumbs.length - 1
-                ? "text-zinc-800 dark:text-white font-medium pointer-events-none"
+                ? "pointer-events-none font-medium text-zinc-800 dark:text-white"
                 : "text-zinc-500 dark:text-zinc-500",
               crumb.url
                 ? "cursor-pointer hover:text-zinc-700 dark:hover:text-zinc-300"
-                : "cursor-default"
+                : "cursor-default",
             )}
           >
             {crumb.metadata.title}
           </Link>
           {index < breadcrumbs.length - 1 && (
-            <ChevronRight className="size-3 mx-2 text-zinc-400 dark:text-zinc-600 flex-shrink-0 transition-colors duration-150 ease-in-out" />
+            <ChevronRight className="mx-2 size-3 flex-shrink-0 text-zinc-400 transition-colors duration-150 ease-in-out dark:text-zinc-600" />
           )}
         </div>
       ))}

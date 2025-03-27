@@ -10,7 +10,6 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 // Types Imports
 import type { Page } from "@/types/page/Page";
 
-
 export default function Highlight({
   title,
   children,
@@ -37,7 +36,7 @@ export default function Highlight({
       }
       return false;
     },
-    [currentPageTitle]
+    [currentPageTitle],
   );
 
   // An item's child should be focused if it's selected or if any of it's descendants are selected
@@ -55,7 +54,7 @@ export default function Highlight({
     if (focusedDirectChildIndex !== -1 && parentElementRef.current) {
       // Fetches all the child elements of the current item with the "data-child-of" attribute
       const childElements = parentElementRef.current.querySelectorAll(
-        `[data-child-of="${title}"]`
+        `[data-child-of="${title}"]`,
       );
       // Fetches the child element that should be focused through index
       const focusedElement = childElements[focusedDirectChildIndex];
@@ -72,7 +71,7 @@ export default function Highlight({
   }, [focusedDirectChildIndex, title, parentElementRef]);
 
   const [highlightPosition, setHighlightPosition] = useState<number | null>(
-    updateHighlightPosition()
+    updateHighlightPosition(),
   );
 
   // Updates the highlight position when a new element is focused
@@ -83,10 +82,10 @@ export default function Highlight({
   return (
     <div
       className={clsx(
-        "w-[0.5px] absolute h-7 bg-zinc-800 shadow-xs shadow-zinc-900/25 dark:shadow-white/15 dark:bg-white left-[14px] rounded-full transition-all duration-150 ease-in-out",
+        "absolute left-[14px] h-7 w-[0.5px] rounded-full bg-zinc-800 shadow-xs shadow-zinc-900/25 transition-all duration-150 ease-in-out dark:bg-white dark:shadow-white/15",
         focusedDirectChildIndex !== -1 && highlightPosition !== null
           ? "opacity-100"
-          : "opacity-0"
+          : "opacity-0",
       )}
       style={{
         top:

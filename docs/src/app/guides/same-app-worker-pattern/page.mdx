@@ -1,4 +1,5 @@
 # Hot Reloading
+
 You can develop your worker with hot reloading by running it in the same
 
 # Implementation
@@ -10,31 +11,26 @@ by running it in the background in an idiomatic way:
 # Set up your application as normal
 worker_app = WorkerApplication(...)
 
-# Instead of running the worker app via the CLI or a dedicated 
+# Instead of running the worker app via the CLI or a dedicated
 # entrypoint, run it the background as a co-routine.
 asyncio.create_task(worker_app.entrypoint())
 
-# When you are done using your worker, you can stop it 
+# When you are done using your worker, you can stop it
 # by calling the shutdown method.
 worker_app.shutdown()
 
-# If you want to wait for the worker to finish cleaning up the remaining 
+# If you want to wait for the worker to finish cleaning up the remaining
 # tasks, you can await the `wait_for_shutdown` method.
 await worker_app.wait_for_shutdown()
 ```
 
 <Warning>
-    This pattern is **not recommended for production use** because:
-    - It is important to separate the resources used by your worker and your 
-      application.
-    - You cannot horizontally scale your worker by running multiple instances.
-    - Your worker may have blocking tasks that will interfere with your 
-      application's performance.
-    
-    If you are using an asynchronous runtime like `tokio`, the impact of blocking
-    tasks may not be as pronounced due to the multiple threads available. In 
-    `asyncio`, however, a blocking task in your worker will block the entire 
-    process.
+  This pattern is **not recommended for production use** because: - It is
+  important to separate the resources used by your worker and your application.
+  - You cannot horizontally scale your worker by running multiple instances. -
+  Your worker may have blocking tasks that will interfere with your
+  application's performance. If you are using an asynchronous runtime like
+  `tokio`, the impact of blocking tasks may not be as pronounced due to the
+  multiple threads available. In `asyncio`, however, a blocking task in your
+  worker will block the entire process.
 </Warning>
-
-

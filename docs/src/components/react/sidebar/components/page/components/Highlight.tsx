@@ -25,21 +25,23 @@ export default function Highlight({
   const focusedChildIndex = useMemo(
     () =>
       children.findIndex((child) =>
-        breadcrumbs.some((page) => page.metadata.title === child.metadata.title)
+        breadcrumbs.some(
+          (page) => page.metadata.title === child.metadata.title,
+        ),
       ),
-    [children, breadcrumbs]
+    [children, breadcrumbs],
   );
 
   // State to store the highlight position
   const [highlightPosition, setHighlightPosition] = useState<number | null>(
-    null
+    null,
   );
 
   // Updates the highlight position
   const updateHighlightPosition = useCallback(() => {
     if (focusedChildIndex !== -1 && parentElementRef.current) {
       const childElements = parentElementRef.current.querySelectorAll(
-        `[data-child-of="${title}"]`
+        `[data-child-of="${title}"]`,
       );
       const focusedElement = childElements[focusedChildIndex];
       if (focusedElement) {
@@ -65,10 +67,10 @@ export default function Highlight({
   return (
     <div
       className={clsx(
-        "w-[0.5px] absolute h-7 bg-zinc-800 shadow-xs shadow-zinc-900/25 dark:shadow-white/15 dark:bg-white left-[14px] rounded-full transition-all duration-150 ease-in-out",
+        "absolute left-[14px] h-7 w-[0.5px] rounded-full bg-zinc-800 shadow-xs shadow-zinc-900/25 transition-all duration-150 ease-in-out dark:bg-white dark:shadow-white/15",
         focusedChildIndex !== -1 && highlightPosition !== null
           ? "opacity-100"
-          : "opacity-0"
+          : "opacity-0",
       )}
       style={{
         top:

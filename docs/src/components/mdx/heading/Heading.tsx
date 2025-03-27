@@ -69,12 +69,12 @@ export default function Heading({
       onClick={handleClick}
       className={clsx(
         headingStyles[Level],
-        "transition-colors relative duration-150 ease-in-out scroll-mt-[94px] w-fit cursor-pointer outline-hidden group", // 94px scroll offset to account for the topbar
-        className
+        "group relative w-fit cursor-pointer scroll-mt-[94px] outline-hidden transition-colors duration-150 ease-in-out", // 94px scroll offset to account for the topbar
+        className,
       )}
     >
       {children}
-      <div className="absolute md:flex items-center justify-center h-full top-0 bottom-0 hidden right-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-in-out pr-3">
+      <div className="absolute top-0 right-full bottom-0 hidden h-full items-center justify-center pr-3 opacity-0 transition-opacity duration-150 ease-in-out group-hover:opacity-100 md:flex">
         <CopyLinkButton headerId={id} />
       </div>
     </Level>

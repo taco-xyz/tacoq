@@ -57,7 +57,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
         router.push(`#${id}`, { scroll: false });
       }
     },
-    [router]
+    [router],
   );
 
   // Effect to track the active heading based on the distance to the top of the viewport (94px offset)
@@ -105,7 +105,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
       {
         rootMargin: "-94px 0px -80% 0px",
         threshold: [0.5],
-      }
+      },
     );
 
     // Start observing all heading elements
@@ -120,17 +120,17 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
   if (!currentPage?.headers) return null;
 
   return (
-    <div className="w-full h-full relative">
+    <div className="relative h-full w-full">
       {/* Top gradient overlay */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
+      <div className="pointer-events-none absolute top-0 right-0 left-0 h-8 bg-gradient-to-b from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
       <nav
         className={clsx(
-          "flex flex-col gap-y-2 text-sm w-full overflow-y-auto custom-scrollbar h-full pr-2.5 pl-[1px]",
-          className
+          "custom-scrollbar flex h-full w-full flex-col gap-y-2 overflow-y-auto pr-2.5 pl-[1px] text-sm",
+          className,
         )}
       >
         {/* Title */}
-        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2 -ml-[3px]">
+        <span className="-ml-[3px] flex flex-row items-center gap-x-2 font-semibold text-zinc-500 dark:text-zinc-400">
           <ChartNoAxesGantt className="size-4" />
           On this page
         </span>
@@ -145,14 +145,14 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
                 key={index}
                 onClick={() => handleClick(headingId)}
                 className={clsx(
-                  "text-left hover:text-zinc-800 dark:hover:text-white transition-all rounded-md duration-150 ease-in-out cursor-pointer custom-tab-outline-offset-0",
+                  "custom-tab-outline-offset-0 cursor-pointer rounded-md text-left transition-all duration-150 ease-in-out hover:text-zinc-800 dark:hover:text-white",
 
                   header.type === "h1" && "pl-0",
                   header.type === "h2" && "pl-4",
                   header.type === "h3" && "pl-8",
                   isActive
                     ? "font-medium text-zinc-800 dark:text-white"
-                    : "font-normal text-zinc-500 dark:text-zinc-300"
+                    : "font-normal text-zinc-500 dark:text-zinc-300",
                 )}
               >
                 {header.title}
@@ -162,7 +162,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
         </div>
       </nav>
       {/* Bottom gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
     </div>
   );
 }

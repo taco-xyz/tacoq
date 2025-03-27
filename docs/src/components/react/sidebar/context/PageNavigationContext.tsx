@@ -41,7 +41,7 @@ interface PageNavigationContextType {
 }
 
 const PageNavigationContext = createContext<PageNavigationContextType | null>(
-  null
+  null,
 );
 
 export function PageNavigationProvider({
@@ -112,7 +112,7 @@ export function PageNavigationProvider({
 
       // Set the focused page to the current page or the first available page
       setFocusedPageTitle(
-        currentPageIndex >= 0 ? currentPageTitle : visiblePagesTitles[0]
+        currentPageIndex >= 0 ? currentPageTitle : visiblePagesTitles[0],
       );
     }
   }, [visiblePagesTitles, currentPageTitle, focusedPageTitle]);
@@ -139,7 +139,7 @@ export function PageNavigationProvider({
         endKeyboardFocus();
       }
     },
-    [endKeyboardFocus]
+    [endKeyboardFocus],
   );
 
   /**
@@ -185,7 +185,7 @@ export function PageNavigationProvider({
           } else {
             // Set the focused page to the last page
             setFocusedPageTitle(
-              visiblePagesTitles[visiblePagesTitles.length - 1]
+              visiblePagesTitles[visiblePagesTitles.length - 1],
             );
           }
           break;
@@ -238,7 +238,7 @@ export function PageNavigationProvider({
       router,
       startKeyboardFocus,
       endKeyboardFocus,
-    ]
+    ],
   );
 
   // Scroll to current focused page if it's hidden by the sidebar scroll
@@ -303,7 +303,7 @@ export function usePageNavigation() {
   const context = useContext(PageNavigationContext);
   if (!context) {
     throw new Error(
-      "usePageNavigation must be used within PageNavigationProvider"
+      "usePageNavigation must be used within PageNavigationProvider",
     );
   }
   return context;

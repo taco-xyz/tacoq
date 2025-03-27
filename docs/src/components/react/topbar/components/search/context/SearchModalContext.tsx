@@ -31,7 +31,7 @@ interface SearchModalContextType {
  * Creates a context for managing the search state
  */
 const SearchModalContext = createContext<SearchModalContextType | undefined>(
-  undefined
+  undefined,
 );
 
 /**
@@ -77,7 +77,7 @@ export function SearchModalProvider({
         closeSearch();
       }
     },
-    [isSearchOpen, openSearch, closeSearch]
+    [isSearchOpen, openSearch, closeSearch],
   );
 
   // Close the search modal when clicking outside of the search panel
@@ -87,7 +87,7 @@ export function SearchModalProvider({
         closeSearch();
       }
     },
-    [closeSearch]
+    [closeSearch],
   );
 
   // Event Listeners for keyboard shortcuts

@@ -25,73 +25,73 @@ export default function DocsPageLayout({ children }: DocsPageLayoutProps) {
 
   // If there is no current page, render the children
   if (!currentPage)
-    return <div className="flex flex-col gap-y-4 w-full">{children}</div>;
+    return <div className="flex w-full flex-col gap-y-4">{children}</div>;
 
   return (
-    <div className="flex flex-col gap-y-4 w-full flex-1">
+    <div className="flex w-full flex-1 flex-col gap-y-4">
       {/* Header */}
-      <div className="flex flex-col items-start justify-start gap-y-5 border-b border-zinc-200 dark:border-zinc-800 pb-9 transition-colors duration-150 ease-in-out">
+      <div className="flex flex-col items-start justify-start gap-y-5 border-b border-zinc-200 pb-9 transition-colors duration-150 ease-in-out dark:border-zinc-800">
         <div className="flex flex-col items-start justify-start gap-y-3">
           {parentPageTitle ? (
-            <div className="flex flex-row items-center w-fit justify-center gap-x-2 font-mono uppercase text-xs font-semibold text-zinc-500 dark:text-zinc-400 transition-colors duration-150 ease-in-out">
+            <div className="flex w-fit flex-row items-center justify-center gap-x-2 font-mono text-xs font-semibold text-zinc-500 uppercase transition-colors duration-150 ease-in-out dark:text-zinc-400">
               {parentPageTitle}
             </div>
           ) : (
             // Default to the name of the parent page if no badge info was provided
             breadcrumbs[breadcrumbs.length - 2] && (
-              <div className="flex flex-row items-center w-fit justify-center gap-x-2 font-mono text-sm font-semibold text-zinc-500 dark:text-zinc-400 transition-colors duration-150 ease-in-out">
-                <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 transition-colors duration-150 ease-in-out">
+              <div className="flex w-fit flex-row items-center justify-center gap-x-2 font-mono text-sm font-semibold text-zinc-500 transition-colors duration-150 ease-in-out dark:text-zinc-400">
+                <span className="text-sm font-semibold text-zinc-500 transition-colors duration-150 ease-in-out dark:text-zinc-400">
                   {breadcrumbs[breadcrumbs.length - 2].metadata.title}
                 </span>
               </div>
             )
           )}
-          <h1 className="text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 transition-colors duration-150 ease-in-out">
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-800 transition-colors duration-150 ease-in-out dark:text-white">
             {currentPage.metadata.title}
           </h1>
         </div>
         {currentPage.metadata.description && (
-          <h5 className="text-lg font-[450] tracking-normal dark:text-zinc-300 text-zinc-600 transition-colors duration-150 ease-in-out">
+          <h5 className="text-lg font-[450] tracking-normal text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-300">
             {currentPage.metadata.description}
           </h5>
         )}
       </div>
 
-      <div className="flex flex-col gap-y-4 w-full">
+      <div className="flex w-full flex-col gap-y-4">
         {/* Content */}
         {children}
       </div>
 
-      <div className="flex sm:flex-row flex-col items-center w-full justify-between gap-x-4 mt-8 border-t border-zinc-200 dark:border-zinc-800 transition-colors duration-150 ease-in-out">
+      <div className="mt-8 flex w-full flex-col items-center justify-between gap-x-4 border-t border-zinc-200 transition-colors duration-150 ease-in-out sm:flex-row dark:border-zinc-800">
         {previousPage?.url && (
           <Link
             href={previousPage.url}
-            className="w-full sm:w-fit group rounded-2xl relative p-6 custom-tab-outline-offset-0 transition-all duration-150 ease-in-out"
+            className="group custom-tab-outline-offset-0 relative w-full rounded-2xl p-6 transition-all duration-150 ease-in-out sm:w-fit"
           >
-            <ChevronLeft className="size-4 absolute left-2 group-hover:left-1 top-1/2 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out" />
+            <ChevronLeft className="absolute top-1/2 left-2 size-4 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out group-hover:left-1" />
             <div className="pl-6">
-              <div className="text-sm dark:text-zinc-400 text-zinc-600 transition-colors duration-150 ease-in-out">
+              <div className="text-sm text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-400">
                 Previous
               </div>
-              <div className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold transition-colors duration-150 ease-in-out">
+              <div className="text-lg font-semibold text-zinc-900 transition-colors duration-150 ease-in-out dark:text-zinc-100">
                 {previousPage.metadata.title}
               </div>
             </div>
           </Link>
         )}
 
-        <div className="flex-1 flex justify-end w-full">
+        <div className="flex w-full flex-1 justify-end">
           {nextPage?.url && (
             <Link
               href={nextPage.url}
-              className="w-full sm:w-fit group rounded-2xl relative p-6  custom-tab-outline-offset-0 transition-all duration-150 ease-in-out"
+              className="group custom-tab-outline-offset-0 relative w-full rounded-2xl p-6 transition-all duration-150 ease-in-out sm:w-fit"
             >
-              <ChevronRight className="size-4 absolute right-2 group-hover:right-1 top-1/2 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out" />
+              <ChevronRight className="absolute top-1/2 right-2 size-4 -translate-y-1/2 text-zinc-400 transition-all duration-150 ease-in-out group-hover:right-1" />
               <div className="pr-6 text-right">
-                <div className="text-sm dark:text-zinc-400 text-zinc-600 transition-colors duration-150 ease-in-out">
+                <div className="text-sm text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-400">
                   Next
                 </div>
-                <div className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold transition-colors duration-150 ease-in-out">
+                <div className="text-lg font-semibold text-zinc-900 transition-colors duration-150 ease-in-out dark:text-zinc-100">
                   {nextPage.metadata.title}
                 </div>
               </div>

@@ -10,7 +10,7 @@ export default function Logo() {
   return (
     <Link
       href="/"
-      className="custom-tab-outline-offset-6 rounded-xs transition-all duration-150 ease-in-out flex-shrink-0"
+      className="custom-tab-outline-offset-6 flex-shrink-0 rounded-xs transition-all duration-150 ease-in-out"
     >
       <PriorityImageWithTheme
         lightSrc="/TacoQTextLogoLight.svg"
@@ -33,7 +33,7 @@ export function DivisionLogo() {
   return (
     <Link
       href="https://github.com/taco-xyz"
-      className="custom-tab-outline-offset-6 rounded-xs transition-all duration-150 ease-in-out flex-shrink-0"
+      className="custom-tab-outline-offset-6 flex-shrink-0 rounded-xs transition-all duration-150 ease-in-out"
     >
       <PriorityImageWithTheme
         lightSrc="/TacoDivisionTextLogoLight.svg"

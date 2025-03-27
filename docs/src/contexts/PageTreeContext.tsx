@@ -31,7 +31,11 @@ const footerContent: FooterContent = {
     {
       groupName: "Frameworks",
       links: [
-        { linkName: "TacoQ", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
+        {
+          linkName: "TacoQ",
+          url: "https://github.com/taco-xyz/tacoq",
+          status: Status.COMPLETED,
+        },
         { linkName: "TacoDocs", status: Status.WORK_IN_PROGRESS },
         { linkName: "TacoFlow", status: Status.SOON },
         { linkName: "TacoBI", status: Status.SOON },
@@ -50,8 +54,16 @@ const footerContent: FooterContent = {
     {
       groupName: "Community",
       links: [
-        { linkName: "Discord", url: "https://discord.gg/NXwBEtZSUq", status: Status.COMPLETED },
-        { linkName: "Github", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
+        {
+          linkName: "Discord",
+          url: "https://discord.gg/NXwBEtZSUq",
+          status: Status.COMPLETED,
+        },
+        {
+          linkName: "Github",
+          url: "https://github.com/taco-xyz/tacoq",
+          status: Status.COMPLETED,
+        },
       ],
     },
   ],
@@ -118,7 +130,7 @@ function findPageByTitle(pages: Page[], title: string): Page | null {
 function findPageAndParents(
   pages: Page[],
   targetUrl: string,
-  parents: string[] = []
+  parents: string[] = [],
 ): string[] {
   for (const page of pages) {
     if (page.url === targetUrl) {
@@ -174,7 +186,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
 
   const visiblePagesTitles = useMemo(
     () => getVisiblePages(pageTree.children, expandedPages),
-    [expandedPages]
+    [expandedPages],
   );
 
   const expandPage = useCallback((pageTitle: string) => {
@@ -191,12 +203,12 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
 
   const isPageExpanded = useCallback(
     (pageTitle: string) => expandedPages.has(pageTitle),
-    [expandedPages]
+    [expandedPages],
   );
 
   const getPageByTitle = useCallback(
     (pageTitle: string) => findPageByTitle(pageTree.children, pageTitle),
-    []
+    [],
   );
 
   const breadcrumbs = useMemo(() => {
@@ -209,7 +221,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
   const { previousPage, nextPage } = useMemo(() => {
     const flattenedPages = getFlattenedPages(pageTree.children);
     const currentIndex = flattenedPages.findIndex(
-      (page) => page.url === pathname
+      (page) => page.url === pathname,
     );
 
     return {

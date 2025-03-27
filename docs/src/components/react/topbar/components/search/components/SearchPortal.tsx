@@ -19,11 +19,11 @@ import { useSearchModal } from "../context/SearchModalContext";
 const SearchPortal = dynamic<{ children: React.ReactNode }>(
   () =>
     Promise.resolve(({ children }: { children: React.ReactNode }) =>
-      createPortal(children, document.body)
+      createPortal(children, document.body),
     ),
   {
     ssr: false,
-  }
+  },
 );
 
 /**
@@ -42,14 +42,14 @@ export default function SearchDialog() {
       <div
         className={clsx(
           "fixed inset-0 z-50",
-          isSearchOpen ? "pointer-events-auto" : "pointer-events-none"
+          isSearchOpen ? "pointer-events-auto" : "pointer-events-none",
         )}
       >
         {/* Backdrop */}
         <div
           className={clsx(
-            "fixed inset-0 h-screen w-full dark:bg-zinc-950/20 bg-zinc-950/5 backdrop-blur-xs transition-opacity duration-300 ease-in-out",
-            isSearchOpen ? "opacity-100" : "opacity-0"
+            "fixed inset-0 h-screen w-full bg-zinc-950/5 backdrop-blur-xs transition-opacity duration-300 ease-in-out dark:bg-zinc-950/20",
+            isSearchOpen ? "opacity-100" : "opacity-0",
           )}
         />
 
@@ -57,23 +57,23 @@ export default function SearchDialog() {
         <div
           ref={dialogRef}
           className={clsx(
-            "dark:bg-zinc-900 bg-white fixed mx-auto inset-0 transition-all md:duration-200 duration-300 ease-in-out md:h-fit h-full md:mt-32 mt-50 md:rounded-xl rounded-t-xl shadow-xl dark:shadow-zinc-950/30 shadow-zinc-500/10 ring-1 ring-zinc-200 dark:ring-white/15 md:w-[640px] w-[95%]",
+            "fixed inset-0 mx-auto mt-50 h-full w-[95%] rounded-t-xl bg-white shadow-xl ring-1 shadow-zinc-500/10 ring-zinc-200 transition-all duration-300 ease-in-out md:mt-32 md:h-fit md:w-[640px] md:rounded-xl md:duration-200 dark:bg-zinc-900 dark:shadow-zinc-950/30 dark:ring-white/15",
             isSearchOpen
-              ? "opacity-100 scale-100 translate-y-0"
-              : "opacity-0 md:scale-[0.97] scale-100 md:translate-y-[2px] translate-y-full"
+              ? "translate-y-0 scale-100 opacity-100"
+              : "translate-y-full scale-100 opacity-0 md:translate-y-[2px] md:scale-[0.97]",
           )}
         >
-          <div className="py-4 px-5 gap-x-6 flex flex-row items-center justify-between">
+          <div className="flex flex-row items-center justify-between gap-x-6 px-5 py-4">
             <input
               ref={inputRef}
               type="text"
               placeholder="What are you looking for?"
-              className="w-full bg-transparent dark:text-white dark:placeholder:text-white/60 text-zinc-800 placeholder:text-zinc-500 outline-hidden"
+              className="w-full bg-transparent text-zinc-800 outline-hidden placeholder:text-zinc-500 dark:text-white dark:placeholder:text-white/60"
             />
             {/* Desktop Close Button */}
             <button
               onClick={closeSearch}
-              className="dark:text-white/70 md:block hidden text-zinc-500 transition-all custom-tab-outline-offset-2 hover:text-zinc-700 dark:bg-zinc-950/80 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/5 dark:hover:ring-white/10 dark:hover:text-white/90 bg-zinc-200/40 dark:hover:bg-zinc-950 hover:bg-zinc-200/60 ease-in-out duration-150 cursor-pointer px-2 py-1 rounded-md whitespace-nowrap font-semibold text-xs font-mono"
+              className="custom-tab-outline-offset-2 hidden cursor-pointer rounded-md bg-zinc-200/40 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-150 ease-in-out hover:bg-zinc-200/60 hover:text-zinc-700 hover:ring-zinc-300 md:block dark:bg-zinc-950/80 dark:text-white/70 dark:ring-white/5 dark:hover:bg-zinc-950 dark:hover:text-white/90 dark:hover:ring-white/10"
             >
               <p>Esc</p>
             </button>
@@ -81,13 +81,13 @@ export default function SearchDialog() {
             {/* Mobile Close Button */}
             <button
               onClick={closeSearch}
-              className="dark:hover:text-white/80 md:hidden text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
+              className="custom-tab-outline-offset-4 cursor-pointer rounded-xs text-zinc-500 transition-all duration-150 ease-in-out hover:text-zinc-400 md:hidden dark:text-white/70 dark:hover:text-white/80"
             >
               <X className="size-6" />
             </button>
           </div>
-          <div className="border-t-[1.5px] dark:border-white/10 border-zinc-200 py-4 px-5">
-            <div className="text-sm dark:text-white/60 text-zinc-500">
+          <div className="border-t-[1.5px] border-zinc-200 px-5 py-4 dark:border-white/10">
+            <div className="text-sm text-zinc-500 dark:text-white/60">
               No recent searches
             </div>
           </div>

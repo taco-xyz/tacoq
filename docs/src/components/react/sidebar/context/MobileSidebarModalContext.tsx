@@ -63,7 +63,7 @@ export function MobileSidebarModalProvider({
         closeSidebar();
       }
     },
-    [closeSidebar, dialogRef]
+    [closeSidebar, dialogRef],
   );
 
   // Listen for click events
@@ -120,7 +120,7 @@ export function useMobileSidebarModal() {
   const context = useContext(MobileSidebarModalContext);
   if (!context)
     throw new Error(
-      "useMobileSidebarModal must be used within MobileSidebarModalProvider"
+      "useMobileSidebarModal must be used within MobileSidebarModalProvider",
     );
   return context;
 }

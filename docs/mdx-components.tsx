@@ -99,16 +99,16 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     hr: ({ className }) => (
       <hr
         className={clsx(
-          "border-t border-zinc-200 dark:border-zinc-800 my-6 transition-colors duration-150 ease-in-out",
-          className
+          "my-6 border-t border-zinc-200 transition-colors duration-150 ease-in-out dark:border-zinc-800",
+          className,
         )}
       />
     ),
 
     // IMAGE ---------------------------------------------------------------
     img: ({ src, alt, className }) => (
-      <span className="w-full h-auto aspect-video ring-inset flex my-2 ring-1 rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/1 dark:shadow-black/5 transition-all duration-150 ease-in-out">
-        <span className="w-full h-full relative rounded-[11px] border-1 border-zinc-200 dark:border-zinc-800/70 transition-all duration-150 ease-in-out overflow-hidden">
+      <span className="my-2 flex aspect-video h-auto w-full rounded-2xl p-1.5 shadow-xl ring-1 shadow-zinc-700/1 ring-zinc-200 transition-all duration-150 ease-in-out ring-inset dark:shadow-black/5 dark:ring-zinc-800/70">
+        <span className="relative h-full w-full overflow-hidden rounded-[11px] border-1 border-zinc-200 transition-all duration-150 ease-in-out dark:border-zinc-800/70">
           <Image
             src={src}
             alt={alt}
@@ -121,11 +121,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
 
     // CODEBLOCK WRAPPER --------------------------------------------------
     pre: ({ children, className }) => (
-      <div className="w-full h-fit p-1.5 ring-1 rounded-2xl ring-inset ring-zinc-200 dark:ring-zinc-800/70 flex items-center shadow-xl shadow-zinc-700/3 dark:shadow-black/5 justify-center transition-all duration-150 ease-in-out">
+      <div className="flex h-fit w-full items-center justify-center rounded-2xl p-1.5 shadow-xl ring-1 shadow-zinc-700/3 ring-zinc-200 transition-all duration-150 ease-in-out ring-inset dark:shadow-black/5 dark:ring-zinc-800/70">
         <pre
           className={clsx(
             className,
-            "bg-zinc-700 w-full dark:bg-zinc-900 ring-1 ring-zinc-300 dark:ring-zinc-800 overflow-x-auto rounded-[11px] transition-all duration-150 ease-in-out shadow-2xl shadow-zinc-700/3 dark:shadow-black/5"
+            "w-full overflow-x-auto rounded-[11px] bg-zinc-700 shadow-2xl ring-1 shadow-zinc-700/3 ring-zinc-300 transition-all duration-150 ease-in-out dark:bg-zinc-900 dark:shadow-black/5 dark:ring-zinc-800",
           )}
         >
           {children}
@@ -165,14 +165,14 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     code: ({ children, className }) => (
       <code
         className={clsx(
-          "font-mono text-sm text-[#ce9178] font-medium transition-all duration-150 ease-in-out",
+          "font-mono text-sm font-medium text-[#ce9178] transition-all duration-150 ease-in-out",
           // Code block
-          "[pre_&]:py-4 [pre_&]:px-0 [pre_&]:bg-transparent",
+          "[pre_&]:bg-transparent [pre_&]:px-0 [pre_&]:py-4",
           // Inline code
-          "py-0.5 px-1.5 rounded-[5px] bg-zinc-100 dark:bg-zinc-800 [&:not(pre_code)]:mx-1 [&:not(pre_code)]:break-words",
+          "rounded-[5px] bg-zinc-100 px-1.5 py-0.5 dark:bg-zinc-800 [&:not(pre_code)]:mx-1 [&:not(pre_code)]:break-words",
           // If the code is inside a blockquote, it should inherit the blockquote styles
-          "[blockquote_&]:text-inherit [blockquote_&]:bg-inherit [blockquote_&]:ring-1 [blockquote_&]:ring-inherit [blockquote_&]:ring-inset",
-          className
+          "[blockquote_&]:bg-inherit [blockquote_&]:text-inherit [blockquote_&]:ring-1 [blockquote_&]:ring-inherit [blockquote_&]:ring-inset",
+          className,
         )}
       >
         {children}
@@ -182,9 +182,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     p: ({ children, className }) => (
       <p
         className={clsx(
-          "text-base tracking-normal dark:text-zinc-400 text-zinc-600 font-normal transition-colors duration-150 ease-in-out",
+          "text-base font-normal tracking-normal text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-400",
           "[blockquote_&]:text-inherit",
-          className
+          className,
         )}
       >
         {children}
@@ -195,9 +195,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       <Link
         href={href}
         className={clsx(
-          "dark:text-white text-zinc-800 custom-tab-outline-offset-2 focus-visible:rounded-sm font-semibold border-b dark:border-blue-400 border-blue-500 hover:border-b-[2px] transition-[outline] ease-in-out duration-150",
-          "[blockquote_&]:text-inherit [blockquote_&]:border-inherit",
-          className
+          "custom-tab-outline-offset-2 border-b border-blue-500 font-semibold text-zinc-800 transition-[outline] duration-150 ease-in-out hover:border-b-[2px] focus-visible:rounded-sm dark:border-blue-400 dark:text-white",
+          "[blockquote_&]:border-inherit [blockquote_&]:text-inherit",
+          className,
         )}
       >
         {children}
@@ -207,9 +207,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     strong: ({ children, className }) => (
       <strong
         className={clsx(
-          "font-semibold text-zinc-800 dark:text-white transition-colors duration-150 ease-in-out",
+          "font-semibold text-zinc-800 transition-colors duration-150 ease-in-out dark:text-white",
           "[blockquote_&]:text-inherit",
-          className
+          className,
         )}
       >
         {children}
@@ -219,9 +219,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     em: ({ children, className }) => (
       <em
         className={clsx(
-          "italic text-zinc-800 dark:text-white transition-colors duration-150 ease-in-out",
+          "text-zinc-800 italic transition-colors duration-150 ease-in-out dark:text-white",
           "[blockquote_&]:text-inherit",
-          className
+          className,
         )}
       >
         {children}
@@ -231,11 +231,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ol: ({ children, className }) => (
       <ol
         className={clsx(
-          "pl-5 space-y-2.5 list-decimal text-base tracking-normal dark:text-zinc-400 text-zinc-600 font-normal transition-colors duration-150 ease-in-out my-2",
+          "my-2 list-decimal space-y-2.5 pl-5 text-base font-normal tracking-normal text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-400",
           "marker:text-zinc-400 dark:marker:text-zinc-600",
-          "[blockquote_&]:marker:text-inherit [blockquote_&]:text-inherit",
+          "[blockquote_&]:text-inherit [blockquote_&]:marker:text-inherit",
           "[&>li]:pl-2",
-          className
+          className,
         )}
       >
         {children}
@@ -245,9 +245,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ul: ({ children, className }) => (
       <ul
         className={clsx(
-          "pl-5 space-y-2.5 lit text-base tracking-normal dark:text-zinc-400 text-zinc-600 font-normal transition-colors duration-150 ease-in-out my-2",
+          "lit my-2 space-y-2.5 pl-5 text-base font-normal tracking-normal text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-400",
           "marker:text-zinc-400 dark:marker:text-zinc-600",
-          "[blockquote_&]:marker:text-inherit [blockquote_&]:text-inherit",
+          "[blockquote_&]:text-inherit [blockquote_&]:marker:text-inherit",
           "[&>li]:pl-2",
           // Level 1
           "list-disc",
@@ -261,7 +261,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
           "[&>li>ul>li>ul>li>ul>li>ul]:list-[circle]",
           // Level 6
           "[&>li>ul>li>ul>li>ul>li>ul>li>ul]:list-[square]",
-          className
+          className,
         )}
       >
         {children}
