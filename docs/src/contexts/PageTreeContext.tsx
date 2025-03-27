@@ -177,7 +177,7 @@ export function PageTreeProvider({ children }: PropsWithChildren) {
     function findPageByUrl(pages: Page[], url: string): Page | null {
       for (const page of pages) {
         if (page.url === url) return page;
-        
+
         if (!page.children) continue;
 
         const found = findPageByUrl(page.children, url);
