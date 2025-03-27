@@ -48,14 +48,13 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     (id: string) => {
       // Get the document element
       const element = document.getElementById(id);
+      if (!element) return;
 
-      if (element) {
-        // Scroll to the element
-        element.scrollIntoView({ behavior: "smooth" });
+      // Scroll to the element
+      element.scrollIntoView({ behavior: "smooth" });
 
-        // Update URL without triggering a scroll
-        router.push(`#${id}`, { scroll: false });
-      }
+      // Update URL without triggering a scroll
+      router.push(`#${id}`, { scroll: false });
     },
     [router],
   );
@@ -82,15 +81,17 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
 
     currentPage.headers.forEach((header) => {
       const element = document.getElementById(getHeaderId(header));
-      if (element) {
-        // Calculate the distance between the heading and the 94px mark
-        const distance = Math.abs(element.getBoundingClientRect().top - 94);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestHeading = element.id;
-        }
-      }
+      if (!element) return;
+
+      // Calculate the distance between the heading and the 94px mark
+      const distance = Math.abs(element.getBoundingClientRect().top - 94);
+      if (distance >= closestDistance) return;
+
+      // Update the closest heading and distance
+      closestDistance = distance;
+      closestHeading = element.id;
     });
+
     if (closestHeading) {
       setActiveHeadingId(closestHeading);
     }
@@ -98,9 +99,8 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     // Set up intersection observer for scroll updates
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setActiveHeadingId(entry.target.id);
-        }
+        if (!entry.isIntersecting) return;
+        setActiveHeadingId(entry.target.id);
       },
       {
         rootMargin: "-94px 0px -80% 0px",
@@ -111,7 +111,8 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     // Start observing all heading elements
     currentPage.headers.forEach((header) => {
       const element = document.getElementById(getHeaderId(header));
-      if (element) observer.observe(element);
+      if (!element) return;
+      observer.observe(element);
     });
 
     return () => observer.disconnect();

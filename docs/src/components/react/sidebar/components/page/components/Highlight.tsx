@@ -39,26 +39,37 @@ export function Highlight({
 
   // Updates the highlight position
   const updateHighlightPosition = useCallback(() => {
-    if (focusedChildIndex !== -1 && parentElementRef.current) {
-      const childElements = parentElementRef.current.querySelectorAll(
-        `[data-child-of="${title}"]`,
-      );
-      const focusedElement = childElements[focusedChildIndex];
-      if (focusedElement) {
-        const parentRect = parentElementRef.current.getBoundingClientRect();
-        const childRect = focusedElement.getBoundingClientRect();
-        setHighlightPosition(childRect.top - parentRect.top);
-      }
-    }
+    // Return if the focused child index is not found or the parent element is not available
+    if (focusedChildIndex === -1 || !parentElementRef.current) return;
+
+    const childElements = parentElementRef.current.querySelectorAll(
+      `[data-child-of="${title}"]`,
+    );
+    const focusedElement = childElements[focusedChildIndex];
+
+    // Return if the focused element is not found
+    if (!focusedElement) return;
+
+    // Get the parent and child element bounding client rects
+    const parentRect = parentElementRef.current.getBoundingClientRect();
+    const childRect = focusedElement.getBoundingClientRect();
+
+    // Set the highlight position
+    setHighlightPosition(childRect.top - parentRect.top);
   }, [focusedChildIndex, parentElementRef, title]);
 
+  // Update the highlight position every 16ms
   useEffect(() => {
     const startTime = Date.now();
     const interval = setInterval(() => {
+      // Update the highlight position
       updateHighlightPosition();
-      if (Date.now() - startTime >= 300) {
-        clearInterval(interval);
-      }
+
+      // Return if the interval has not reached 300ms
+      if (Date.now() - startTime < 300) return;
+
+      // Clear the interval
+      clearInterval(interval);
     }, 16); // ~60fps
 
     return () => clearInterval(interval);

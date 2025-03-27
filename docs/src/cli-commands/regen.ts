@@ -39,13 +39,13 @@ function extractHeadings(content: string): Header[] {
     if (inCodeBlock) continue;
 
     const match = line.match(/^(\s*)(#{1,6})\s+(.+)$/);
-    if (match) {
-      const [, , level, title] = match;
-      rows.push({
-        title,
-        type: ("h" + level.length) as HeaderType,
-      });
-    }
+    if (!match) continue;
+
+    const [, , level, title] = match;
+    rows.push({
+      title,
+      type: ("h" + level.length) as HeaderType,
+    });
   }
 
   return rows;
@@ -102,6 +102,7 @@ function scanDirectory(
   // Log directory info
   const relativePath = path.relative(APP_DIR, dirPath);
   console.log(chalk.blue(`${indent}📁 Scanning ${relativePath || "root"}`));
+
   if (metadata) {
     console.log(chalk.gray(`${indent}  Title: ${metadata.title}`));
   } else {
@@ -117,10 +118,10 @@ function scanDirectory(
   // Scan subdirectories first
   const children: Page[] = [];
   for (const entry of dirEntries) {
-    if (entry.isDirectory()) {
-      const fullPath = path.join(dirPath, entry.name);
-      children.push(...scanDirectory(fullPath, false, depth + 1));
-    }
+    if (!entry.isDirectory()) continue;
+
+    const fullPath = path.join(dirPath, entry.name);
+    children.push(...scanDirectory(fullPath, false, depth + 1));
   }
 
   // If this is the root directory, just return the children sorted by index
@@ -165,30 +166,31 @@ function scanDirectory(
       entry.name.endsWith(".mdx") &&
       entry.name !== "page.mdx",
   );
+
   if (additionalMdxFiles.length > 0) {
     console.log(
       chalk.gray(
         `${indent}  📄 Found ${additionalMdxFiles.length} additional MDX files`,
       ),
     );
+
     for (const entry of additionalMdxFiles) {
       const fullPath = path.join(dirPath, entry.name);
       const relativePath = path.relative(APP_DIR, fullPath);
       const content = readPageContent(fullPath);
+      if (!content) continue;
 
-      if (content) {
-        entries.push({
-          url: `/${relativePath.replace(/\\/g, "/").replace(/\.mdx$/, "")}`,
-          metadata: {
-            title: entry.name.replace(/\.mdx$/, ""),
-            description: "",
-            icon: "",
-            index: 999, // Put additional MDX files at the end
-          },
-          rawContent: content,
-          headers: extractHeadings(content),
-        });
-      }
+      entries.push({
+        url: `/${relativePath.replace(/\\/g, "/").replace(/\.mdx$/, "")}`,
+        metadata: {
+          title: entry.name.replace(/\.mdx$/, ""),
+          description: "",
+          icon: "",
+          index: 999,
+        },
+        rawContent: content,
+        headers: extractHeadings(content),
+      });
     }
   }
 

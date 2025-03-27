@@ -56,18 +56,19 @@ export function MobileSidebarModalProvider({ children }: PropsWithChildren) {
    */
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        closeSidebar();
-      }
+      if (!dialogRef.current || dialogRef.current.contains(e.target as Node))
+        return;
+
+      closeSidebar();
     },
     [closeSidebar, dialogRef],
   );
 
   // Listen for click events
   useEffect(() => {
-    if (isSidebarOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (!isSidebarOpen) return;
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSidebarOpen, handleClickOutside]);
 

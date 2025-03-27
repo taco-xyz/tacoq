@@ -120,10 +120,11 @@ function getVisiblePages(pages: Page[], expandedPages: Set<string>): string[] {
 function findPageByTitle(pages: Page[], title: string): Page | null {
   for (const page of pages) {
     if (page.metadata.title === title) return page;
-    if (page.children) {
-      const found = findPageByTitle(page.children, title);
-      if (found) return found;
-    }
+
+    if (!page.children) continue;
+
+    const found = findPageByTitle(page.children, title);
+    if (found) return found;
   }
   return null;
 }
@@ -137,13 +138,14 @@ function findPageAndParents(
     if (page.url === targetUrl) {
       return [...parents, page.metadata.title];
     }
-    if (page.children) {
-      const found = findPageAndParents(page.children, targetUrl, [
-        ...parents,
-        page.metadata.title,
-      ]);
-      if (found.length > 0) return found;
-    }
+
+    if (!page.children) continue;
+
+    const found = findPageAndParents(page.children, targetUrl, [
+      ...parents,
+      page.metadata.title,
+    ]);
+    if (found.length > 0) return found;
   }
   return [];
 }
@@ -154,9 +156,10 @@ function getFlattenedPages(pages: Page[]): Page[] {
     if (page.url) {
       flattened.push(page);
     }
-    if (page.children) {
-      page.children.forEach(traverse);
-    }
+
+    if (!page.children) return;
+
+    page.children.forEach(traverse);
   }
   pages.forEach(traverse);
   return flattened;
@@ -174,10 +177,11 @@ export function PageTreeProvider({ children }: PropsWithChildren) {
     function findPageByUrl(pages: Page[], url: string): Page | null {
       for (const page of pages) {
         if (page.url === url) return page;
-        if (page.children) {
-          const found = findPageByUrl(page.children, url);
-          if (found) return found;
-        }
+        
+        if (!page.children) continue;
+
+        const found = findPageByUrl(page.children, url);
+        if (found) return found;
       }
       return null;
     }

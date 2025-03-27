@@ -52,7 +52,9 @@ export function SearchModalProvider({ children }: PropsWithChildren) {
    * Clears the input value and opens the search
    */
   const openSearch = useCallback(() => {
-    if (inputRef.current) inputRef.current.value = "";
+    if (!inputRef.current) return;
+
+    inputRef.current.value = "";
     setIsSearchOpen(true);
   }, []);
 
@@ -66,12 +68,19 @@ export function SearchModalProvider({ children }: PropsWithChildren) {
   // Esc to close the search
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k" && !isSearchOpen) {
-        e.preventDefault();
-        openSearch();
-      }
-      if (e.key === "Escape" && isSearchOpen) {
-        closeSearch();
+      switch (e.key) {
+        case "k":
+          if (isSearchOpen || (!e.ctrlKey && !e.metaKey)) return;
+
+          e.preventDefault();
+          openSearch();
+          return;
+        case "Escape":
+          if (!isSearchOpen) return;
+
+          e.preventDefault();
+          closeSearch();
+          return;
       }
     },
     [isSearchOpen, openSearch, closeSearch],
@@ -80,9 +89,10 @@ export function SearchModalProvider({ children }: PropsWithChildren) {
   // Close the search modal when clicking outside of the search panel
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        closeSearch();
-      }
+      if (!dialogRef.current || dialogRef.current.contains(e.target as Node))
+        return;
+
+      closeSearch();
     },
     [closeSearch],
   );
@@ -95,9 +105,9 @@ export function SearchModalProvider({ children }: PropsWithChildren) {
 
   // Event listener for clicks
   useEffect(() => {
-    if (isSearchOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (!isSearchOpen) return;
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSearchOpen, handleClickOutside]);
 
