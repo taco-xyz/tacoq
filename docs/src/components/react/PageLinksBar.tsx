@@ -103,7 +103,17 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
         setActiveHeadingId(entry.target.id);
       },
       {
-        rootMargin: "-94px 0px -80% 0px",
+        // Calculate percentage that gives us exactly 40px zone below the 94px header:
+        // percentage = ((viewportHeight - 94px - 40px) / viewportHeight) * 100
+        rootMargin: (() => {
+          const viewportHeight = window.innerHeight;
+          const headerOffset = 94;
+          const zoneHeight = 40;
+          const percentage =
+            ((viewportHeight - headerOffset - zoneHeight) / viewportHeight) *
+            100;
+          return `-${headerOffset}px 0px -${percentage}% 0px`;
+        })(),
         threshold: [0.5],
       },
     );
@@ -146,7 +156,7 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
                 key={index}
                 onClick={() => handleClick(headingId)}
                 className={clsx(
-                  "custom-tab-outline-offset-0 cursor-pointer rounded-md text-left transition-all duration-150 ease-in-out hover:text-zinc-800 dark:hover:text-white",
+                  "custom-tab-outline-offset-0 w-fit cursor-pointer rounded-md text-left transition-all duration-150 ease-in-out hover:text-zinc-800 dark:hover:text-white",
 
                   header.type === "h1" && "pl-0",
                   header.type === "h2" && "pl-4",
