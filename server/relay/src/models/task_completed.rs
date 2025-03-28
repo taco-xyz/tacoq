@@ -26,7 +26,7 @@ pub struct TaskCompletedUpdate {
 // ----------------------------------------------------------------------------
 // Constructors
 // ----------------------------------------------------------------------------
-
+#[cfg(test)]
 impl TaskCompletedUpdate {
     /// Creates a new TaskCompletedUpdate with the specified parameters.
     ///
@@ -59,7 +59,7 @@ impl TaskCompletedUpdate {
     ///
     /// # Returns
     /// A new TaskCompletedUpdate instance
-    pub fn with_id(id: Uuid) -> Self {
+    pub fn _with_id(id: Uuid) -> Self {
         Self {
             id,
             completed_at: NaiveDateTime::MIN,
@@ -75,7 +75,7 @@ impl TaskCompletedUpdate {
     ///
     /// # Returns
     /// A new TaskCompletedUpdate instance
-    pub fn with_completed_at(mut self, completed_at: NaiveDateTime) -> Self {
+    pub fn _with_completed_at(mut self, completed_at: NaiveDateTime) -> Self {
         self.completed_at = completed_at;
         self
     }
@@ -87,7 +87,7 @@ impl TaskCompletedUpdate {
     ///
     /// # Returns
     /// A new TaskCompletedUpdate instance
-    pub fn with_output_data(mut self, output_data: Option<Vec<u8>>) -> Self {
+    pub fn _with_output_data(mut self, output_data: Option<Vec<u8>>) -> Self {
         self.output_data = output_data;
         self
     }
@@ -99,7 +99,7 @@ impl TaskCompletedUpdate {
     ///
     /// # Returns
     /// A new TaskCompletedUpdate instance
-    pub fn with_is_error(mut self, is_error: i32) -> Self {
+    pub fn _with_is_error(mut self, is_error: i32) -> Self {
         self.is_error = is_error;
         self
     }

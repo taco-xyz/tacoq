@@ -1,8 +1,9 @@
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::{routing::get, Router};
-use tracing::{debug, info, instrument};
+use tracing::{debug, error, info, instrument};
 
-use crate::AppState;
+use crate::lifecycle::AppState;
 
 pub fn routes() -> Router<AppState> {
     debug!("Setting up health API routes");
@@ -18,11 +19,27 @@ pub fn routes() -> Router<AppState> {
     ),
     tag = "health"
 )]
-#[instrument]
-async fn health() -> StatusCode {
+#[instrument(skip(state))]
+async fn health(State(state): State<AppState>) -> Result<String, (StatusCode, String)> {
     info!("Health check requested");
-    // Here you could add additional health checks for backend services
+
+    let (is_healthy, reports) = state.health_probe.check_health().await;
+
+    if !is_healthy {
+        let error_message = reports
+            .iter()
+            .filter(|report| !report.is_healthy)
+            .map(|report| format!("{}: {}", report.component, report.message))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        error!("Health check failed: {}", error_message);
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            format!("{}\n", error_message),
+        ));
+    }
 
     debug!("Health check successful");
-    StatusCode::OK
+    Ok("Service is healthy\n".to_string())
 }

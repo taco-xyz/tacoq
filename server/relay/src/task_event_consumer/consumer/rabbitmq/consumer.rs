@@ -1,73 +1,79 @@
 use crate::repo::task_repo::TaskRepository;
+use crate::task_event_consumer::consumer::TaskEventCore;
 use crate::task_event_consumer::{
     event_parsing::Event, handler::TaskEventHandler, TaskEventConsumer,
 };
 use futures::StreamExt;
 use lapin::message::Delivery;
+use lapin::options::QueueDeclareOptions;
 use lapin::options::{BasicAckOptions, BasicConsumeOptions};
 use lapin::types::FieldTable;
-use lapin::{options::QueueDeclareOptions, Connection, ConnectionProperties};
 use lapin::{Channel, Consumer};
 use std::error::Error;
 use std::sync::atomic::Ordering;
 use std::sync::{atomic::AtomicBool, Arc};
+use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
+use super::connection::RabbitMQConnection;
+
 static QUEUE_NAME: &str = "tacoq_relay_queue";
+
+pub struct RabbitMQTaskEventCore {
+    channel: Channel,
+}
+
+impl TaskEventCore for RabbitMQTaskEventCore {
+    async fn health_check(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if !self.channel.status().connected() {
+            return Err("RabbitMQ channel is not connected".into());
+        }
+
+        // Check if we can successfully perform a channel operation
+        match self
+            .channel
+            .basic_publish(
+                "",                    // default exchange
+                "health_check_target", // routing key
+                lapin::options::BasicPublishOptions::default(),
+                &[], // empty payload
+                lapin::BasicProperties::default(),
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("Failed to publish health check message: {}", e).into()),
+        }
+    }
+}
 
 /// A consumer that listens for task events from RabbitMQ and uploads
 /// them to the task repository.
 pub struct RabbitMQTaskEventConsumer {
     event_handler: TaskEventHandler,
-    url_string: String,
+    connection: Arc<Mutex<RabbitMQConnection>>,
     shutdown: Arc<AtomicBool>,
 }
 
 impl RabbitMQTaskEventConsumer {
     /// Creates a new RabbitMQ task event consumer. Does not connect directly
     /// as that is instead done in the `lifecycle` method.
-    pub fn new(
+    pub async fn new(
         url_string: &str,
         task_repository: Arc<TaskRepository>,
         shutdown: Arc<AtomicBool>,
     ) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        let connection = RabbitMQConnection::new(url_string).await?;
         Ok(Self {
-            url_string: url_string.to_string(),
+            connection: Arc::new(Mutex::new(connection)),
             event_handler: TaskEventHandler::new(task_repository),
             shutdown,
         })
     }
 
-    /// Creates a new RabbitMQ channel.
-    async fn channel(&self) -> Result<Channel, Box<dyn Error + Send + Sync>> {
-        let connection =
-            match Connection::connect(self.url_string.as_str(), ConnectionProperties::default())
-                .await
-            {
-                Ok(conn) => {
-                    debug!("RabbitMQ connection established successfully");
-                    conn
-                }
-                Err(e) => {
-                    error!(error = %e, url = %self.url_string, "Failed to connect to RabbitMQ");
-                    return Err(Box::new(e));
-                }
-            };
-
-        let channel = match connection.create_channel().await {
-            Ok(ch) => ch,
-            Err(e) => {
-                error!(error = %e, "Failed to create RabbitMQ channel");
-                return Err(Box::new(e));
-            }
-        };
-
-        Ok(channel)
-    }
-
     /// Creates a new RabbitMQ consumer based on a channel.
     async fn consumer(&self, channel: &Channel) -> Result<Consumer, Box<dyn Error + Send + Sync>> {
-        info!(url = %self.url_string, queue = %QUEUE_NAME, "Connecting to RabbitMQ for consumer");
+        info!(queue = %QUEUE_NAME, "Connecting to RabbitMQ for consumer");
 
         let mut arguments = FieldTable::default();
         arguments.insert("x-max-priority".into(), 255.into());
@@ -114,17 +120,54 @@ impl RabbitMQTaskEventConsumer {
 
         Ok(consumer)
     }
+
+    /// Reconnects to RabbitMQ and returns a new consumer.
+    async fn reconnect(&self) -> Result<Consumer, Box<dyn Error + Send + Sync>> {
+        let mut connection = self.connection.lock().await;
+        *connection = match connection.reconnect().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                error!(error = %e, "Failed to reconnect to RabbitMQ");
+                return Err(e);
+            }
+        };
+
+        let new_channel = match connection.create_channel().await {
+            Ok(ch) => ch,
+            Err(e) => {
+                error!(error = %e, "Failed to create channel");
+                return Err(e);
+            }
+        };
+        let consumer = match self.consumer(&new_channel).await {
+            Ok(consumer) => consumer,
+            Err(e) => {
+                error!(error = %e, "Failed to create consumer");
+                return Err(e);
+            }
+        };
+
+        Ok(consumer)
+    }
 }
 
 impl TaskEventConsumer for RabbitMQTaskEventConsumer {
+    type Core = RabbitMQTaskEventCore;
+
     fn event_handler(&self) -> &TaskEventHandler {
         &self.event_handler
+    }
+
+    /// Creates a new RabbitMQ channel.
+    async fn core(&self) -> Result<Arc<Self::Core>, Box<dyn Error + Send + Sync>> {
+        let channel = self.connection.lock().await.create_channel().await?;
+        Ok(Arc::new(RabbitMQTaskEventCore { channel }))
     }
 
     async fn lifecycle(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         info!(queue = %QUEUE_NAME, "Starting message consumption");
 
-        let channel = match self.channel().await {
+        let channel = match self.connection.lock().await.create_channel().await {
             Ok(ch) => ch,
             Err(e) => {
                 error!(error = %e, queue = %QUEUE_NAME, "Failed to create channel");
@@ -152,6 +195,18 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
                 Ok(msg) => msg,
                 Err(e) => {
                     error!(error = %e, "Error receiving message");
+
+                    if let lapin::Error::IOError(e) = e {
+                        error!(error = %e, "Connection aborted, attempting to reconnect");
+                        consumer = match self.reconnect().await {
+                            Ok(consumer) => consumer,
+                            Err(e) => {
+                                error!(error = %e, "Failed to reconnect to RabbitMQ");
+                                continue;
+                            }
+                        };
+                    }
+
                     continue;
                 }
             };
@@ -194,5 +249,9 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
         self.shutdown.store(true, Ordering::SeqCst);
         debug!(queue = %QUEUE_NAME, "Shutdown flag set");
         Ok(())
+    }
+
+    async fn handle_events(&self, events: Vec<Event>) -> Result<(), Box<dyn Error + Send + Sync>> {
+        self.event_handler().handle_batch_events(events).await
     }
 }
