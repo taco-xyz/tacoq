@@ -1,6 +1,6 @@
 [project]
 name = "tacoq"
-version = "0.3.0"
+version = "0.3.0b"
 description = "Python SDK to interact with the TacoQ task queue."
 readme = "README.md"
 authors = [
@@ -9,7 +9,6 @@ authors = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
@@ -28,6 +27,12 @@ dependencies = [
     "uuid>=1.30",
     "watchfiles>=1.0.3",
 ]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+tacoq = ["core/models/schemas/**/*.json"]  # Adjust path as needed
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
