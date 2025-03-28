@@ -30,7 +30,7 @@ program
 program
   .command("regen")
   .description(
-    "Based on the pages found in the docs folder, regenerate the sidebar and the text search index."
+    "Based on the pages found in the docs folder, regenerate the sidebar and the text search index.",
   )
   .configureHelp(styleConfig)
   .action(() => {

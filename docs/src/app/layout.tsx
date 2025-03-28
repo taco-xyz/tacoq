@@ -1,12 +1,15 @@
 // Global Styles Imports
 import "./globals.css";
 
+// React Imports
+import { PropsWithChildren } from "react";
+
 // Components Imports
 import { TopBar } from "../components/react/topbar/TopBar";
 import { Footer } from "../components/react/Footer";
-import DesktopSideBar from "../components/react/sidebar/DesktopSideBar";
-import DocsPageLayout from "../components/react/docs-page-layout/DocsPageLayout";
-import PageLinksBar from "../components/react/PageLinksBar";
+import { DesktopSideBar } from "../components/react/sidebar/DesktopSideBar";
+import { DocsPageLayout } from "../components/react/docs-page-layout/DocsPageLayout";
+import { PageLinksBar } from "../components/react/PageLinksBar";
 
 // Context imports
 import { TooltipProvider } from "@/components/react/sidebar/context/TooltipContext";
@@ -73,18 +76,14 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: PropsWithChildren) {
   return (
     <html
       lang="en"
       className={clsx(
         geistSans.variable,
         geistMono.variable,
-        "dark custom-body-scrollbar"
+        "dark custom-body-scrollbar",
       )}
       suppressHydrationWarning
     >
@@ -102,16 +101,16 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="flex items-center text-zinc-800 dark:text-white relative min-h-screen w-full flex-col overflow-x-hidden bg-white transition-colors duration-150 ease-in-out dark:bg-zinc-950">
+      <body className="relative flex min-h-screen w-full flex-col items-center overflow-x-hidden bg-white text-zinc-800 transition-colors duration-150 ease-in-out dark:bg-zinc-950 dark:text-white">
         <PageTreeProvider>
           <PlatformProvider>
             {/* Topbar */}
-            <div className="sticky top-0 w-full z-10">
+            <div className="sticky top-0 z-10 w-full">
               <TopBar />
             </div>
-            <div className="flex flex-row items-start justify-between 2xl:gap-x-20 xl:gap-x-16 gap-x-10 w-full max-w-(--breakpoint-2xl) relative md:py-8 px-8 ">
+            <div className="relative flex w-full max-w-(--breakpoint-2xl) flex-row items-start justify-between gap-x-10 px-8 md:py-8 xl:gap-x-16 2xl:gap-x-20">
               {/* Sidebar - height is calculated to account for the topbar and bottom padding */}
-              <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 md:flex hidden">
+              <div className="sticky top-[112px] z-1 hidden h-[calc(100vh-112px-32px)] w-56 flex-col md:flex xl:w-64">
                 <PageNavigationProvider>
                   <TooltipProvider>
                     <DesktopSideBar className="py-6" />
@@ -119,11 +118,11 @@ export default function RootLayout({
                 </PageNavigationProvider>
               </div>
               {/* Page */}
-              <div className="z-0 w-full flex-1 py-6 min-w-0">
+              <div className="z-0 w-full min-w-0 flex-1 py-6">
                 <DocsPageLayout>{children}</DocsPageLayout>
               </div>
               {/* Page Links Bar - height is calculated to account for the topbar and bottom padding */}
-              <div className="h-[calc(100vh-112px-32px)] flex-col xl:w-64 w-56 sticky top-[112px] z-1 lg:flex hidden">
+              <div className="sticky top-[112px] z-1 hidden h-[calc(100vh-112px-32px)] w-56 flex-col lg:flex xl:w-64">
                 <PageLinksBar className="py-6" />
               </div>
             </div>

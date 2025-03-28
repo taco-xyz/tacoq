@@ -9,6 +9,7 @@ import {
   useState,
   RefObject,
   useRef,
+  PropsWithChildren,
 } from "react";
 
 /**
@@ -34,13 +35,9 @@ const MobileSidebarModalContext = createContext<
 
 /**
  * Provider component for the MobileSidebarContext
- * @param {React.ReactNode} children - The children components to render within the context
+ * @param {PropsWithChildren} children - The children components to render within the context
  */
-export function MobileSidebarModalProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function MobileSidebarModalProvider({ children }: PropsWithChildren) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -59,18 +56,19 @@ export function MobileSidebarModalProvider({
    */
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        closeSidebar();
-      }
+      if (!dialogRef.current || dialogRef.current.contains(e.target as Node))
+        return;
+
+      closeSidebar();
     },
-    [closeSidebar, dialogRef]
+    [closeSidebar, dialogRef],
   );
 
   // Listen for click events
   useEffect(() => {
-    if (isSidebarOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (!isSidebarOpen) return;
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSidebarOpen, handleClickOutside]);
 
@@ -120,7 +118,7 @@ export function useMobileSidebarModal() {
   const context = useContext(MobileSidebarModalContext);
   if (!context)
     throw new Error(
-      "useMobileSidebarModal must be used within MobileSidebarModalProvider"
+      "useMobileSidebarModal must be used within MobileSidebarModalProvider",
     );
   return context;
 }

@@ -10,6 +10,7 @@ import {
   useRef,
   RefObject,
   useLayoutEffect,
+  PropsWithChildren,
 } from "react";
 
 // Next Imports
@@ -41,14 +42,10 @@ interface PageNavigationContextType {
 }
 
 const PageNavigationContext = createContext<PageNavigationContextType | null>(
-  null
+  null,
 );
 
-export function PageNavigationProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function PageNavigationProvider({ children }: PropsWithChildren) {
   const router = useRouter();
 
   const pageContainerRef = useRef<HTMLDivElement>(null);
@@ -88,15 +85,15 @@ export function PageNavigationProvider({
    * Handle hover focus on the sidebar
    */
   const endHoverFocus = useCallback(() => {
-    if (focusedPageTitle) {
-      if (hoverFocusTimeoutRef.current) {
-        clearTimeout(hoverFocusTimeoutRef.current);
-      }
+    if (!focusedPageTitle) return;
 
-      hoverFocusTimeoutRef.current = setTimeout(() => {
-        setFocusedPageTitle(null);
-      }, 150);
+    if (hoverFocusTimeoutRef.current) {
+      clearTimeout(hoverFocusTimeoutRef.current);
     }
+
+    hoverFocusTimeoutRef.current = setTimeout(() => {
+      setFocusedPageTitle(null);
+    }, 150);
   }, [focusedPageTitle]);
 
   /**
@@ -104,26 +101,24 @@ export function PageNavigationProvider({
    * If no page is focused, focuses either the current page or first available page
    */
   const startKeyboardFocus = useCallback(() => {
-    if (!focusedPageTitle && visiblePagesTitles.length > 0) {
-      // Get the current page index
-      const currentPageIndex = currentPageTitle
-        ? visiblePagesTitles.indexOf(currentPageTitle)
-        : -1;
+    if (focusedPageTitle || visiblePagesTitles.length === 0) return;
 
-      // Set the focused page to the current page or the first available page
-      setFocusedPageTitle(
-        currentPageIndex >= 0 ? currentPageTitle : visiblePagesTitles[0]
-      );
-    }
+    const currentPageIndex = currentPageTitle
+      ? visiblePagesTitles.indexOf(currentPageTitle)
+      : -1;
+
+    // Set the focused page to the current page or the first available page
+    setFocusedPageTitle(
+      currentPageIndex >= 0 ? currentPageTitle : visiblePagesTitles[0],
+    );
   }, [visiblePagesTitles, currentPageTitle, focusedPageTitle]);
 
   /**
    * End keyboard focus mode on the sidebar by clearing focused page
    */
   const endKeyboardFocus = useCallback(() => {
-    if (focusedPageTitle) {
-      setFocusedPageTitle(null);
-    }
+    if (!focusedPageTitle) return;
+    setFocusedPageTitle(null);
   }, [focusedPageTitle]);
 
   /**
@@ -133,13 +128,14 @@ export function PageNavigationProvider({
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
       if (
-        pageContainerRef.current &&
-        !pageContainerRef.current.contains(e.target as Node)
-      ) {
-        endKeyboardFocus();
-      }
+        !pageContainerRef.current ||
+        pageContainerRef.current.contains(e.target as Node)
+      )
+        return;
+
+      endKeyboardFocus();
     },
-    [endKeyboardFocus]
+    [endKeyboardFocus],
   );
 
   /**
@@ -170,11 +166,12 @@ export function PageNavigationProvider({
           if (currentIndex < visiblePagesTitles.length - 1) {
             // Set the focused page to the next page
             setFocusedPageTitle(visiblePagesTitles[currentIndex + 1]);
+            return;
           } else {
             // Set the focused page to the first page
             setFocusedPageTitle(visiblePagesTitles[0]);
+            return;
           }
-          break;
 
         case "ArrowUp":
           e.preventDefault();
@@ -182,50 +179,60 @@ export function PageNavigationProvider({
           if (currentIndex > 0) {
             // Set the focused page to the previous page
             setFocusedPageTitle(visiblePagesTitles[currentIndex - 1]);
+            return;
           } else {
             // Set the focused page to the last page
             setFocusedPageTitle(
-              visiblePagesTitles[visiblePagesTitles.length - 1]
+              visiblePagesTitles[visiblePagesTitles.length - 1],
             );
+            return;
           }
-          break;
 
         case " ":
           e.preventDefault();
-          if (currentPage?.children) {
-            if (isPageExpanded(focusedPageTitle)) {
-              collapsePage(focusedPageTitle);
-            } else {
-              expandPage(focusedPageTitle);
-            }
+          // Check if the current page has children
+          if (!currentPage?.children) return;
+
+          // Toggle the expansion state of the current page
+          if (isPageExpanded(focusedPageTitle)) {
+            collapsePage(focusedPageTitle);
+            return;
+          } else {
+            expandPage(focusedPageTitle);
+            return;
           }
-          break;
 
         case "ArrowRight":
           e.preventDefault();
-          if (currentPage?.children && !isPageExpanded(focusedPageTitle)) {
-            expandPage(focusedPageTitle);
-          }
-          break;
+          // Check if the current page has children and is not expanded
+          if (!currentPage?.children || isPageExpanded(focusedPageTitle))
+            return;
+
+          expandPage(focusedPageTitle);
+          return;
 
         case "ArrowLeft":
           e.preventDefault();
-          if (currentPage?.children && isPageExpanded(focusedPageTitle)) {
-            collapsePage(focusedPageTitle);
-          }
-          break;
+          // Check if the current page has children and is expanded
+          if (!currentPage?.children || !isPageExpanded(focusedPageTitle))
+            return;
+
+          collapsePage(focusedPageTitle);
+          return;
 
         case "Enter":
           e.preventDefault();
-          if (currentPage?.url) {
-            router.push(currentPage.url);
-          }
-          break;
+          // Check if the current page has a URL
+          if (!currentPage?.url) return;
+
+          // Navigate to the current page's URL
+          router.push(currentPage.url);
+          return;
 
         case "Escape":
           e.preventDefault();
           endKeyboardFocus();
-          break;
+          return;
       }
     },
     [
@@ -238,7 +245,7 @@ export function PageNavigationProvider({
       router,
       startKeyboardFocus,
       endKeyboardFocus,
-    ]
+    ],
   );
 
   // Scroll to current focused page if it's hidden by the sidebar scroll
@@ -303,7 +310,7 @@ export function usePageNavigation() {
   const context = useContext(PageNavigationContext);
   if (!context) {
     throw new Error(
-      "usePageNavigation must be used within PageNavigationProvider"
+      "usePageNavigation must be used within PageNavigationProvider",
     );
   }
   return context;

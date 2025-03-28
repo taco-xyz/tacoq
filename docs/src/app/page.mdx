@@ -1,31 +1,16 @@
-import Image from "next/image";
+import { PriorityImageWithTheme } from "@/components/react/PriorityImageWithTheme";
 
-<div className="w-full h-fit my-2 ring-1 rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/1 dark:shadow-black/5 transition-all duration-150 ease-in-out ring-inset">
-  <Image
-    src="/TacoQBannerLight.png"
+<div className="my-2 h-fit w-full rounded-2xl p-1.5 shadow-xl ring-1 shadow-zinc-700/1 ring-zinc-200 transition-all duration-150 ease-in-out ring-inset dark:shadow-black/5 dark:ring-zinc-800/70">
+  <PriorityImageWithTheme
+    lightSrc="/TacoQBannerLight.png"
+    darkSrc="/TacoQBannerDark.png"
     alt="TacoQ Banner"
     width={1000}
     height={300}
-    className="flex dark:hidden w-full h-auto aspect-[1000/302] rounded-[11px] border-1 border-zinc-200 dark:border-zinc-800/70 transition-all duration-150 ease-in-out"
-    priority
-    loading="eager"
-    quality={100}
-    placeholder="blur"
-    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQtJSEkLUEwLi0tLTAtQFBGRkBQRi4tMCY4PTo+OTFFRkpLRk45OUVFRUX/2wBDAR"  
+    darkClassName="dark:border-zinc-800/70 "
+    lightClassName="border-zinc-200"
+    commonClassName="w-full h-auto aspect-[1000/302] rounded-[11px] border-1 transition-all duration-150 ease-in-out"
   />
-  <Image
-    src="/TacoQBannerDark.png"
-    alt="TacoQ Banner"
-    width={1000}
-    height={300}
-    className="hidden dark:flex w-full h-auto aspect-[1000/302] rounded-[11px] border-1 border-zinc-200 dark:border-zinc-800/70 transition-all duration-150 ease-in-out"
-    priority
-    loading="eager"
-    quality={100}
-    placeholder="blur"
-    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQtJSEkLUEwLi0tLTAtQFBGRkBQRi4tMCY4PTo+OTFFRkpLRk45OUVFRUX/2wBDAR"
-/>
-
 </div>
 
 TacoQ is a multi-language distributed task queue with built-in observability, low latency, and first-class idiomatic support.

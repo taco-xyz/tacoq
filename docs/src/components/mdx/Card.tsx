@@ -1,4 +1,4 @@
-import { FC, ComponentType } from "react";
+import { FC, ComponentType, PropsWithChildren } from "react";
 import clsx from "clsx";
 import Link from "next/link";
 
@@ -35,24 +35,24 @@ const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
   const Icon = icon ? getIcon(icon) : null;
 
   const content = (
-    <div className="w-full h-full ring-1 group rounded-2xl p-1.5  ring-zinc-200 dark:ring-zinc-800/70 shadow-xl shadow-zinc-700/1 dark:shadow-black/5 transition-all duration-150 ease-in-out ring-inset hover:translate-y-[-2px]">
+    <div className="group h-full w-full rounded-2xl p-1.5 shadow-xl ring-1 shadow-zinc-700/1 ring-zinc-200 transition-all duration-150 ease-in-out ring-inset hover:translate-y-[-2px] dark:shadow-black/5 dark:ring-zinc-800/70">
       <div
         className={clsx(
-          "rounded-[11px] relative group h-full ring-1 ring-inset ring-zinc-300 dark:ring-zinc-800 p-6 shadow-2xl shadow-zinc-600/3 dark:shadow-black/5",
+          "group relative h-full rounded-[11px] p-6 shadow-2xl ring-1 shadow-zinc-600/3 ring-zinc-300 ring-inset dark:shadow-black/5 dark:ring-zinc-800",
           href &&
-            "cursor-pointer transition-all duration-100 ease-in-out group-hover:translate-y-[-3px] group-hover:shadow-zinc-600/10 dark:group-hover:shadow-black/40"
+            "cursor-pointer transition-all duration-100 ease-in-out group-hover:translate-y-[-3px] group-hover:shadow-zinc-600/10 dark:group-hover:shadow-black/40",
         )}
       >
         {href && (
-          <ArrowUpRight className="size-5 group-hover:text-zinc-400 dark:group-hover:text-zinc-400 transition-all duration-100 ease-in-out absolute group-hover:top-5 group-hover:right-5 top-6 right-6 text-zinc-300 dark:text-zinc-600 group-hover:scale-105" />
+          <ArrowUpRight className="absolute top-6 right-6 size-5 text-zinc-300 transition-all duration-100 ease-in-out group-hover:top-5 group-hover:right-5 group-hover:scale-105 group-hover:text-zinc-400 dark:text-zinc-600 dark:group-hover:text-zinc-400" />
         )}
         {Icon && (
-          <Icon className="size-[23px] mb-3 dark:text-zinc-400 text-zinc-500" />
+          <Icon className="mb-3 size-[23px] text-zinc-500 dark:text-zinc-400" />
         )}
-        <h3 className="text-lg dark:text-zinc-100 text-zinc-900 font-semibold">
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
           {title}
         </h3>
-        <p className="text-sm mt-1 dark:text-zinc-400 text-zinc-600">
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           {description}
         </p>
       </div>
@@ -75,17 +75,19 @@ const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
 
 interface CardGroupProps {
   columns: 2 | 3 | 4;
-  children: React.ReactNode;
 }
 
-const CardGroup: FC<CardGroupProps> = ({ columns, children }) => {
+const CardGroup = ({
+  columns,
+  children,
+}: PropsWithChildren<CardGroupProps>) => {
   return (
     <div
       className={clsx(
         "mt-4 grid gap-4",
         columns === 2 && "grid-cols-1 md:grid-cols-2",
         columns === 3 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
-        columns === 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+        columns === 4 && "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
       )}
     >
       {children}

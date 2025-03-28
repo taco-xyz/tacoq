@@ -7,7 +7,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { usePageTree } from "@/contexts/PageTreeContext";
 
 // Types Imports
-import getHeaderId from "@/utils/getHeaderId";
+import { getHeaderId } from "@/utils/getHeaderId";
 
 // Utils Imports
 import clsx from "clsx";
@@ -28,7 +28,7 @@ interface PageLinksBarProps {
  * Scrolls to the corresponding heading when clicked
  * Highlights the current section based on scroll position
  */
-export default function PageLinksBar({ className }: PageLinksBarProps) {
+export function PageLinksBar({ className }: PageLinksBarProps) {
   const router = useRouter();
 
   // Extract the page tree context
@@ -48,16 +48,15 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
     (id: string) => {
       // Get the document element
       const element = document.getElementById(id);
+      if (!element) return;
 
-      if (element) {
-        // Scroll to the element
-        element.scrollIntoView({ behavior: "smooth" });
+      // Scroll to the element
+      element.scrollIntoView({ behavior: "smooth" });
 
-        // Update URL without triggering a scroll
-        router.push(`#${id}`, { scroll: false });
-      }
+      // Update URL without triggering a scroll
+      router.push(`#${id}`, { scroll: false });
     },
-    [router]
+    [router],
   );
 
   // Effect to track the active heading based on the distance to the top of the viewport (94px offset)
@@ -82,15 +81,17 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
 
     currentPage.headers.forEach((header) => {
       const element = document.getElementById(getHeaderId(header));
-      if (element) {
-        // Calculate the distance between the heading and the 94px mark
-        const distance = Math.abs(element.getBoundingClientRect().top - 94);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestHeading = element.id;
-        }
-      }
+      if (!element) return;
+
+      // Calculate the distance between the heading and the 94px mark
+      const distance = Math.abs(element.getBoundingClientRect().top - 94);
+      if (distance >= closestDistance) return;
+
+      // Update the closest heading and distance
+      closestDistance = distance;
+      closestHeading = element.id;
     });
+
     if (closestHeading) {
       setActiveHeadingId(closestHeading);
     }
@@ -98,20 +99,30 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
     // Set up intersection observer for scroll updates
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setActiveHeadingId(entry.target.id);
-        }
+        if (!entry.isIntersecting) return;
+        setActiveHeadingId(entry.target.id);
       },
       {
-        rootMargin: "-94px 0px -80% 0px",
+        // Calculate percentage that gives us exactly 40px zone below the 94px header:
+        // percentage = ((viewportHeight - 94px - 40px) / viewportHeight) * 100
+        rootMargin: (() => {
+          const viewportHeight = window.innerHeight;
+          const headerOffset = 94;
+          const zoneHeight = 40;
+          const percentage =
+            ((viewportHeight - headerOffset - zoneHeight) / viewportHeight) *
+            100;
+          return `-${headerOffset}px 0px -${percentage}% 0px`;
+        })(),
         threshold: [0.5],
-      }
+      },
     );
 
     // Start observing all heading elements
     currentPage.headers.forEach((header) => {
       const element = document.getElementById(getHeaderId(header));
-      if (element) observer.observe(element);
+      if (!element) return;
+      observer.observe(element);
     });
 
     return () => observer.disconnect();
@@ -120,17 +131,17 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
   if (!currentPage?.headers) return null;
 
   return (
-    <div className="w-full h-full relative">
+    <div className="relative h-full w-full">
       {/* Top gradient overlay */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
+      <div className="pointer-events-none absolute top-0 right-0 left-0 h-8 bg-gradient-to-b from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
       <nav
         className={clsx(
-          "flex flex-col gap-y-2 text-sm w-full overflow-y-auto custom-scrollbar h-full pr-2.5 pl-[1px]",
-          className
+          "custom-scrollbar flex h-full w-full flex-col gap-y-2 overflow-y-auto pr-2.5 pl-[1px] text-sm",
+          className,
         )}
       >
         {/* Title */}
-        <span className="font-semibold text-zinc-500 dark:text-zinc-400 flex flex-row items-center gap-x-2 -ml-[3px]">
+        <span className="-ml-[3px] flex flex-row items-center gap-x-2 font-semibold text-zinc-500 dark:text-zinc-400">
           <ChartNoAxesGantt className="size-4" />
           On this page
         </span>
@@ -145,14 +156,14 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
                 key={index}
                 onClick={() => handleClick(headingId)}
                 className={clsx(
-                  "text-left hover:text-zinc-800 dark:hover:text-white transition-all rounded-md duration-150 ease-in-out cursor-pointer custom-tab-outline-offset-0",
+                  "custom-tab-outline-offset-0 w-fit cursor-pointer rounded-md text-left transition-all duration-150 ease-in-out hover:text-zinc-800 dark:hover:text-white",
 
                   header.type === "h1" && "pl-0",
                   header.type === "h2" && "pl-4",
                   header.type === "h3" && "pl-8",
                   isActive
                     ? "font-medium text-zinc-800 dark:text-white"
-                    : "font-normal text-zinc-500 dark:text-zinc-300"
+                    : "font-normal text-zinc-500 dark:text-zinc-300",
                 )}
               >
                 {header.title}
@@ -162,7 +173,7 @@ export default function PageLinksBar({ className }: PageLinksBarProps) {
         </div>
       </nav>
       {/* Bottom gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
     </div>
   );
 }

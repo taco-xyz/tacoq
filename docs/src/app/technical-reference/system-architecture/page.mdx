@@ -121,6 +121,7 @@ We do not do this for a few reasons:
 - We already support OTEL tracing. We believe this is enough to get
   observability into the system. The task also has information about the
   timeline of its execution.
+
 </Note>
 
 <Note>
@@ -225,7 +226,7 @@ the REST API.
 
 ## Task & Event Objects
 
-Services communicate with each other by sending `Task`, `TaskAssignmentUpdate`, 
+Services communicate with each other by sending `Task`, `TaskAssignmentUpdate`,
 `TaskRunningUpdate`, and `TaskCompletedUpdate` objects. We split the updates
 into different objects so we can be as compact as possible when sending small
 updates.
@@ -235,6 +236,3 @@ Objects are serialized and schematized using [Apache Avro](https://avro.apache.o
 - Schemata are defined in `schema/avro`
 - Correspondent idiomatic objects are defined in each SDK.
 - Avro helps us provide full backwards and forwards compatibility.
-
-
-

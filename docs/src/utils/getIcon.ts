@@ -1,3 +1,4 @@
+// Lucide Icons Imports
 import {
   GraduationCap,
   SlidersHorizontal,
@@ -19,6 +20,9 @@ import {
   Package,
 } from "lucide-react";
 
+/**
+ * Icons object containing all available Lucide icons
+ */
 const icons = {
   GraduationCap,
   SlidersHorizontal,
@@ -40,6 +44,11 @@ const icons = {
   Package,
 };
 
+/**
+ * Retrieves an icon from the icons object based on the icon name
+ * @param iconName - The name of the icon to retrieve
+ * @returns The requested icon from the icons object
+ */
 export function getIcon(iconName: string) {
   return icons[iconName as keyof typeof icons];
 }

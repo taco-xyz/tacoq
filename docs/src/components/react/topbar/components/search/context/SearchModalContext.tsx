@@ -9,6 +9,7 @@ import {
   useState,
   useRef,
   RefObject,
+  PropsWithChildren,
 } from "react";
 
 /**
@@ -31,18 +32,14 @@ interface SearchModalContextType {
  * Creates a context for managing the search state
  */
 const SearchModalContext = createContext<SearchModalContextType | undefined>(
-  undefined
+  undefined,
 );
 
 /**
  * Provider component for the SearchModalContext
- * @param {React.ReactNode} children - The children components to be wrapped by the provider
+ * @param {PropsWithChildren} children - The children components to be wrapped by the provider
  */
-export function SearchModalProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function SearchModalProvider({ children }: PropsWithChildren) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Ref for the dialog element, used to listen for click events outside of it
@@ -55,7 +52,9 @@ export function SearchModalProvider({
    * Clears the input value and opens the search
    */
   const openSearch = useCallback(() => {
-    if (inputRef.current) inputRef.current.value = "";
+    if (!inputRef.current) return;
+
+    inputRef.current.value = "";
     setIsSearchOpen(true);
   }, []);
 
@@ -69,25 +68,33 @@ export function SearchModalProvider({
   // Esc to close the search
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k" && !isSearchOpen) {
-        e.preventDefault();
-        openSearch();
-      }
-      if (e.key === "Escape" && isSearchOpen) {
-        closeSearch();
+      switch (e.key) {
+        case "k":
+          if (isSearchOpen || (!e.ctrlKey && !e.metaKey)) return;
+
+          e.preventDefault();
+          openSearch();
+          return;
+        case "Escape":
+          if (!isSearchOpen) return;
+
+          e.preventDefault();
+          closeSearch();
+          return;
       }
     },
-    [isSearchOpen, openSearch, closeSearch]
+    [isSearchOpen, openSearch, closeSearch],
   );
 
   // Close the search modal when clicking outside of the search panel
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
-      if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        closeSearch();
-      }
+      if (!dialogRef.current || dialogRef.current.contains(e.target as Node))
+        return;
+
+      closeSearch();
     },
-    [closeSearch]
+    [closeSearch],
   );
 
   // Event Listeners for keyboard shortcuts
@@ -98,9 +105,9 @@ export function SearchModalProvider({
 
   // Event listener for clicks
   useEffect(() => {
-    if (isSearchOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (!isSearchOpen) return;
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSearchOpen, handleClickOutside]);
 

@@ -6,8 +6,8 @@ import { usePageNavigation } from "@/components/react/sidebar/context/PageNaviga
 import { usePlatform } from "@/contexts/PlatformContext";
 
 // Components Imports
-import Tooltip from "@/components/react/sidebar/components/Tooltip";
-import PageComponent from "@/components/react/sidebar/components/page/DesktopPage";
+import { Tooltip } from "@/components/react/sidebar/components/Tooltip";
+import { DesktopPageComponent } from "@/components/react/sidebar/components/page/DesktopPage";
 // import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
 // Utils Imports
@@ -18,7 +18,7 @@ interface DesktopSideBarProps {
   className?: string;
 }
 
-export default function DesktopSideBar({ className }: DesktopSideBarProps) {
+export function DesktopSideBar({ className }: DesktopSideBarProps) {
   // Extract the page tree context
   const { pages } = usePageTree();
 
@@ -32,15 +32,15 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
   } = usePageNavigation();
 
   // Extract the platform context
-  const { isMacOS } = usePlatform();
+  const { isAppleDevice } = usePlatform();
 
   return (
-    <div className="w-full h-full relative">
+    <div className="relative h-full w-full">
       <div
         ref={sidebarContainerRef}
         className={clsx(
-          "w-full h-full gap-y-12 flex flex-col overflow-y-auto custom-scrollbar pr-2.5",
-          className
+          "custom-scrollbar flex h-full w-full flex-col gap-y-12 overflow-y-auto pr-2.5",
+          className,
         )}
       >
         {/* <nav className="flex flex-col gap-y-3.5">
@@ -54,22 +54,22 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
             <button
               onClick={startKeyboardFocus}
               tabIndex={-1}
-              className={`absolute left-0 font-mono ring-inset dark:text-white/70 dark:hover:text-white/90 cursor-pointer text-zinc-500 hover:text-zinc-700 font-semibold text-xs bg-zinc-100/80 hover:bg-zinc-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-900 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all duration-100 ease-in-out px-2 py-1 rounded-md whitespace-nowrap ${
+              className={`absolute left-0 cursor-pointer rounded-md bg-zinc-100/80 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-100 ease-in-out ring-inset hover:bg-zinc-100 hover:text-zinc-700 hover:ring-zinc-300 dark:bg-zinc-900/80 dark:text-white/70 dark:ring-white/10 dark:hover:bg-zinc-900 dark:hover:text-white/90 dark:hover:ring-white/15 ${
                 focusedPageTitle
-                  ? "opacity-0 pointer-events-none"
-                  : "opacity-100 pointer-events-auto"
+                  ? "pointer-events-none opacity-0"
+                  : "pointer-events-auto opacity-100"
               }`}
             >
-              {isMacOS ? "⌘" : "Ctrl"} 0
+              {isAppleDevice ? "Cmd" : "Ctrl"} 0
             </button>
 
             <button
               onClick={endKeyboardFocus}
               tabIndex={-1}
-              className={`absolute left-0 font-mono ring-inset dark:text-white/70 dark:hover:text-white/90 cursor-pointer text-zinc-500 hover:text-zinc-700 font-semibold text-xs bg-zinc-100/80 hover:bg-zinc-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-900 ring-1 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all duration-100 ease-in-out px-2 py-1 rounded-md whitespace-nowrap ${
+              className={`absolute left-0 cursor-pointer rounded-md bg-zinc-100/80 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-100 ease-in-out ring-inset hover:bg-zinc-100 hover:text-zinc-700 hover:ring-zinc-300 dark:bg-zinc-900/80 dark:text-white/70 dark:ring-white/10 dark:hover:bg-zinc-900 dark:hover:text-white/90 dark:hover:ring-white/15 ${
                 !focusedPageTitle
-                  ? "opacity-0 pointer-events-none"
-                  : "opacity-100 pointer-events-auto"
+                  ? "pointer-events-none opacity-0"
+                  : "pointer-events-auto opacity-100"
               }`}
             >
               Esc
@@ -77,12 +77,10 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
           </div>
 
           <nav
-            className="flex flex-col gap-y-1.5 relative outline-hidden"
+            className="relative flex flex-col gap-y-1.5 outline-hidden"
             // The sidebar is focusable and navigable through default tab navigation
             tabIndex={0}
-            onFocus={() => {
-              startKeyboardFocus();
-            }}
+            onFocus={() => startKeyboardFocus()}
             onBlur={(e) => {
               // End keyboard focus when tab navigation ends
               if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -96,7 +94,7 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
 
             {/* Pages */}
             {pages.map((page) => (
-              <PageComponent
+              <DesktopPageComponent
                 key={page.metadata.title}
                 childOf="root"
                 {...page}
@@ -106,9 +104,9 @@ export default function DesktopSideBar({ className }: DesktopSideBarProps) {
         </div>
       </div>
       {/* Top gradient overlay */}
-      <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
+      <div className="pointer-events-none absolute top-0 right-0 left-0 h-8 bg-gradient-to-b from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
       {/* Bottom gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-zinc-950 to-transparent pointer-events-none transition-[--tw-gradient-from] duration-150 ease-in-out" />
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
     </div>
   );
 }

@@ -6,24 +6,24 @@ import { Search } from "lucide-react";
 // Context Imports
 import { useSearchModal } from "../context/SearchModalContext";
 import { usePlatform } from "@/contexts/PlatformContext";
-export default function DesktopSearchButton() {
+export function DesktopSearchButton() {
   // Extract the Search Context
   const { openSearch } = useSearchModal();
 
   // Extract the platform context
-  const { isMacOS } = usePlatform();
+  const { isAppleDevice } = usePlatform();
 
   return (
     <button
       onClick={openSearch}
-      className="w-full sm:flex hidden cursor-pointer flex-row items-center group gap-x-4 h-10 rounded-xl pl-4 pr-2 text-sm dark:bg-zinc-300/5 bg-white/80 ring-1 backdrop-blur-sm dark:shadow-xl shadow-md shadow-zinc-300/15 hover:shadow-zinc-300/25 dark:shadow-zinc-950/15 dark:hover:shadow-zinc-950/25 ring-zinc-200 hover:ring-zinc-300 dark:ring-white/10 dark:hover:ring-white/15 transition-all ease-in-out duration-150 custom-tab-outline-offset-2"
+      className="group custom-tab-outline-offset-2 hidden h-10 w-full cursor-pointer flex-row items-center gap-x-4 rounded-xl bg-white/80 pr-2 pl-4 text-sm shadow-md ring-1 shadow-zinc-300/15 ring-zinc-200 backdrop-blur-sm transition-all duration-150 ease-in-out hover:shadow-zinc-300/25 hover:ring-zinc-300 sm:flex dark:bg-zinc-300/5 dark:shadow-xl dark:shadow-zinc-950/15 dark:ring-white/10 dark:hover:shadow-zinc-950/25 dark:hover:ring-white/15"
     >
-      <Search className="size-5 dark:text-white/80 text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-white/90 transition-all ease-in-out duration-150" />
-      <p className=" dark:text-white/70 text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-white/90 transition-all ease-in-out duration-150">
+      <Search className="size-5 text-zinc-500 transition-all duration-150 ease-in-out group-hover:text-zinc-600 dark:text-white/80 dark:group-hover:text-white/90" />
+      <p className="text-zinc-500 transition-all duration-150 ease-in-out group-hover:text-zinc-700 dark:text-white/70 dark:group-hover:text-white/90">
         Search documentation...
       </p>
-      <p className="dark:text-white/70 font-mono   text-zinc-500 group-hover:text-zinc-700 ring-1 dark:ring-white/5 ring-zinc-200 group-hover:ring-zinc-300 dark:group-hover:ring-white/10 dark:group-hover:text-white/90 ml-auto font-semibold text-xs bg-zinc-200/40 group-hover:bg-zinc-200/60 dark:bg-zinc-950/80 dark:group-hover:bg-zinc-950/90 transition-all ease-in-out duration-150 cursor-pointer px-2 py-1 rounded-lg whitespace-nowrap">
-        {isMacOS ? "⌘" : "Ctrl"} K
+      <p className="ml-auto cursor-pointer rounded-lg bg-zinc-200/40 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-150 ease-in-out group-hover:bg-zinc-200/60 group-hover:text-zinc-700 group-hover:ring-zinc-300 dark:bg-zinc-950/80 dark:text-white/70 dark:ring-white/5 dark:group-hover:bg-zinc-950/90 dark:group-hover:text-white/90 dark:group-hover:ring-white/10">
+        {isAppleDevice ? "Cmd" : "Ctrl"} K
       </p>
     </button>
   );

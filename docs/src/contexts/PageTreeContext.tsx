@@ -8,6 +8,7 @@ import {
   useCallback,
   useMemo,
   useEffect,
+  PropsWithChildren,
 } from "react";
 
 // Next Imports
@@ -16,7 +17,7 @@ import { usePathname } from "next/navigation";
 // Type imports
 import type { Page, PageTree } from "@/types/PageTree";
 //import type { Anchor } from "@/types/Anchor";
-import FooterContent, { Status } from "@/types/FooterContent";
+import { FooterContent, Status } from "@/types/FooterContent";
 
 // Data imports
 import pageTreeJson from "@/page-tree.json";
@@ -31,7 +32,11 @@ const footerContent: FooterContent = {
     {
       groupName: "Frameworks",
       links: [
-        { linkName: "TacoQ", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
+        {
+          linkName: "TacoQ",
+          url: "https://github.com/taco-xyz/tacoq",
+          status: Status.COMPLETED,
+        },
         { linkName: "TacoDocs", status: Status.WORK_IN_PROGRESS },
         { linkName: "TacoFlow", status: Status.SOON },
         { linkName: "TacoBI", status: Status.SOON },
@@ -50,8 +55,16 @@ const footerContent: FooterContent = {
     {
       groupName: "Community",
       links: [
-        { linkName: "Discord", url: "https://discord.gg/NXwBEtZSUq", status: Status.COMPLETED },
-        { linkName: "Github", url: "https://github.com/taco-xyz/tacoq", status: Status.COMPLETED },
+        {
+          linkName: "Discord",
+          url: "https://discord.gg/NXwBEtZSUq",
+          status: Status.COMPLETED,
+        },
+        {
+          linkName: "Github",
+          url: "https://github.com/taco-xyz/tacoq",
+          status: Status.COMPLETED,
+        },
       ],
     },
   ],
@@ -107,10 +120,11 @@ function getVisiblePages(pages: Page[], expandedPages: Set<string>): string[] {
 function findPageByTitle(pages: Page[], title: string): Page | null {
   for (const page of pages) {
     if (page.metadata.title === title) return page;
-    if (page.children) {
-      const found = findPageByTitle(page.children, title);
-      if (found) return found;
-    }
+
+    if (!page.children) continue;
+
+    const found = findPageByTitle(page.children, title);
+    if (found) return found;
   }
   return null;
 }
@@ -118,19 +132,20 @@ function findPageByTitle(pages: Page[], title: string): Page | null {
 function findPageAndParents(
   pages: Page[],
   targetUrl: string,
-  parents: string[] = []
+  parents: string[] = [],
 ): string[] {
   for (const page of pages) {
     if (page.url === targetUrl) {
       return [...parents, page.metadata.title];
     }
-    if (page.children) {
-      const found = findPageAndParents(page.children, targetUrl, [
-        ...parents,
-        page.metadata.title,
-      ]);
-      if (found.length > 0) return found;
-    }
+
+    if (!page.children) continue;
+
+    const found = findPageAndParents(page.children, targetUrl, [
+      ...parents,
+      page.metadata.title,
+    ]);
+    if (found.length > 0) return found;
   }
   return [];
 }
@@ -141,15 +156,16 @@ function getFlattenedPages(pages: Page[]): Page[] {
     if (page.url) {
       flattened.push(page);
     }
-    if (page.children) {
-      page.children.forEach(traverse);
-    }
+
+    if (!page.children) return;
+
+    page.children.forEach(traverse);
   }
   pages.forEach(traverse);
   return flattened;
 }
 
-export function PageTreeProvider({ children }: { children: React.ReactNode }) {
+export function PageTreeProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
 
   const [expandedPages, setExpandedPages] = useState<Set<string>>(() => {
@@ -161,10 +177,11 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
     function findPageByUrl(pages: Page[], url: string): Page | null {
       for (const page of pages) {
         if (page.url === url) return page;
-        if (page.children) {
-          const found = findPageByUrl(page.children, url);
-          if (found) return found;
-        }
+
+        if (!page.children) continue;
+
+        const found = findPageByUrl(page.children, url);
+        if (found) return found;
       }
       return null;
     }
@@ -174,7 +191,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
 
   const visiblePagesTitles = useMemo(
     () => getVisiblePages(pageTree.children, expandedPages),
-    [expandedPages]
+    [expandedPages],
   );
 
   const expandPage = useCallback((pageTitle: string) => {
@@ -191,12 +208,12 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
 
   const isPageExpanded = useCallback(
     (pageTitle: string) => expandedPages.has(pageTitle),
-    [expandedPages]
+    [expandedPages],
   );
 
   const getPageByTitle = useCallback(
     (pageTitle: string) => findPageByTitle(pageTree.children, pageTitle),
-    []
+    [],
   );
 
   const breadcrumbs = useMemo(() => {
@@ -209,7 +226,7 @@ export function PageTreeProvider({ children }: { children: React.ReactNode }) {
   const { previousPage, nextPage } = useMemo(() => {
     const flattenedPages = getFlattenedPages(pageTree.children);
     const currentIndex = flattenedPages.findIndex(
-      (page) => page.url === pathname
+      (page) => page.url === pathname,
     );
 
     return {

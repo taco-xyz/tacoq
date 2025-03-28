@@ -10,6 +10,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   useMemo,
+  PropsWithChildren,
 } from "react";
 
 // Context Imports
@@ -83,7 +84,7 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  * </TooltipProvider>
  * ```
  */
-export function TooltipProvider({ children }: { children: React.ReactNode }) {
+export function TooltipProvider({ children }: PropsWithChildren) {
   // Extract the pathname
   const pathname = usePathname();
 
@@ -126,7 +127,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
       previousContent: contentState.previous,
       appearance: appearanceState,
     }),
-    [contentState, appearanceState]
+    [contentState, appearanceState],
   );
 
   // Ref for managing hide animation timeout
@@ -267,7 +268,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
 
         const getAnimationDirection = (
           currentTitle: string,
-          previousTitle?: string
+          previousTitle?: string,
         ) => {
           //If there's no previous top position we're focusing for the first time on the tooltip
           if (!previousTitle || currentTitle === previousTitle) return null;
@@ -294,7 +295,7 @@ export function TooltipProvider({ children }: { children: React.ReactNode }) {
           // Set the direction of the tooltip animation
           animationDirection: getAnimationDirection(
             contentState.current.title,
-            contentState.previous?.title
+            contentState.previous?.title,
           ),
         }));
       }

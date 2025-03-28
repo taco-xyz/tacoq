@@ -39,13 +39,13 @@ function extractHeadings(content: string): Header[] {
     if (inCodeBlock) continue;
 
     const match = line.match(/^(\s*)(#{1,6})\s+(.+)$/);
-    if (match) {
-      const [, , level, title] = match;
-      rows.push({
-        title,
-        type: ("h" + level.length) as HeaderType,
-      });
-    }
+    if (!match) continue;
+
+    const [, , level, title] = match;
+    rows.push({
+      title,
+      type: ("h" + level.length) as HeaderType,
+    });
   }
 
   return rows;
@@ -88,7 +88,7 @@ function readPageContent(filePath: string): string | null {
 function scanDirectory(
   dirPath: string,
   isRoot: boolean = false,
-  depth: number = 0
+  depth: number = 0,
 ): Page[] {
   const entries: Page[] = [];
   const dirEntries = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -102,6 +102,7 @@ function scanDirectory(
   // Log directory info
   const relativePath = path.relative(APP_DIR, dirPath);
   console.log(chalk.blue(`${indent}📁 Scanning ${relativePath || "root"}`));
+
   if (metadata) {
     console.log(chalk.gray(`${indent}  Title: ${metadata.title}`));
   } else {
@@ -117,19 +118,19 @@ function scanDirectory(
   // Scan subdirectories first
   const children: Page[] = [];
   for (const entry of dirEntries) {
-    if (entry.isDirectory()) {
-      const fullPath = path.join(dirPath, entry.name);
-      children.push(...scanDirectory(fullPath, false, depth + 1));
-    }
+    if (!entry.isDirectory()) continue;
+
+    const fullPath = path.join(dirPath, entry.name);
+    children.push(...scanDirectory(fullPath, false, depth + 1));
   }
 
   // If this is the root directory, just return the children sorted by index
   if (isRoot) {
     console.log(
-      chalk.green(`\n✨ Found ${children.length} top-level sections`)
+      chalk.green(`\n✨ Found ${children.length} top-level sections`),
     );
     return children.sort(
-      (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0)
+      (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0),
     );
   }
 
@@ -143,7 +144,7 @@ function scanDirectory(
         index: 0,
       },
       children: children.sort(
-        (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0)
+        (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0),
       ),
     });
   }
@@ -163,38 +164,39 @@ function scanDirectory(
     (entry) =>
       !entry.isDirectory() &&
       entry.name.endsWith(".mdx") &&
-      entry.name !== "page.mdx"
+      entry.name !== "page.mdx",
   );
+
   if (additionalMdxFiles.length > 0) {
     console.log(
       chalk.gray(
-        `${indent}  📄 Found ${additionalMdxFiles.length} additional MDX files`
-      )
+        `${indent}  📄 Found ${additionalMdxFiles.length} additional MDX files`,
+      ),
     );
+
     for (const entry of additionalMdxFiles) {
       const fullPath = path.join(dirPath, entry.name);
       const relativePath = path.relative(APP_DIR, fullPath);
       const content = readPageContent(fullPath);
+      if (!content) continue;
 
-      if (content) {
-        entries.push({
-          url: `/${relativePath.replace(/\\/g, "/").replace(/\.mdx$/, "")}`,
-          metadata: {
-            title: entry.name.replace(/\.mdx$/, ""),
-            description: "",
-            icon: "",
-            index: 999, // Put additional MDX files at the end
-          },
-          rawContent: content,
-          headers: extractHeadings(content),
-        });
-      }
+      entries.push({
+        url: `/${relativePath.replace(/\\/g, "/").replace(/\.mdx$/, "")}`,
+        metadata: {
+          title: entry.name.replace(/\.mdx$/, ""),
+          description: "",
+          icon: "",
+          index: 999,
+        },
+        rawContent: content,
+        headers: extractHeadings(content),
+      });
     }
   }
 
   // Sort entries by index before returning
   return entries.sort(
-    (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0)
+    (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0),
   );
 }
 
@@ -213,7 +215,7 @@ function printSummaryTree(entries: Page[], depth: number = 0): void {
     console.log(
       `${indent}${icon} ${chalk.bold(entry.metadata.title)}${
         entry.url ? ` (${chalk.gray(entry.url)})` : ""
-      }${headers}`
+      }${headers}`,
     );
     if (entry.children) {
       printSummaryTree(entry.children, depth + 1);
@@ -231,8 +233,8 @@ export function generatePageStructure(): PageTree {
   const entries = scanDirectory(APP_DIR, true);
   console.log(
     chalk.green(
-      `\n✅ Scan complete! Found ${entries.length} top-level sections`
-    )
+      `\n✅ Scan complete! Found ${entries.length} top-level sections`,
+    ),
   );
   return { children: entries };
 }
@@ -244,8 +246,8 @@ export function regenPageStructure() {
   fs.writeFileSync(outputPath, JSON.stringify(pageTree, null, 2));
   console.log(
     chalk.green(
-      `\n💾 Saved page structure to ${path.relative(process.cwd(), outputPath)}`
-    )
+      `\n💾 Saved page structure to ${path.relative(process.cwd(), outputPath)}`,
+    ),
   );
 
   console.log(chalk.bold(chalk.magentaBright("\n📊 Generated Structure:\n")));

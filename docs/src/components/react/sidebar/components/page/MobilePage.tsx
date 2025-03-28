@@ -20,13 +20,13 @@ import { useMobileSidebarModal } from "../../context/MobileSidebarModalContext";
 import type { Page } from "@/types/page/Page";
 
 // Components Imports
-import Highlight from "./components/Highlight";
+import { Highlight } from "./components/Highlight";
 
 export interface PageComponentProps extends Page {
   childOf: string;
 }
 
-export default function MobilePageComponent({
+export function MobilePageComponent({
   childOf,
   url,
   children,
@@ -46,7 +46,7 @@ export default function MobilePageComponent({
     <div
       data-child-of={childOf}
       ref={elementRef}
-      className={clsx("flex flex-col text-sm relative outline-hidden")}
+      className={clsx("relative flex flex-col text-sm outline-hidden")}
     >
       {/* If the item has a url, it's a link */}
       {url ? (
@@ -55,23 +55,21 @@ export default function MobilePageComponent({
             href={url}
             className={clsx(
               currentPageTitle === title &&
-                "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+                "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
               currentPageTitle !== title &&
-                "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-              "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
+                "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
+              "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden transition-all duration-50 ease-in-out select-none",
             )}
-            onClick={() => {
-              closeSidebar();
-            }}
+            onClick={() => closeSidebar()}
             tabIndex={-1}
           >
             {sidebar?.Icon && (
               <sidebar.Icon
                 className={clsx(
-                  "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                  "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
                   currentPageTitle === title
                     ? "text-zinc-950 dark:text-white/100"
-                    : "text-zinc-500 dark:text-white/50"
+                    : "text-zinc-500 dark:text-white/50",
                 )}
               />
             )}
@@ -89,8 +87,8 @@ export default function MobilePageComponent({
                   }
                 }}
                 className={clsx(
-                  "size-3 mt-[3px] transition-all duration-150 ease-in-out opacity-50 text-zinc-700 dark:text-zinc-300",
-                  isPageExpanded(title) && "rotate-90"
+                  "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
+                  isPageExpanded(title) && "rotate-90",
                 )}
               />
             )}
@@ -110,19 +108,19 @@ export default function MobilePageComponent({
           }}
           className={clsx(
             currentPageTitle === title &&
-              "dark:bg-white/[0.075] bg-zinc-800/[0.075] text-zinc-800 dark:text-white font-semibold dark:hover:bg-white/[0.075] hover:bg-zinc-800/[0.075]",
+              "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
             currentPageTitle !== title &&
-              "hover:text-zinc-800 dark:hover:text-white text-zinc-600 dark:text-zinc-300 font-normal dark:hover:bg-white/5 hover:bg-zinc-800/5",
-            "flex items-center relative rounded-md flex-row gap-2 px-2 py-1 cursor-pointer outline-hidden select-none w-full whitespace-nowrap transition-all duration-50 ease-in-out"
+              "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
+            "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden transition-all duration-50 ease-in-out select-none",
           )}
         >
           {sidebar?.Icon && (
             <sidebar.Icon
               className={clsx(
-                "size-4 mr-1  transition-all duration-50 ease-in-out flex-shrink-0",
+                "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
                 currentPageTitle === title
                   ? "text-zinc-950 dark:text-white/100"
-                  : "text-zinc-500 dark:text-white/50"
+                  : "text-zinc-500 dark:text-white/50",
               )}
             />
           )}
@@ -139,8 +137,8 @@ export default function MobilePageComponent({
                 }
               }}
               className={clsx(
-                "size-3 mt-[3px] transition-all duration-150 ease-in-out opacity-50 text-zinc-700 dark:text-zinc-300",
-                isPageExpanded(title) && "rotate-90"
+                "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
+                isPageExpanded(title) && "rotate-90",
               )}
             />
           )}
@@ -150,11 +148,11 @@ export default function MobilePageComponent({
       {children && (
         <div
           className={clsx(
-            "pl-2.5 ml-3.5 border-l-[1px] border-zinc-300 dark:border-zinc-700",
+            "ml-3.5 border-l-[1px] border-zinc-300 pl-2.5 dark:border-zinc-700",
             "grid transition-all duration-300 ease-in-out",
             isPageExpanded(title)
-              ? "grid-rows-[1fr] opacity-100 mt-1.5"
-              : "grid-rows-[0fr] opacity-0"
+              ? "mt-1.5 grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0",
           )}
         >
           {/* Selected highlight */}

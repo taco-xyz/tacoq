@@ -1,37 +1,33 @@
-"use client";
-
 // Next Imports
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // Lucide Icons
 import { ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
-  const router = useRouter();
-
   return (
-    <div className="flex flex-col items-start justify-start gap-y-6 border-b border-zinc-200 dark:border-zinc-800 pb-9 transition-colors duration-150 ease-in-out">
+    <div className="flex flex-col items-start justify-start gap-y-6 border-b border-zinc-200 pb-9 transition-colors duration-150 ease-in-out dark:border-zinc-800">
       <div className="flex flex-col items-start justify-start gap-y-3">
-        <div className="flex flex-row items-center w-fit justify-center gap-x-2 font-mono uppercase text-xs font-semibold text-zinc-500 dark:text-zinc-400 transition-colors duration-150 ease-in-out">
+        <div className="flex w-fit flex-row items-center justify-center gap-x-2 font-mono text-xs font-semibold text-zinc-500 uppercase transition-colors duration-150 ease-in-out dark:text-zinc-400">
           Error 404
         </div>
 
-        <h1 className="text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 transition-colors duration-150 ease-in-out">
+        <h1 className="text-4xl font-semibold tracking-tight text-zinc-800 transition-colors duration-150 ease-in-out dark:text-white">
           Page Not Found
         </h1>
       </div>
 
-      <h5 className="text-lg font-[450] tracking-normal dark:text-zinc-300 text-zinc-600 transition-colors duration-150 ease-in-out">
+      <h5 className="text-lg font-[450] tracking-normal text-zinc-600 transition-colors duration-150 ease-in-out dark:text-zinc-300">
         We couldn&apos;t find the page you were looking for.
       </h5>
 
-      <button
-        onClick={() => router.back()}
-        className=" text-zinc-600 hover:bg-zinc-800/5 dark:hover:bg-white/5 hover:dark:text-white hover:text-zinc-800 py-1 px-1.5 dark:text-zinc-300 transition-all duration-150 ease-in-out flex flex-row items-center gap-x-2 rounded-lg custom-tab-outline-offset-4 cursor-pointer"
+      <Link
+        href=".."
+        className="custom-tab-outline-offset-4 flex cursor-pointer flex-row items-center gap-x-2 rounded-lg px-1.5 py-1 text-zinc-600 transition-all duration-150 ease-in-out hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 hover:dark:text-white"
       >
-        <ArrowLeft className="size-3.5" />{" "}
+        <ArrowLeft className="size-3.5" />
         <p className="text-sm font-medium">Go back</p>
-      </button>
+      </Link>
     </div>
   );
 }

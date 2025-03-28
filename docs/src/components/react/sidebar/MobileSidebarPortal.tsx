@@ -1,6 +1,7 @@
 "use client";
 
 // React Imports
+import { PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 
 // Next Imports
@@ -17,21 +18,21 @@ import { useMobileSidebarModal } from "./context/MobileSidebarModalContext";
 import { usePageTree } from "@/contexts/PageTreeContext";
 
 // Components Imports
-import ThemeToggle from "../topbar/components/ThemeToggle";
-import MobilePageComponent from "./components/page/MobilePage";
-import Logo from "../Logo";
+import { ThemeToggle } from "../topbar/components/ThemeToggle";
+import { MobilePageComponent } from "./components/page/MobilePage";
+import { Logo } from "../Logo";
 //import AnchorComponent from "./components/Anchor";
 
 // Dynamic Components Imports
-const SidebarPortal = dynamic<{ children: React.ReactNode }>(
+const SidebarPortal = dynamic<PropsWithChildren>(
   () =>
-    Promise.resolve(({ children }: { children: React.ReactNode }) =>
-      createPortal(children, document.body)
+    Promise.resolve(({ children }: PropsWithChildren) =>
+      createPortal(children, document.body),
     ),
-  { ssr: false }
+  { ssr: false },
 );
 
-export default function MobileSidebarPortal() {
+export function MobileSidebarPortal() {
   // Extract the Mobile Sidebar Modal Context
   const { isSidebarOpen, closeSidebar, dialogRef } = useMobileSidebarModal();
 
@@ -43,14 +44,14 @@ export default function MobileSidebarPortal() {
       <div
         className={clsx(
           "fixed inset-0 z-50",
-          isSidebarOpen ? "pointer-events-auto" : "pointer-events-none"
+          isSidebarOpen ? "pointer-events-auto" : "pointer-events-none",
         )}
       >
         {/* Backdrop */}
         <div
           className={clsx(
-            "fixed inset-0 h-screen w-full dark:bg-zinc-950/20 bg-zinc-950/5 backdrop-blur-xs transition-opacity duration-300 ease-in-out",
-            isSidebarOpen ? "opacity-100" : "opacity-0"
+            "fixed inset-0 h-screen w-full bg-zinc-950/5 backdrop-blur-xs transition-opacity duration-300 ease-in-out dark:bg-zinc-950/20",
+            isSidebarOpen ? "opacity-100" : "opacity-0",
           )}
         />
 
@@ -58,13 +59,13 @@ export default function MobileSidebarPortal() {
         <div
           ref={dialogRef}
           className={clsx(
-            "dark:bg-zinc-950 bg-white fixed right-0 top-0 bottom-0 w-full sm:max-w-sm max-w-full transition-all duration-300 ease-in-out max-h-full h-full overflow-y-auto shadow-xl dark:shadow-zinc-950/30 shadow-zinc-500/10 border-l border-zinc-200 dark:border-white/5",
-            isSidebarOpen ? "translate-x-0" : "translate-x-full"
+            "fixed top-0 right-0 bottom-0 h-full max-h-full w-full max-w-full overflow-y-auto border-l border-zinc-200 bg-white shadow-xl shadow-zinc-500/10 transition-all duration-300 ease-in-out sm:max-w-sm dark:border-white/5 dark:bg-zinc-950 dark:shadow-zinc-950/30",
+            isSidebarOpen ? "translate-x-0" : "translate-x-full",
           )}
         >
           {/* Header */}
-          <div className="sticky top-0 dark:bg-zinc-950/50 bg-white/50 backdrop-blur-lg overflow-hidden transition-all duration-300 ease-in-out px-8 ">
-            <div className="w-full h-full relative flex flex-row items-center justify-between border-b dark:border-white/10 border-zinc-200 py-5 transition-all duration-300 ease-in-out">
+          <div className="sticky top-0 overflow-hidden bg-white/50 px-8 backdrop-blur-lg transition-all duration-300 ease-in-out dark:bg-zinc-950/50">
+            <div className="relative flex h-full w-full flex-row items-center justify-between border-b border-zinc-200 py-5 transition-all duration-300 ease-in-out dark:border-white/10">
               {/* Logo */}
               <Logo />
 
@@ -73,30 +74,30 @@ export default function MobileSidebarPortal() {
                 <ThemeToggle />
                 <button
                   onClick={closeSidebar}
-                  className="dark:hover:text-white/80 text-zinc-500 hover:text-zinc-400 cursor-pointer dark:text-white/70 transition-all ease-in-out duration-150 custom-tab-outline-offset-4 rounded-xs"
+                  className="custom-tab-outline-offset-4 cursor-pointer rounded-xs text-zinc-500 transition-all duration-150 ease-in-out hover:text-zinc-400 dark:text-white/70 dark:hover:text-white/80"
                 >
                   <X className="size-6" />
                 </button>
               </div>
 
               {/* Decorative Background gradient */}
-              <div className="absolute overflow-hidden h-full mx-auto left-1/2 -translate-x-1/2 -bottom-6 z-[-1] pointer-events-none">
-                <div className="bg-radial origin-center h-20 w-[20rem] dark:opacity-3 opacity-10 dark:from-white from-zinc-400 dark:via-white/50 via-zinc-400/50 from-0% via-15% to-transparent to-50% pointer-events-none" />
+              <div className="pointer-events-none absolute -bottom-6 left-1/2 z-[-1] mx-auto h-full -translate-x-1/2 overflow-hidden">
+                <div className="pointer-events-none h-20 w-[20rem] origin-center bg-radial from-zinc-400 from-0% via-zinc-400/50 via-15% to-transparent to-50% opacity-10 dark:from-white dark:via-white/50 dark:opacity-3" />
               </div>
             </div>
           </div>
 
           {/* Sidebar Content */}
           <div className="px-8 py-8">
-            <div className="w-full h-fit gap-y-10 flex flex-col">
+            <div className="flex h-fit w-full flex-col gap-y-10">
               {/*<nav className="flex flex-col gap-y-3.5">
                 {anchors.map((anchor) => (
                   <AnchorComponent key={anchor.title} {...anchor} />
                 ))}
               </nav>*/}
 
-              <div className="flex flex-col gap-y-3 -ml-2 ">
-                <nav className="flex flex-col gap-y-1.5 relative outline-hidden">
+              <div className="-ml-2 flex flex-col gap-y-3">
+                <nav className="relative flex flex-col gap-y-1.5 outline-hidden">
                   {/* Pages */}
                   {pages.map((page) => (
                     <MobilePageComponent
