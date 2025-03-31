@@ -28,7 +28,6 @@ export const metadata = {
     "health checks",
     "environment variables",
     "task serialization",
-    "JSON handling",
     "task results",
     "worker application",
     "UV package manager",
@@ -101,9 +100,9 @@ services:
       timeout: 5s
       retries: 5
     environment:
-      TACOQ_DATABASE_URL: postgresql://user:password@localhost:5432/tacoq
-      TACOQ_BROKER_URL: amqp://user:password@localhost:5672
-
+      TACOQ_DATABASE_URL: postgresql://user:password@postgres:5432/tacoq
+      TACOQ_BROKER_URL: amqp://user:password@rabbitmq:5672
+      
   # ================================================
   # Broker
   # This is the message broker where all tasks get
@@ -200,39 +199,60 @@ The worker application has been created, but it doesn't know how to handle any
 tasks that come its way. So, let's teach it to handle a task:
 
 ```python
-import json
-from tacoq import TaskInput, TaskOutput
+from tacoq import TaskInput, TaskOutput, PydanticDecoder
+from pydantic import BaseModel
+import asyncio
 
-@worker_app.task(kind="task_wait_n_seconds")
-async def task_wait_n_seconds(input_data: TaskInput) -> TaskOutput:
+# Create Pydantic models for the task input and output.
 
-    # The input data must be de-serialized from a string into your preferred
-    # data structure. In this case, we're using JSON. You could use Avro or Proto!
-    input_data_dict: dict[str, Any] = json.loads(input_data)
-    seconds = input_data_dict.get("seconds", 0)
+class TestInputPydanticModel(BaseModel):
+    seconds: int
+
+class TestOutputPydanticModel(BaseModel):
+    result: str
+    seconds: int
+
+@worker_app.task(kind="task_wait_n_seconds", input_decoder=PydanticDecoder(TestInputPydanticModel))
+async def task_wait_n_seconds(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
+    seconds = input_data.seconds
 
     # The task is now executed. Here we simply wait for the specified number of
     # seconds and then return a results dictionary.
     await asyncio.sleep(seconds)
 
-    # The results are serialized back into a string so that they can be
-    # transported back to whomever requested the task.
-    return json.dumps(
-        {
-            "result": "Hello, world! You waited for %d seconds" % seconds,
-            "seconds": seconds,
-        }
+    # The results are automatically encoded into bytes and sent back to the broker
+    return TestOutputPydanticModel(
+        result=f"Hello, world! You waited for {seconds} seconds",
+        seconds=seconds,
     )
 ```
 
+<Tip>
+  When a task's input and output data reach the broker, **they must be encoded
+  in byte format.**
+
+  TacoQ provides a **default encoder and decoder that can handle JSON** objects
+  with the language's most commonly used libraries. These are **well tested and
+  should work for most use cases.**
+  
+  - **Python**: `pydantic`
+  - **Rust**: `serde_json`
+  
+  You can also **write your own encoders and decoders**. Simply peek into the
+  source code of the default ones and implement the required methods.
+</Tip>
+
 <Note>
   Note the task field `kind` is set to `"task_wait_n_seconds"`. You can think
-  about it the following way: - **Worker Kind**: Helps the publisher know which
-  set of workers to send the task to. - **Task Kind**: Helps the worker know
-  which method to use to handle a task. If you're familiar with task queues,
-  you're probably used to only specifying the task kind and not the worker kind.
-  You can read about this design decision in the [System
-  Architecture](/technical-reference/system-architecture#h2-worker) section.
+  about it the following way: 
+  - **Worker Kind**: Helps the publisher know which set of workers to send the
+    task to. 
+  - **Task Kind**: Helps the worker know which method to use to handle a task. 
+    
+  If you're familiar with task queues, you're probably used to only specifying
+  the task kind and not the worker kind. You can read about this design decision
+  in the [System Architecture](/technical-reference/system-architecture#h2-worker)
+  section.
 </Note>
 
 Now that our worker is ready to handle tasks, we can boot it up via its
@@ -240,7 +260,6 @@ Now that our worker is ready to handle tasks, we can boot it up via its
 
 ```python
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(worker_app.entrypoint())
 ```
 
@@ -250,7 +269,7 @@ for it to take care of!
 ## PublisherClient
 
 We'll start by setting up the publisher and its configuration. The publisher's
-one and only responsability is to publish tasks via the message broker so that
+one and only responsibility is to publish tasks via the message broker so that
 the relay and the worker can take care of the rest.
 
 ```python
@@ -261,27 +280,23 @@ publisher = PublisherClient(broker_config=broker_config)
 ```
 
 With the publisher application created, we don't need to run an entrypoint.
-Instead, we will simply use the publisher to publish the task.
+Instead, we will use the object to publish the task.
 
-Let's publish a new task, wait for it to complete, and then retrieve the results:
+Let's publish a new task, wait for it to complete, and finally, retrieve the
+results:
 
 ```python
-# We must serialize the input data in a string so that it can be passed and
-# interpreted by the worker!
-task_input = json.dumps({"duration": 2})
-
 # The task is published to the message broker. Note that the worker kind and
-# task kind but be properly configured and match the worker and task kinds
+# task kind must be properly configured and match the worker and task kinds
 # in the worker application.
 task = await publisher.publish_task(
     worker_kind="worker_waiter_kind",
     task_kind="task_wait_n_seconds",
-    input_data=task_input,
+    input_data=TestInputPydanticModel(seconds=2),
 )
 
-# The task's ID is important for later!
+# The task's ID is important so we can later retrieve it!
 task_id = task.id
-
 ```
 
 Our task has now been published and is being worked on. But how do we retrieve
@@ -296,7 +311,7 @@ current state.
 To communicate with the relay, we can use the `RelayClient` class:
 
 ```python
-from tacoq import RelayClient
+from tacoq import RelayClient, PydanticDecoder
 
 # The relay's URL is passed as an argument to the constructor.
 relay_client = RelayClient(url="http://localhost:3000")
@@ -307,7 +322,11 @@ relay_client = RelayClient(url="http://localhost:3000")
 completed_task = await relay_client.get_task(task_id)
 
 # Let's load the results into a dictionary and print them.
-result = json.loads(completed_task.results)
+# It's important for the decoder to know which Pydantic model to use
+# to decode the results.
+result = completed_task.get_decoded_output_data(
+    decoder=PydanticDecoder(TestOutputPydanticModel)
+)
 print(result)
 
 # Hurray!
