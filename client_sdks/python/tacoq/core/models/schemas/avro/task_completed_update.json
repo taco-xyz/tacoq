@@ -19,10 +19,7 @@
       },
       {
         "name": "output_data",
-        "type": [
-          "null",
-          "bytes"
-        ]
+        "type": "bytes"
       },
       {
         "name": "is_error",

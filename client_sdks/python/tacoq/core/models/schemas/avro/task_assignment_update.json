@@ -27,7 +27,7 @@
       },
       {
         "name": "input_data",
-        "type": ["null", "bytes"]
+        "type": "bytes"
       },
       {
         "name": "priority",
