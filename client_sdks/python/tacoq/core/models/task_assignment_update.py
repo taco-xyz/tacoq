@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import Field
@@ -9,7 +8,7 @@ from tacoq.core.models.avro_serializable_base_model import (
     avro_schema_path,
 )
 
-from tacoq.core.models.task import TaskInput
+from tacoq.core.models.task import TaskRawInput
 
 
 @avro_schema_path("schemas/avro/task_assignment_update.json")
@@ -31,7 +30,7 @@ class TaskAssignmentUpdate(AvroSerializableBaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now())
     """ The time the task was created at. """
 
-    input_data: Optional[TaskInput] = Field(default=None)
+    input_data: TaskRawInput = Field(default=None)
     """ The input data of the task."""
 
     priority: int

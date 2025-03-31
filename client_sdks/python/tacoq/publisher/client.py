@@ -14,8 +14,8 @@ from typing_extensions import Self
 
 from tacoq.core.encoding import (
     Data,
-    EncoderFunction,
-    pydantic_encoder,
+    Encoder,
+    PydanticEncoder,
 )
 from tacoq.core.infra.broker import BrokerConfig, PublisherBrokerClient
 from tacoq.core.models import Task, TaskAssignmentUpdate
@@ -65,7 +65,7 @@ class PublisherClient(BaseModel):
         task_kind: str,
         worker_kind: str,
         input_data: Data,
-        encoder: EncoderFunction[Data] = pydantic_encoder,
+        encoder: Encoder[Data] = PydanticEncoder(),
         task_id: Optional[UUID] = None,
         priority: int = 0,
         ttl_duration: int = 60 * 60 * 24 * 7,
@@ -77,7 +77,7 @@ class PublisherClient(BaseModel):
         - task_kind: The kind of the task. Can either be in the format of `worker_kind:task_name` string or a `TaskKind` object.
         - worker_kind: The kind of worker that will execute the task.
         - input_data: The data to publish. The type of this data must be able to be encoded using the `encoder` function. By default, it accepts a Pydantic model.
-        - encoder: The encoder to use to encode the input data.
+        - encoder: The encoder function to use to encode the input data.
         - task_id: The ID of the task. If not provided, a new UUID will be generated.
         - priority: The priority of the task.
         - ttl_duration: For how long the task should live after its done. Default value of 7 days.
@@ -128,7 +128,7 @@ class PublisherClient(BaseModel):
             inject(otel_ctx_carrier)
 
             # Create a task with base values
-            encoded_input_data = encoder(input_data)
+            encoded_input_data = encoder.encode(input_data)
             task = Task(
                 id=task_id or uuid4(),
                 task_kind=task_kind,

@@ -7,7 +7,7 @@ publish the results back to the relay.
 import asyncio
 import json
 from datetime import datetime
-from typing import Awaitable, Callable, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Generic, Optional, TypeVar
 
 from aio_pika.abc import (
     AbstractIncomingMessage,
@@ -23,10 +23,11 @@ from tacoq.core.models import (
     SerializedException,
     TaskAssignmentUpdate,
     TaskCompletedUpdate,
-    TaskInput,
-    TaskOutput,
+    TaskRawInput,
+    TaskRawOutput,
     TaskRunningUpdate,
 )
+from tacoq.core.encoding import Decoder, Encoder, PydanticEncoder
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
 from tacoq.worker.config import WorkerApplicationConfig
@@ -43,15 +44,72 @@ class TaskNotRegisteredError(Exception):
     def __init__(
         self: Self,
         task_kind: str,
-        registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]],
+        registered_tasks: list[str],
     ):
-        self.message = f"Task {task_kind} not registered for this worker. Available tasks: {registered_tasks.keys()}"
+        self.message = f"Task {task_kind} not registered for this worker. Available tasks: {registered_tasks}"
         super().__init__(self.message)
 
 
 # =========================================
 # Worker Application
 # =========================================
+
+TaskInputType = TypeVar("TaskInputType")
+TaskOutputType = TypeVar("TaskOutputType")
+
+TaskHandlerFunction = Callable[
+    [Optional[TaskInputType]], Awaitable[Optional[TaskOutputType]]
+]
+
+
+class TaskHandler(BaseModel, Generic[TaskInputType, TaskOutputType]):
+    """A task handler for a specific task kind.
+
+    ### Attributes:
+    - kind: The name of the task kind that uniquely identifies this task
+      within the worker.
+    - task_function: The function that will be called to execute the task.
+    - input_decoder: The decoder that will be used to decode the task input
+      from bytes to the input type after receiving it from the broker.
+    - output_encoder: The encoder that will be used to encode the task output
+      into bytes before queing it into the broker.
+    """
+
+    kind: str
+    task_function: TaskHandlerFunction[TaskInputType, TaskOutputType]
+    input_decoder: Decoder[TaskInputType]
+    output_encoder: Encoder[TaskOutputType]
+
+    async def execute(self, input_data: TaskRawInput) -> TaskRawOutput:
+        """Execute a task based on the raw input data, returning the raw output
+        data. Also takes care of the conversion between the input and output
+        types and the encoding/decoding of the data.
+
+        ### Arguments
+        - input_data: The input data for the task.
+
+        ### Returns
+        - The output data from the task.
+        """
+
+        # Decode raw input data
+        decoded_task_input: Optional[TaskInputType] = (
+            self.input_decoder.decode(input_data) if input_data is not None else None
+        )
+
+        # Execute task, returning the decoded output data
+        decoded_task_output: Optional[TaskOutputType] = await self.task_function(
+            decoded_task_input
+        )
+
+        # Encode the output data and return it.
+        encoded_task_output: TaskRawOutput = (
+            self.output_encoder.encode(decoded_task_output)
+            if decoded_task_output is not None
+            else None
+        )
+
+        return encoded_task_output
 
 
 class WorkerApplication(BaseModel):
@@ -73,10 +131,17 @@ class WorkerApplication(BaseModel):
     # Initialize the worker with the config
     worker = WorkerApplication(config=config)
 
+    # Create a Pydantic model for the input and output of the task
+    class MyInputModel(BaseModel):
+        name: str
+
+    class MyOutputModel(BaseModel):
+        result: str
+
     # Register a task. It must be async!
-    @worker.task(kind="my_task")
-    async def my_task(input_data: TaskInput) -> TaskOutput:
-        return TaskOutput(result="Hello, world!")
+    @worker.task(kind="my_task", input_decoder=PydanticDecoder(model=MyInputModel))
+    async def my_task(input_data: MyInputModel) -> MyOutputModel:
+        return MyOutputModel(result=f"Hello, {input_data.name}!")
 
     # Start the worker
     await worker.entrypoint()
@@ -101,7 +166,7 @@ class WorkerApplication(BaseModel):
     config: WorkerApplicationConfig
     """ The configuration for this worker application. """
 
-    _registered_tasks: Dict[str, Callable[[TaskInput], Awaitable[TaskOutput]]] = {}
+    _registered_tasks: Dict[str, TaskHandler[Any, Any]] = {}
     """ All the tasks that this worker application can handle. """
 
     _broker_client: Optional[WorkerBrokerClient] = None
@@ -127,13 +192,39 @@ class WorkerApplication(BaseModel):
     # ================================
 
     def register_task(
-        self: Self, kind: str, task: Callable[[TaskInput], Awaitable[TaskOutput]]
+        self: Self,
+        kind: str,
+        task: TaskHandlerFunction[TaskInputType, TaskOutputType],
+        input_decoder: Decoder[TaskInputType],
+        output_encoder: Encoder[TaskOutputType] = PydanticEncoder(),
     ):
         """Register a task handler function for a specific task kind.
 
         ### Parameters
         - `kind`: Unique identifier for the task type
         - `task`: Async function that processes tasks of this kind
+        - `input_decoder`: Decoder for the input data of the task. Needs to be provided by the user since it isn't possible to infer the input type.
+        - `output_encoder`: Encoder for the output data of the task. Defaults to `PydanticEncoder` so that all Pydantic models are automatically encoded to bytes.
+
+        ### Usage
+        ```python
+
+        class MyInputModel(BaseModel):
+            name: str
+
+        class MyOutputModel(BaseModel):
+            result: str
+
+        async def my_task(input_data: MyInputModel) -> MyOutputModel:
+            return MyOutputModel(result=f"Hello, {input_data.name}!")
+
+        worker.register_task(
+            kind="my_task",
+            task=my_task,
+            input_decoder=PydanticDecoder(model=MyInputModel),
+        )
+        ```
+        You don't need to specifiy the output decoder if you are using a Pydantic model because that can be inferred automatically.
         """
 
         logger = LoggerManager.get_logger()
@@ -147,34 +238,55 @@ class WorkerApplication(BaseModel):
             )
         )
 
-        self._registered_tasks[kind] = task
+        self._registered_tasks[kind] = TaskHandler(
+            kind=kind,
+            task_function=task,
+            input_decoder=input_decoder,
+            output_encoder=output_encoder,
+        )
 
     def task(
-        self: Self, kind: str
+        self: Self,
+        kind: str,
+        input_decoder: Decoder[TaskInputType],
+        output_encoder: Encoder[TaskOutputType] = PydanticEncoder(),
     ) -> Callable[
-        [Callable[[TaskInput], Awaitable[TaskOutput]]],
-        Callable[[TaskInput], Awaitable[TaskOutput]],
+        [TaskHandlerFunction[TaskInputType, TaskOutputType]],
+        TaskHandlerFunction[TaskInputType, TaskOutputType],
     ]:
         """Decorator for registering task handler functions.
 
         ### Arguments
         - kind: Unique identifier for the task type
+        - input_decoder: Decoder for the input data of the task. Needs to be provided by the user since it isn't possible to infer the input type.
+        - output_encoder: Encoder for the output data of the task. Defaults to `PydanticEncoder` so that all Pydantic models are automatically encoded to bytes.
 
         ### Returns
         - Callable: Decorator function that registers the task handler
 
         ### Usage
         ```python
-        @worker.task(kind="my_task")
-        async def my_task(input_data: TaskInput) -> TaskOutput:
-            return TaskOutput(result="Hello, world!")
+
+        class MyInputModel(BaseModel):
+            name: str
+
+        class MyOutputModel(BaseModel):
+            result: str
+
+        @worker.task(kind="my_task", input_decoder=PydanticDecoder(model=MyInputModel))
+        async def my_task(input_data: MyInputModel) -> MyOutputModel:
+            return MyOutputModel(result=f"Hello, {input_data.name}!")
         ```
+
+        The output decoder is optional for Pydantic models because it can be
+        inferred at runtime from the output object. You can, however, override
+        the default.
         """
 
         def decorator(
-            task: Callable[[TaskInput], Awaitable[TaskOutput]],
-        ) -> Callable[[TaskInput], Awaitable[TaskOutput]]:
-            self.register_task(kind, task)
+            task: TaskHandlerFunction[TaskInputType, TaskOutputType],
+        ) -> TaskHandlerFunction[TaskInputType, TaskOutputType]:
+            self.register_task(kind, task, input_decoder, output_encoder)
             return task
 
         return decorator
@@ -214,10 +326,11 @@ class WorkerApplication(BaseModel):
             # If this task is not registered anywhere, it will loop infinitely through
             # the workers. That's the user's problem.
 
-            task_func = self._registered_tasks.get(task_assignment_update.task_kind)
-            if task_func is None:
+            task_handler = self._registered_tasks.get(task_assignment_update.task_kind)
+            if task_handler is None:
                 error = TaskNotRegisteredError(
-                    task_assignment_update.task_kind, self._registered_tasks
+                    task_assignment_update.task_kind,
+                    list(self._registered_tasks.keys()),
                 )
                 parent_span.set_status(Status(StatusCode.ERROR))
                 parent_span.record_exception(error)
@@ -236,7 +349,7 @@ class WorkerApplication(BaseModel):
             # Task Execution ================================
             # TODO - Improve exception serialization
 
-            result: TaskOutput = None
+            result: TaskRawOutput = None
             is_error: bool = False
 
             # Send task processing event
@@ -259,12 +372,16 @@ class WorkerApplication(BaseModel):
             with tracer.start_as_current_span(
                 "task_execution",
                 attributes={
-                    "task.handler": task_func.__name__,
-                    "task.input_size": len(str(task_assignment_update.input_data)),
+                    "task.handler": task_handler.kind,
+                    "task.input_size": len(str(task_assignment_update.input_data))
+                    if task_assignment_update.input_data is not None
+                    else 0,
                 },
             ) as execution_span:
                 try:
-                    result = await task_func(task_assignment_update.input_data)
+                    result = await task_handler.execute(
+                        task_assignment_update.input_data
+                    )
                     execution_span.set_attribute("task.output_size", len(str(result)))
                 except Exception as e:
                     exception = SerializedException.from_exception(e)
