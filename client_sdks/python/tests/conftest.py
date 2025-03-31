@@ -1,7 +1,8 @@
+import asyncio
 import os
 from time import sleep
 from typing import AsyncGenerator
-import asyncio
+
 import pytest
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -11,10 +12,12 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
 )
 from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
+from pydantic import BaseModel
+from tacoq.core.encoding.models import Decoder, Encoder
 from tacoq.core.infra.broker import BrokerConfig
-from tacoq.relay import RelayClient, RelayConfig
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.publisher import PublisherClient
+from tacoq.relay import RelayClient, RelayConfig
 from tacoq.worker import WorkerApplicationConfig
 
 RELAY_TEST_URL = os.environ.get("RELAY_TEST_URL", "http://localhost:3000")
@@ -162,3 +165,26 @@ async def cleanup_leftover_tasks():
 
     # Then give them time to shut down
     await asyncio.gather(*leftover, return_exceptions=True)
+
+
+## ==============================
+## Common Input and Output objects
+## ==============================
+
+
+class TestInputPydanticModel(BaseModel):
+    value: int
+
+
+class TestOutputPydanticModel(BaseModel):
+    value: int
+
+
+class TestInputDecoder(Decoder[int]):
+    def decode(self, data: bytes) -> int:
+        return int(data.decode("utf-8"))
+
+
+class TestOutputEncoder(Encoder[int]):
+    def encode(self, data: int) -> bytes:
+        return str(data).encode("utf-8")
