@@ -12,8 +12,13 @@ from opentelemetry.propagate import inject
 from pydantic import BaseModel
 from typing_extensions import Self
 
+from tacoq.core.encoding import (
+    Data,
+    EncoderFunction,
+    pydantic_encoder,
+)
 from tacoq.core.infra.broker import BrokerConfig, PublisherBrokerClient
-from tacoq.core.models import Task, TaskAssignmentUpdate, TaskInput
+from tacoq.core.models import Task, TaskAssignmentUpdate
 from tacoq.core.telemetry import TracerManager
 
 
@@ -59,7 +64,8 @@ class PublisherClient(BaseModel):
         self: Self,
         task_kind: str,
         worker_kind: str,
-        input_data: TaskInput = b"",
+        input_data: Data,
+        encoder: EncoderFunction[Data] = pydantic_encoder,
         task_id: Optional[UUID] = None,
         priority: int = 0,
         ttl_duration: int = 60 * 60 * 24 * 7,
@@ -70,7 +76,8 @@ class PublisherClient(BaseModel):
         ### Arguments:
         - task_kind: The kind of the task. Can either be in the format of `worker_kind:task_name` string or a `TaskKind` object.
         - worker_kind: The kind of worker that will execute the task.
-        - input_data: The data to publish.
+        - input_data: The data to publish. The type of this data must be able to be encoded using the `encoder` function. By default, it accepts a Pydantic model.
+        - encoder: The encoder to use to encode the input data.
         - task_id: The ID of the task. If not provided, a new UUID will be generated.
         - priority: The priority of the task.
         - ttl_duration: For how long the task should live after its done. Default value of 7 days.
@@ -82,10 +89,14 @@ class PublisherClient(BaseModel):
         ### Usage
         You can publish a task with the following code:
         ```python
+
+        class TestInput(BaseModel):
+            name: str
+
         task = await publisher.publish_task(
             task_kind="task_name",
             worker_kind="worker_kind",
-            input_data="Hello, world!",
+            input_data=TestInput(name="input_data"),
             priority=5,
         )
         ```
@@ -95,6 +106,7 @@ class PublisherClient(BaseModel):
         task = await publisher.publish_task(
             task_kind="task_name",
             worker_kind="worker_kind",
+            input_data=TestInput(name="input_data"),
             otel_ctx_carrier=otel_ctx_carrier,
         )
         ```
@@ -116,11 +128,12 @@ class PublisherClient(BaseModel):
             inject(otel_ctx_carrier)
 
             # Create a task with base values
+            encoded_input_data = encoder(input_data)
             task = Task(
                 id=task_id or uuid4(),
                 task_kind=task_kind,
                 worker_kind=worker_kind,
-                input_data=input_data,
+                input_data=encoded_input_data,
                 priority=priority,
                 ttl_duration=ttl_duration,
                 otel_ctx_carrier=otel_ctx_carrier,
@@ -130,7 +143,7 @@ class PublisherClient(BaseModel):
                 id=task.id,
                 task_kind=task_kind,
                 worker_kind=worker_kind,
-                input_data=input_data,
+                input_data=encoded_input_data,
                 priority=priority,
                 ttl_duration=ttl_duration,
                 otel_ctx_carrier=otel_ctx_carrier,
@@ -169,3 +182,30 @@ class PublisherClient(BaseModel):
         self: Self, exc_type: Any, exc_value: Any, traceback: Any
     ) -> None:
         await self.cleanup()
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    from tacoq.core.infra.broker import BrokerConfig
+
+    broker_config = BrokerConfig(
+        url="amqp://localhost",
+    )
+
+    class TestInput(BaseModel):
+        name: str
+
+    def string_encoder(data: str) -> bytes:
+        return data.encode("utf-8")
+
+    async def main():
+        async with PublisherClient(broker_config=broker_config) as publisher:
+            task = await publisher.publish_task(
+                task_kind="task_name",
+                worker_kind="worker_kind",
+                input_data=TestInput(name="John"),
+            )
+            print(task)
+
+    asyncio.run(main())

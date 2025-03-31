@@ -1,4 +1,5 @@
-from typing import Callable, TypeVar, Type
+from typing import Callable, Type, TypeVar
+
 from pydantic import BaseModel
 
 Data = TypeVar("Data")
