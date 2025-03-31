@@ -1,8 +1,17 @@
+from tacoq.core.encoding import (
+    Data,
+    Decoder,
+    Encoder,
+    PassthroughDecoder,
+    PassthroughEncoder,
+    PydanticDecoder,
+    PydanticEncoder,
+)
 from tacoq.core.infra.broker import BrokerConfig
-from tacoq.relay import RelayConfig, RelayClient, RelayStates
-from tacoq.core.models import Task, TaskInput, TaskOutput
-from tacoq.core.telemetry import TracerManager, LoggerManager
+from tacoq.core.models import Task, TaskRawInput, TaskRawOutput
+from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.publisher import PublisherClient
+from tacoq.relay import RelayClient, RelayConfig, RelayStates
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
 __all__ = [
@@ -14,8 +23,15 @@ __all__ = [
     "WorkerApplication",
     "WorkerApplicationConfig",
     "Task",
-    "TaskInput",
-    "TaskOutput",
+    "TaskRawInput",
+    "TaskRawOutput",
     "TracerManager",
     "LoggerManager",
+    "PydanticEncoder",
+    "PydanticDecoder",
+    "PassthroughEncoder",
+    "PassthroughDecoder",
+    "Encoder",
+    "Decoder",
+    "Data",
 ]
