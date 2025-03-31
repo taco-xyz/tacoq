@@ -9,9 +9,9 @@ use crate::lifecycle::AppState;
     paths(openapi, crate::api::task::get_task_by_id),
     components(schemas(crate::models::Task)),
     info(
-        title = "Task Queue API",
-        version = "0.3.0",
-        description = "API for the Task Queue service. Supports both JSON and Avro formats for task data."
+        title = "TacoQ Relay API",
+        version = "0.3.1",
+        description = "API for the TacoQ Relay Service. Supports both JSON and Avro formats for task data."
     )
 )]
 struct ApiDoc;
