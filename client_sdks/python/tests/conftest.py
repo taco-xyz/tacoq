@@ -173,11 +173,11 @@ async def cleanup_leftover_tasks():
 
 
 class TestInputPydanticModel(BaseModel):
-    value: int
+    value: int | float
 
 
 class TestOutputPydanticModel(BaseModel):
-    value: int
+    value: int | float
 
 
 class TestInputDecoder(Decoder[int]):
