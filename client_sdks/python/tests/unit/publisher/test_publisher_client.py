@@ -5,13 +5,17 @@ These tests verify that the publisher client can correctly publish tasks
 to the broker and retrieve task information from the manager.
 """
 
-import json
 from unittest import mock
 from uuid import uuid4
 
 import pytest
+from tacoq.core.encoding.pydantic import (
+    PydanticDecoder,
+    PydanticEncoder,
+)
 from tacoq.core.infra.broker import PublisherBrokerClient
 from tacoq.publisher import PublisherClient
+from tests.conftest import TestInputPydanticModel
 
 # =========================================
 # Task Publishing Tests
@@ -24,7 +28,6 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     """Test publishing a task successfully."""
     task_kind = "test_task"
     worker_kind = "test_kind"
-    input_data = {"test": "data"}
     priority = 5
     id = uuid4()
 
@@ -35,7 +38,7 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     task = await publisher_client.publish_task(
         task_kind=task_kind,
         worker_kind=worker_kind,
-        input_data=json.dumps(input_data).encode("utf-8"),
+        input_data=TestInputPydanticModel(value=5),
         priority=priority,
         task_id=id,
     )
@@ -43,7 +46,10 @@ async def test_publish_task_success(publisher_client: PublisherClient):
     # Verify task properties
     assert task.task_kind == task_kind
     assert task.worker_kind == worker_kind
-    assert task.input_data == json.dumps(input_data).encode("utf-8")
+    assert task.get_decoded_input_data(
+        PydanticDecoder(TestInputPydanticModel)
+    ) == TestInputPydanticModel(value=5)
+    assert task.input_data == PydanticEncoder().encode(TestInputPydanticModel(value=5))
     assert task.priority == priority
     assert task.id == id
 
