@@ -4,7 +4,6 @@ This model is very sensible because serialization logic must be consistent
 across all other languages and the core service. `TaskInput` and `TaskOutput`
 are strings and are expected to be serialized and deserialized by the user."""
 
-from typing_extensions import TypeVar
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
@@ -12,20 +11,21 @@ from typing import Optional, Self
 from uuid import UUID
 
 from pydantic import Field
-from client_sdks.python.tacoq.core.encoding.models import Decoder
+from tacoq.core.encoding.models import Decoder
 from tacoq.core.models.avro_serializable_base_model import (
     AvroSerializableBaseModel,
     avro_schema_path,
 )
+from typing_extensions import TypeVar
 
 # Types ================================
 
-TaskRawInput = Optional[bytes]
+TaskRawInput = bytes
 """ Task input data defined by the user - they can use whatever format they 
 want, but they must handle the serialization and deserialization of the data
 themselves."""
 
-TaskRawOutput = Optional[bytes]
+TaskRawOutput = bytes
 """ Task output data defined by the user - they can use whatever format they
 want, but they must handle the serialization and deserialization of the data 
 themselves. """
@@ -108,10 +108,10 @@ class Task(AvroSerializableBaseModel):
     executed_by: Optional[str] = Field(default=None)
     """ The name of the worker that executed the task. """
 
-    input_data: TaskRawInput = Field(default=None)
+    input_data: Optional[TaskRawInput] = Field(default=None)
     """ The raw input data of the task. To decode it, use the `get_decoded_input_data` method. """
 
-    output_data: TaskRawOutput = Field(default=None)
+    output_data: Optional[TaskRawOutput] = Field(default=None)
     """ The raw output data of the task. To decode it, use the `get_decoded_output_data` method. """
 
     is_error: Optional[int] = Field(default=None)

@@ -5,6 +5,7 @@ the broker and relay. This is a public-facing class that can
 be used to publish tasks.
 """
 
+from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
@@ -129,6 +130,7 @@ class PublisherClient(BaseModel):
 
             # Create a task with base values
             encoded_input_data = encoder.encode(input_data)
+            created_at = datetime.now()
             task = Task(
                 id=task_id or uuid4(),
                 task_kind=task_kind,
@@ -137,6 +139,7 @@ class PublisherClient(BaseModel):
                 priority=priority,
                 ttl_duration=ttl_duration,
                 otel_ctx_carrier=otel_ctx_carrier,
+                created_at=created_at,
             )
 
             task_assignment_update = TaskAssignmentUpdate(
@@ -147,6 +150,7 @@ class PublisherClient(BaseModel):
                 priority=priority,
                 ttl_duration=ttl_duration,
                 otel_ctx_carrier=otel_ctx_carrier,
+                created_at=created_at,
             )
 
             # Set the attributes of the span so it can be identified

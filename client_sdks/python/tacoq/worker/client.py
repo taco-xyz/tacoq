@@ -57,9 +57,7 @@ class TaskNotRegisteredError(Exception):
 TaskInputType = TypeVar("TaskInputType")
 TaskOutputType = TypeVar("TaskOutputType")
 
-TaskHandlerFunction = Callable[
-    [Optional[TaskInputType]], Awaitable[Optional[TaskOutputType]]
-]
+TaskHandlerFunction = Callable[[TaskInputType], Awaitable[TaskOutputType]]
 
 
 class TaskHandler(BaseModel, Generic[TaskInputType, TaskOutputType]):
@@ -80,6 +78,9 @@ class TaskHandler(BaseModel, Generic[TaskInputType, TaskOutputType]):
     input_decoder: Decoder[TaskInputType]
     output_encoder: Encoder[TaskOutputType]
 
+    # We need this to allow generics in the model
+    model_config = {"arbitrary_types_allowed": True}
+
     async def execute(self, input_data: TaskRawInput) -> TaskRawOutput:
         """Execute a task based on the raw input data, returning the raw output
         data. Also takes care of the conversion between the input and output
@@ -93,20 +94,16 @@ class TaskHandler(BaseModel, Generic[TaskInputType, TaskOutputType]):
         """
 
         # Decode raw input data
-        decoded_task_input: Optional[TaskInputType] = (
-            self.input_decoder.decode(input_data) if input_data is not None else None
-        )
+        decoded_task_input: TaskInputType = self.input_decoder.decode(input_data)
 
         # Execute task, returning the decoded output data
-        decoded_task_output: Optional[TaskOutputType] = await self.task_function(
+        decoded_task_output: TaskOutputType = await self.task_function(
             decoded_task_input
         )
 
         # Encode the output data and return it.
-        encoded_task_output: TaskRawOutput = (
-            self.output_encoder.encode(decoded_task_output)
-            if decoded_task_output is not None
-            else None
+        encoded_task_output: TaskRawOutput = self.output_encoder.encode(
+            decoded_task_output
         )
 
         return encoded_task_output
@@ -206,6 +203,9 @@ class WorkerApplication(BaseModel):
         - `input_decoder`: Decoder for the input data of the task. Needs to be provided by the user since it isn't possible to infer the input type.
         - `output_encoder`: Encoder for the output data of the task. Defaults to `PydanticEncoder` so that all Pydantic models are automatically encoded to bytes.
 
+        ### Behaviour
+        - Re-registering a task will OVERWRITE the previous task handler - it WILL NOT throw an error.
+
         ### Usage
         ```python
 
@@ -225,6 +225,8 @@ class WorkerApplication(BaseModel):
         )
         ```
         You don't need to specifiy the output decoder if you are using a Pydantic model because that can be inferred automatically.
+
+
         """
 
         logger = LoggerManager.get_logger()
@@ -349,7 +351,7 @@ class WorkerApplication(BaseModel):
             # Task Execution ================================
             # TODO - Improve exception serialization
 
-            result: TaskRawOutput = None
+            result: TaskRawOutput = b""
             is_error: bool = False
 
             # Send task processing event
@@ -373,9 +375,7 @@ class WorkerApplication(BaseModel):
                 "task_execution",
                 attributes={
                     "task.handler": task_handler.kind,
-                    "task.input_size": len(str(task_assignment_update.input_data))
-                    if task_assignment_update.input_data is not None
-                    else 0,
+                    "task.input_size": len(str(task_assignment_update.input_data)),
                 },
             ) as execution_span:
                 try:

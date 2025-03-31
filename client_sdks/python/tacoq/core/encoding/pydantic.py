@@ -59,6 +59,9 @@ class PydanticDecoder(Decoder[Model]):
 
     model: Type[Model]
 
+    def __init__(self, model: Type[Model]):
+        self.model = model
+
     def decode(self, data: bytes) -> Model:
         """Default decoder for Pydantic models.
 

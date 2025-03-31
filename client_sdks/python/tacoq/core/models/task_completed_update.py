@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import Field
@@ -8,8 +7,7 @@ from tacoq.core.models.avro_serializable_base_model import (
     AvroSerializableBaseModel,
     avro_schema_path,
 )
-
-from tacoq.core.models.task import TaskOutput
+from tacoq.core.models.task import TaskRawOutput
 
 
 @avro_schema_path("schemas/avro/task_completed_update.json")
@@ -23,7 +21,7 @@ class TaskCompletedUpdate(AvroSerializableBaseModel):
     completed_at: datetime = Field(default_factory=lambda: datetime.now())
     """ The time the task was completed at. """
 
-    output_data: Optional[TaskOutput] = Field()
+    output_data: TaskRawOutput = Field()
     """ The data output by the task."""
 
     is_error: int = Field()
