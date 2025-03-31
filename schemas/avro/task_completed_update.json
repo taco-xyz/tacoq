@@ -24,7 +24,11 @@
       {
         "name": "is_error",
         "type": "int"
-      }    
+      },
+      {
+        "name": "update_type",
+        "type": "string"
+      }
     ]
 }
   

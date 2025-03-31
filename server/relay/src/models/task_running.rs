@@ -12,17 +12,36 @@ use uuid::Uuid;
 /// * `id` - The id of the task
 /// * `started_at` - The timestamp when the task started running
 /// * `executed_by` - The worker that executed the task
+/// * `update_type` - The type of update
 #[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
 pub struct TaskRunningUpdate {
     pub id: Uuid,
     #[serde(with = "serde_avro_datetime")]
     pub started_at: NaiveDateTime,
     pub executed_by: String,
+    #[serde(default = "TaskRunningUpdate::update_type")]
+    pub update_type: String,
 }
 
 // ----------------------------------------------------------------------------
 // Constructors
 // ----------------------------------------------------------------------------
+
+impl TaskRunningUpdate {
+    fn update_type() -> String {
+        "Running".to_string()
+    }
+
+    pub fn validate_update_type(&self) -> Result<(), String> {
+        if self.update_type != "Running" {
+            return Err(format!(
+                "Invalid update type. Expected 'Running', got '{}'",
+                self.update_type
+            ));
+        }
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 impl TaskRunningUpdate {
@@ -40,6 +59,7 @@ impl TaskRunningUpdate {
             id,
             started_at,
             executed_by,
+            update_type: Self::update_type(),
         }
     }
 
@@ -55,6 +75,7 @@ impl TaskRunningUpdate {
             id,
             started_at: NaiveDateTime::MIN,
             executed_by: String::new(),
+            update_type: Self::update_type(),
         }
     }
 
@@ -105,8 +126,9 @@ mod tests {
 
     #[test]
     fn test_task_running_update_avro_serde() {
-        let update =
+        let mut update =
             TaskRunningUpdate::new(Uuid::new_v4(), Local::now().naive_local(), "".to_string());
+        update.update_type = "Running".to_string();
 
         // Serialize to Avro bytes
         let avro_bytes = update.try_into_avro_bytes().unwrap();
@@ -122,5 +144,17 @@ mod tests {
             deserialized.started_at.and_utc().timestamp_micros()
         );
         assert_eq!(update.executed_by, deserialized.executed_by);
+        assert_eq!(update.update_type, deserialized.update_type);
+    }
+
+    #[test]
+    fn test_task_running_validate_update_type() {
+        let mut update =
+            TaskRunningUpdate::new(Uuid::new_v4(), Local::now().naive_local(), "".to_string());
+        update.update_type = "Running".to_string();
+        assert!(update.validate_update_type().is_ok());
+
+        update.update_type = "Wrong".to_string();
+        assert!(update.validate_update_type().is_err());
     }
 }

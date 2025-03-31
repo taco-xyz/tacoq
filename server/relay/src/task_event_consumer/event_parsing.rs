@@ -70,19 +70,37 @@ pub fn try_parse_event_from_avro_bytes(
 ) -> Result<Event, MessageProcessingError> {
     match event_type {
         EventType::Assignment => {
+            // Deserialize the message
             let assignment: TaskAssignmentUpdate =
                 TaskAssignmentUpdate::try_from_avro_bytes(raw_bytes)
                     .map_err(|e| MessageProcessingError::AvroDeserializationError(e.to_string()))?;
+
+            // Validate message integrity
+            assignment
+                .validate_update_type()
+                .map_err(|e| MessageProcessingError::AvroDeserializationError(e.to_string()))?;
             Ok(Event::Assignment(assignment))
         }
         EventType::Completed => {
+            // Deserialize the message
             let completed: TaskCompletedUpdate =
                 TaskCompletedUpdate::try_from_avro_bytes(raw_bytes)
                     .map_err(|e| MessageProcessingError::AvroDeserializationError(e.to_string()))?;
+
+            // Validate message integrity
+            completed
+                .validate_update_type()
+                .map_err(|e| MessageProcessingError::AvroDeserializationError(e.to_string()))?;
             Ok(Event::Completed(completed))
         }
         EventType::Running => {
+            // Deserialize the message
             let running: TaskRunningUpdate = TaskRunningUpdate::try_from_avro_bytes(raw_bytes)
+                .map_err(|e| MessageProcessingError::AvroDeserializationError(e.to_string()))?;
+
+            // Validate message integrity
+            running
+                .validate_update_type()
                 .map_err(|e| MessageProcessingError::AvroDeserializationError(e.to_string()))?;
             Ok(Event::Running(running))
         }
@@ -106,10 +124,11 @@ mod tests {
             task_kind: "test_task".to_string(),
             worker_kind: "test_worker".to_string(),
             created_at: Local::now().naive_local(),
-            input_data: Some(vec![1, 2, 3]),
+            input_data: vec![1, 2, 3],
             priority: 1,
             ttl_duration: 3600000000, // 1 hour in microseconds
             otel_ctx_carrier: otel_ctx,
+            update_type: "Assignment".to_string(),
         }
     }
 
@@ -117,8 +136,9 @@ mod tests {
         TaskCompletedUpdate {
             id: Uuid::new_v4(),
             completed_at: Local::now().naive_local(),
-            output_data: Some(vec![4, 5, 6]),
+            output_data: vec![4, 5, 6],
             is_error: 0,
+            update_type: "Completed".to_string(),
         }
     }
 
@@ -127,6 +147,7 @@ mod tests {
             id: Uuid::new_v4(),
             started_at: Local::now().naive_local(),
             executed_by: "test_worker".to_string(),
+            update_type: "Running".to_string(),
         }
     }
 

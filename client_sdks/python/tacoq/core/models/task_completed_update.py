@@ -26,3 +26,6 @@ class TaskCompletedUpdate(AvroSerializableBaseModel):
 
     is_error: int = Field()
     """ Whether the task failed. Used primarly for the dead letter queue."""
+
+    update_type: str = Field(default="Completed")
+    """ The type of update. """

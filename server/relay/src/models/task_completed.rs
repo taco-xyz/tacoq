@@ -1,5 +1,5 @@
 use crate::models::{serde_avro_datetime, AvroSerializable};
-use apache_avro::{serde_avro_bytes_opt, Schema};
+use apache_avro::{serde_avro_bytes, Schema};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -13,19 +13,38 @@ use uuid::Uuid;
 /// * `completed_at` - The timestamp when the task completed
 /// * `output_data` - Optional output data from the task execution
 /// * `is_error` - Whether the task completed with an error
+/// * `update_type` - The type of update
 #[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
 pub struct TaskCompletedUpdate {
     pub id: Uuid,
     #[serde(with = "serde_avro_datetime")]
     pub completed_at: NaiveDateTime,
-    #[serde(with = "serde_avro_bytes_opt")]
-    pub output_data: Option<Vec<u8>>,
+    #[serde(with = "serde_avro_bytes")]
+    pub output_data: Vec<u8>,
     pub is_error: i32,
+    #[serde(default = "TaskCompletedUpdate::update_type")]
+    pub update_type: String,
 }
 
 // ----------------------------------------------------------------------------
 // Constructors
 // ----------------------------------------------------------------------------
+impl TaskCompletedUpdate {
+    fn update_type() -> String {
+        "Completed".to_string()
+    }
+
+    pub fn validate_update_type(&self) -> Result<(), String> {
+        if self.update_type != "Completed" {
+            return Err(format!(
+                "Invalid update type. Expected 'Completed', got '{}'",
+                self.update_type
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 impl TaskCompletedUpdate {
     /// Creates a new TaskCompletedUpdate with the specified parameters.
@@ -38,17 +57,13 @@ impl TaskCompletedUpdate {
     ///
     /// # Returns
     /// A new TaskCompletedUpdate instance
-    pub fn new(
-        id: Uuid,
-        completed_at: NaiveDateTime,
-        output_data: Option<Vec<u8>>,
-        is_error: i32,
-    ) -> Self {
+    pub fn new(id: Uuid, completed_at: NaiveDateTime, output_data: Vec<u8>, is_error: i32) -> Self {
         Self {
             id,
             completed_at,
             output_data,
             is_error,
+            update_type: Self::update_type(),
         }
     }
 
@@ -63,8 +78,9 @@ impl TaskCompletedUpdate {
         Self {
             id,
             completed_at: NaiveDateTime::MIN,
-            output_data: None,
+            output_data: vec![],
             is_error: 0,
+            update_type: Self::update_type(),
         }
     }
 
@@ -87,7 +103,7 @@ impl TaskCompletedUpdate {
     ///
     /// # Returns
     /// A new TaskCompletedUpdate instance
-    pub fn _with_output_data(mut self, output_data: Option<Vec<u8>>) -> Self {
+    pub fn _with_output_data(mut self, output_data: Vec<u8>) -> Self {
         self.output_data = output_data;
         self
     }
@@ -127,12 +143,9 @@ mod tests {
 
     #[test]
     fn test_task_completed_update_avro_serde() {
-        let update = TaskCompletedUpdate::new(
-            Uuid::new_v4(),
-            Local::now().naive_local(),
-            Some(vec![1, 2, 3]),
-            0,
-        );
+        let mut update =
+            TaskCompletedUpdate::new(Uuid::new_v4(), Local::now().naive_local(), vec![1, 2, 3], 0);
+        update.update_type = "Completed".to_string();
 
         // Serialize to Avro bytes
         let avro_bytes = update.try_into_avro_bytes().unwrap();
@@ -149,5 +162,17 @@ mod tests {
         );
         assert_eq!(update.output_data, deserialized.output_data);
         assert_eq!(update.is_error, deserialized.is_error);
+        assert_eq!(update.update_type, deserialized.update_type);
+    }
+
+    #[test]
+    fn test_task_completed_validate_update_type() {
+        let mut update =
+            TaskCompletedUpdate::new(Uuid::new_v4(), Local::now().naive_local(), vec![], 0);
+        update.update_type = "Completed".to_string();
+        assert!(update.validate_update_type().is_ok());
+
+        update.update_type = "Wrong".to_string();
+        assert!(update.validate_update_type().is_err());
     }
 }

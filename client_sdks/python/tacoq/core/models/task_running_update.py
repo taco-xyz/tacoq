@@ -1,6 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
+from pydantic import Field
+
 from tacoq.core.models.avro_serializable_base_model import (
     AvroSerializableBaseModel,
     avro_schema_path,
@@ -20,3 +22,6 @@ class TaskRunningUpdate(AvroSerializableBaseModel):
 
     executed_by: str
     """ The name of the worker that is executing the task. """
+
+    update_type: str = Field(default="Running")
+    """ The type of update. """
