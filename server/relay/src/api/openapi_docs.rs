@@ -10,7 +10,7 @@ use crate::lifecycle::AppState;
     components(schemas(crate::models::Task)),
     info(
         title = "TacoQ Relay API",
-        version = "0.3.1",
+        version = "0.4.0",
         description = "API for the TacoQ Relay Service. Supports both JSON and Avro formats for task data."
     )
 )]
