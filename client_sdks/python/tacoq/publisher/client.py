@@ -186,30 +186,3 @@ class PublisherClient(BaseModel):
         self: Self, exc_type: Any, exc_value: Any, traceback: Any
     ) -> None:
         await self.cleanup()
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    from tacoq.core.infra.broker import BrokerConfig
-
-    broker_config = BrokerConfig(
-        url="amqp://localhost",
-    )
-
-    class TestInput(BaseModel):
-        name: str
-
-    def string_encoder(data: str) -> bytes:
-        return data.encode("utf-8")
-
-    async def main():
-        async with PublisherClient(broker_config=broker_config) as publisher:
-            task = await publisher.publish_task(
-                task_kind="task_name",
-                worker_kind="worker_kind",
-                input_data=TestInput(name="John"),
-            )
-            print(task)
-
-    asyncio.run(main())
