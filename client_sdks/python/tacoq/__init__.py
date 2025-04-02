@@ -6,6 +6,12 @@ from tacoq.core.encoding import (
     PassthroughEncoder,
     PydanticDecoder,
     PydanticEncoder,
+    StringDecoder,
+    StringEncoder,
+    JsonDictDecoder,
+    JsonDictEncoder,
+    create_encoder,
+    create_decoder,
 )
 from tacoq.core.infra.broker import BrokerConfig
 from tacoq.core.models import Task, TaskRawInput, TaskRawOutput
@@ -34,4 +40,10 @@ __all__ = [
     "Encoder",
     "Decoder",
     "Data",
+    "StringEncoder",
+    "StringDecoder",
+    "JsonDictEncoder",
+    "JsonDictDecoder",
+    "create_encoder",
+    "create_decoder",
 ]
