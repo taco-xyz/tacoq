@@ -177,27 +177,22 @@ class WorkerContext:
         self._worker_app.register_task(
             DELAYED_INSTRUMENTED_TASK,
             delayed_instrumented_task,
-            input_decoder=PydanticDecoder(TestInputPydanticModel),
         )
         self._worker_app.register_task(
             FAILING_TASK,
             failing_task,
-            input_decoder=PydanticDecoder(TestInputPydanticModel),
         )
         self._worker_app.register_task(
             DELAYED_TASK_BLOCKING,
             delayed_task_blocking,
-            input_decoder=PydanticDecoder(TestInputPydanticModel),
         )
         self._worker_app.register_task(
             VARIABLE_TASK,
             variable_task,
-            input_decoder=PydanticDecoder(TestInputPydanticModel),
         )
         self._worker_app.register_task(
             BENCHMARK_TASK,
             benchmark_task,
-            input_decoder=PydanticDecoder(TestInputPydanticModel),
         )
 
     async def __aenter__(self: Self) -> WorkerApplication:
