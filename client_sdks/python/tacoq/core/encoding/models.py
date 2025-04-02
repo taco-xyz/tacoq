@@ -20,3 +20,9 @@ class Decoder(Generic[Data]):
     def decode(self, data: bytes) -> Data:
         """Decodes an object from bytes into the input of the task."""
         ...
+
+
+class EncodingError(Exception):
+    """Raised when there's an error encoding or decoding a message."""
+
+    pass
