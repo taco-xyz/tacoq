@@ -199,7 +199,7 @@ The worker application has been created, but it doesn't know how to handle any
 tasks that come its way. So, let's teach it to handle a task:
 
 ```python
-from tacoq import TaskInput, TaskOutput, PydanticDecoder
+from tacoq import TaskInput, TaskOutput
 from pydantic import BaseModel
 import asyncio
 
@@ -212,7 +212,9 @@ class TestOutputPydanticModel(BaseModel):
     result: str
     seconds: int
 
-@worker_app.task(kind="task_wait_n_seconds", input_decoder=PydanticDecoder(TestInputPydanticModel))
+# Task input is automatically decoded from bytes to the input type.
+
+@worker_app.task(kind="task_wait_n_seconds")
 async def task_wait_n_seconds(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
     seconds = input_data.seconds
 
@@ -232,12 +234,12 @@ async def task_wait_n_seconds(input_data: TestInputPydanticModel) -> TestOutputP
   in byte format.**
 
   TacoQ provides a **default encoder and decoder that can handle JSON** objects
-  with the language's most commonly used libraries. These are **well tested and
-  should work for most use cases.**
+  with the language's most commonly used libraries. These are **well tested** 
+  and should work for most use cases.
   
   - **Python**: `pydantic`
   - **Rust**: `serde_json`
-  
+
   You can also **write your own encoders and decoders**. Simply peek into the
   source code of the default ones and implement the required methods.
 </Tip>
@@ -323,7 +325,8 @@ completed_task = await relay_client.get_task(task_id)
 
 # Let's load the results into a dictionary and print them.
 # It's important for the decoder to know which Pydantic model to use
-# to decode the results.
+# to decode the results, and this is impossible to infer automatically,
+# so you must be explicit about which decoder and model to use.
 result = completed_task.get_decoded_output_data(
     decoder=PydanticDecoder(TestOutputPydanticModel)
 )
