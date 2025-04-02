@@ -5,9 +5,19 @@ publish the results back to the relay.
 """
 
 import asyncio
+import inspect
 import json
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, Generic, Optional, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    TypeVar,
+    get_type_hints,
+)
 
 from aio_pika.abc import (
     AbstractIncomingMessage,
@@ -15,9 +25,14 @@ from aio_pika.abc import (
 from opentelemetry.propagate import extract
 from opentelemetry.trace import Status, StatusCode
 from pydantic import BaseModel
-from typing_extensions import Self
 from tenacity import retry, wait_exponential
+from typing_extensions import Self
 
+from tacoq.core.encoding import (
+    create_decoder,
+    create_encoder,
+)
+from tacoq.core.encoding import Decoder, Encoder
 from tacoq.core.infra.broker import WorkerBrokerClient
 from tacoq.core.models import (
     SerializedException,
@@ -27,7 +42,6 @@ from tacoq.core.models import (
     TaskRawOutput,
     TaskRunningUpdate,
 )
-from tacoq.core.encoding import Decoder, Encoder, PydanticEncoder
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
 from tacoq.worker.config import WorkerApplicationConfig
@@ -192,19 +206,27 @@ class WorkerApplication(BaseModel):
         self: Self,
         kind: str,
         task: TaskHandlerFunction[TaskInputType, TaskOutputType],
-        input_decoder: Decoder[TaskInputType],
-        output_encoder: Encoder[TaskOutputType] = PydanticEncoder(),
+        input_decoder: Optional[Decoder[TaskInputType]] = None,
+        output_encoder: Optional[Encoder[TaskOutputType]] = None,
     ):
         """Register a task handler function for a specific task kind.
 
         ### Parameters
         - `kind`: Unique identifier for the task type
         - `task`: Async function that processes tasks of this kind
-        - `input_decoder`: Decoder for the input data of the task. Needs to be provided by the user since it isn't possible to infer the input type.
-        - `output_encoder`: Encoder for the output data of the task. Defaults to `PydanticEncoder` so that all Pydantic models are automatically encoded to bytes.
+        - `input_decoder`: Decoder for the input data of the task. When set
+          to `None`, type hints will be used to infer the decoding logic. See
+          `Behaviour` for more details.
+        - `output_encoder`: Encoder for the output data of the task. When set
+          to `None`, type hints will be used to infer the encoding logic. See
+          `Behaviour` for more details.
 
         ### Behaviour
-        - Re-registering a task will OVERWRITE the previous task handler - it WILL NOT throw an error.
+        - If you don't specify `input_decoder` or `output_encoder`, type hints
+          are used to infer which decoder to use, fabricating one based on the
+          types. See more in `tacoq.core.encoding.polymorphic`.
+        - Re-registering a task will OVERWRITE the previous task handler - it
+          WILL NOT throw an error.
 
         ### Usage
         ```python
@@ -221,13 +243,35 @@ class WorkerApplication(BaseModel):
         worker.register_task(
             kind="my_task",
             task=my_task,
-            input_decoder=PydanticDecoder(model=MyInputModel),
         )
         ```
-        You don't need to specifiy the output decoder if you are using a Pydantic model because that can be inferred automatically.
-
-
         """
+
+        # Get type hints so we can infer the input and output types for polymorphic
+        # encoding and decoding
+        type_hints = get_type_hints(task)
+        input_type = None
+        output_type = None
+
+        # Validate that either an input decoder or input type is specified
+        if input_decoder is None:
+            input_type = type_hints.get(
+                list(inspect.signature(task).parameters.keys())[0]
+            )
+            if input_type is None:
+                raise ValueError(
+                    "Input type is not specified for task with unspecified input decoder. Please specify either of these."
+                )
+            input_decoder = create_decoder(input_type)
+
+        # Validate that either an output encoder or output type is specified
+        if output_encoder is None:
+            output_type = type_hints.get("return")
+            if output_type is None:
+                raise ValueError(
+                    "Output type is not specified for task with unspecified output encoder. Please specify either of these."
+                )
+            output_encoder = create_encoder(output_type)
 
         logger = LoggerManager.get_logger()
         logger.info(
@@ -250,8 +294,8 @@ class WorkerApplication(BaseModel):
     def task(
         self: Self,
         kind: str,
-        input_decoder: Decoder[TaskInputType],
-        output_encoder: Encoder[TaskOutputType] = PydanticEncoder(),
+        input_decoder: Optional[Decoder[TaskInputType]] = None,
+        output_encoder: Optional[Encoder[TaskOutputType]] = None,
     ) -> Callable[
         [TaskHandlerFunction[TaskInputType, TaskOutputType]],
         TaskHandlerFunction[TaskInputType, TaskOutputType],
@@ -260,8 +304,12 @@ class WorkerApplication(BaseModel):
 
         ### Arguments
         - kind: Unique identifier for the task type
-        - input_decoder: Decoder for the input data of the task. Needs to be provided by the user since it isn't possible to infer the input type.
-        - output_encoder: Encoder for the output data of the task. Defaults to `PydanticEncoder` so that all Pydantic models are automatically encoded to bytes.
+        - input_decoder: Decoder for the input data of the task. When set
+          to `None`, type hints will be used to infer the decoding logic. See
+          `WorkerApplication.register_task` for more details.
+        - output_encoder: Encoder for the output data of the task. When set
+          to `None`, type hints will be used to infer the encoding logic. See
+          `WorkerApplication.register_task` for more details.
 
         ### Returns
         - Callable: Decorator function that registers the task handler
@@ -275,14 +323,10 @@ class WorkerApplication(BaseModel):
         class MyOutputModel(BaseModel):
             result: str
 
-        @worker.task(kind="my_task", input_decoder=PydanticDecoder(model=MyInputModel))
+        @worker.task(kind="my_task")
         async def my_task(input_data: MyInputModel) -> MyOutputModel:
             return MyOutputModel(result=f"Hello, {input_data.name}!")
         ```
-
-        The output decoder is optional for Pydantic models because it can be
-        inferred at runtime from the output object. You can, however, override
-        the default.
         """
 
         def decorator(
