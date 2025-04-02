@@ -78,11 +78,22 @@ async def test_register_single_task(worker_app: WorkerApplication):
     worker_app.register_task(
         "test_task",
         task_handler,
-        PydanticDecoder(TestInputPydanticModel),
     )
 
     assert "test_task" in worker_app._registered_tasks
     assert worker_app._registered_tasks["test_task"].task_function == task_handler
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_register_task_without_hints_or_encoders(worker_app: WorkerApplication):
+    """Test registering a task without type hints or specified encoders raises ValueError."""
+
+    async def task_without_hints(input_data):  # type: ignore
+        return {"value": input_data["value"] * 2}  # type: ignore
+
+    with pytest.raises(ValueError) as _:
+        worker_app.register_task("test_task_no_hints", task_without_hints)  # type: ignore
 
 
 @pytest.mark.unit
