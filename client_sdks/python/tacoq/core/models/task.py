@@ -187,9 +187,9 @@ class Task(AvroSerializableBaseModel):
 
         ### Example:
         ```python
-        from tacoq.core.encoding import PydanticDecoder
+        from tacoq.core.encoding import create_decoder
 
-        decoder = PydanticDecoder(model=MyModel)
+        decoder = create_decoder(MyModel)
         task = await relay.get_task(task_id)
         decoded_data = task.get_decoded_input_data(decoder)
         ```
@@ -214,9 +214,9 @@ class Task(AvroSerializableBaseModel):
 
         ### Example:
         ```python
-        from tacoq.core.encoding import PydanticDecoder
+        from tacoq.core.encoding import create_decoder
 
-        decoder = PydanticDecoder(model=MyModel)
+        decoder = create_decoder(MyModel)
         task = await relay.get_task(task_id)
         decoded_data = task.get_decoded_output_data(decoder)
         ```
