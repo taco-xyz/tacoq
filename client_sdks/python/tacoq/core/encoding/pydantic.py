@@ -1,6 +1,6 @@
 """Encoders/Decoders that translate between Pydantic models and JSON bytes."""
 
-from tacoq.core.encoding.models import Encoder, Decoder
+from tacoq.core.encoding.models import Encoder, Decoder, EncodingError
 from pydantic import BaseModel
 from typing import Type, TypeVar
 
@@ -31,8 +31,15 @@ class PydanticEncoder(Encoder[BaseModel]):
 
         ### Returns:
         The encoded bytes
+
+        ### Raises:
+        - EncodingError: If there's an error encoding the message
         """
-        return data.model_dump_json().encode("utf-8")
+
+        try:
+            return data.model_dump_json().encode("utf-8")
+        except Exception as e:
+            raise EncodingError(f"Error encoding message: {str(e)}")
 
 
 Model = TypeVar("Model", bound=BaseModel)
@@ -72,5 +79,12 @@ class PydanticDecoder(Decoder[Model]):
 
         ### Returns:
         The decoded Pydantic model
+
+        ### Raises:
+        - EncodingError: If there's an error decoding the message
         """
-        return self.model.model_validate_json(data.decode("utf-8"))
+
+        try:
+            return self.model.model_validate_json(data.decode("utf-8"))
+        except Exception as e:
+            raise EncodingError(f"Error decoding message: {str(e)}")
