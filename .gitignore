@@ -15,3 +15,5 @@
 .benchmarks/
 __pycache__/
 /client_sdks/python/tacoq.egg-info
+client_sdks/python/.vscode/settings.json
+.vscode/settings.json
