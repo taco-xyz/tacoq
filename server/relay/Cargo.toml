@@ -26,7 +26,7 @@ utoipa = { version = "5.3.1", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-axum = "0.2.0"
 time = { version = "0.3.36", features = ["serde"] }
 axum-tracing-opentelemetry = "0.28.0"
-init-tracing-opentelemetry = { version = "0.27.1", features = [
+init-tracing-opentelemetry = { version = "0.28.0", features = [
   "otlp",
   "tracing_subscriber_ext",
 ] }
