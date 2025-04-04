@@ -243,10 +243,11 @@ mod tests {
             task_kind: "TestKind".to_string(),
             worker_kind: "TestWorker".to_string(),
             created_at: now,
-            input_data: Some(vec![1, 2, 3]),
+            input_data: vec![1, 2, 3],
             priority: 1,
             ttl_duration: 60,
             otel_ctx_carrier: HashMap::new(),
+            update_type: "Assignment".to_string(),
         };
 
         repo.update_task_from_assignment_update(&update)
@@ -287,7 +288,7 @@ mod tests {
         let id = Uuid::new_v4();
         let now = Local::now().naive_local();
 
-        let update = TaskCompletedUpdate::new(id, now, Some(vec![4, 5, 6]), 0);
+        let update = TaskCompletedUpdate::new(id, now, vec![4, 5, 6], 0);
 
         repo.update_task_from_completed_update(&update)
             .await
@@ -314,10 +315,11 @@ mod tests {
             task_kind: "test_task".to_string(),
             worker_kind: "test_worker".to_string(),
             created_at: now,
-            input_data: Some(vec![1, 2, 3]),
+            input_data: vec![1, 2, 3],
             priority: 1,
             ttl_duration: 3600000000, // 1 hour in microseconds
             otel_ctx_carrier: HashMap::new(),
+            update_type: "Assignment".to_string(),
         };
         repo.update_task_from_assignment_update(&assignment)
             .await
@@ -330,7 +332,7 @@ mod tests {
             .unwrap();
 
         // 3. Completed
-        let completed = TaskCompletedUpdate::new(id, now, Some(vec![4, 5, 6]), 0);
+        let completed = TaskCompletedUpdate::new(id, now, vec![4, 5, 6], 0);
         repo.update_task_from_completed_update(&completed)
             .await
             .unwrap();

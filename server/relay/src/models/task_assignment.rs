@@ -1,5 +1,5 @@
 use crate::models::{serde_avro_datetime, AvroSerializable};
-use apache_avro::{serde_avro_bytes_opt, Schema};
+use apache_avro::{serde_avro_bytes, Schema};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -17,6 +17,11 @@ use uuid::Uuid;
 /// * `priority` - The priority of the task
 /// * `ttl_duration` - Time to live duration in microseconds
 /// * `otel_ctx_carrier` - OpenTelemetry context carrier map
+/// * `update_type` - The type of update - IMPORTANT NOTE: This isn't useless.
+///   if the task happens to be deserialized from a message with the same byte
+///   count, an error won't be thrown but the data will be totally f-ed. We
+///   ALWAYS need to validate that the update_type is correct and matches the
+///   expected type.
 #[derive(Debug, ToSchema, Clone, Serialize, Deserialize, FromRow)]
 pub struct TaskAssignmentUpdate {
     pub id: Uuid,
@@ -24,11 +29,29 @@ pub struct TaskAssignmentUpdate {
     pub worker_kind: String,
     #[serde(with = "serde_avro_datetime")]
     pub created_at: NaiveDateTime,
-    #[serde(with = "serde_avro_bytes_opt")]
-    pub input_data: Option<Vec<u8>>,
+    #[serde(with = "serde_avro_bytes")]
+    pub input_data: Vec<u8>,
     pub priority: i32,
     pub ttl_duration: i64,
     pub otel_ctx_carrier: std::collections::HashMap<String, String>,
+    #[serde(default = "TaskAssignmentUpdate::update_type")]
+    pub update_type: String,
+}
+
+impl TaskAssignmentUpdate {
+    fn update_type() -> String {
+        "Assignment".to_string()
+    }
+
+    pub fn validate_update_type(&self) -> Result<(), String> {
+        if self.update_type != "Assignment" {
+            return Err(format!(
+                "Invalid update type. Expected 'Assignment', got '{}'",
+                self.update_type
+            ));
+        }
+        Ok(())
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -48,6 +71,8 @@ impl AvroSerializable for TaskAssignmentUpdate {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use chrono::Local;
 
@@ -62,10 +87,11 @@ mod tests {
             task_kind: "test_task".to_string(),
             worker_kind: "test_worker".to_string(),
             created_at: Local::now().naive_local(),
-            input_data: Some(vec![1, 2, 3]),
+            input_data: vec![1, 2, 3],
             priority: 1,
             ttl_duration: 3600000000, // 1 hour in microseconds
             otel_ctx_carrier: otel_ctx.clone(),
+            update_type: "Assignment".to_string(),
         };
 
         // Serialize to Avro bytes
@@ -86,5 +112,25 @@ mod tests {
         assert_eq!(assignment.priority, deserialized.priority);
         assert_eq!(assignment.ttl_duration, deserialized.ttl_duration);
         assert_eq!(assignment.otel_ctx_carrier, deserialized.otel_ctx_carrier);
+    }
+
+    #[test]
+    fn test_task_assignment_validate_update_type() {
+        let mut assignment = TaskAssignmentUpdate {
+            id: Uuid::new_v4(),
+            task_kind: "test_task".to_string(),
+            worker_kind: "test_worker".to_string(),
+            created_at: Local::now().naive_local(),
+            input_data: vec![1, 2, 3],
+            priority: 1,
+            ttl_duration: 3600000000,
+            otel_ctx_carrier: HashMap::new(),
+            update_type: "Assignment".to_string(),
+        };
+
+        assert!(assignment.validate_update_type().is_ok());
+
+        assignment.update_type = "Wrong".to_string();
+        assert!(assignment.validate_update_type().is_err());
     }
 }

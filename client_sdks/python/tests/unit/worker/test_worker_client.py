@@ -5,19 +5,25 @@ These tests verify that the worker application can correctly register task handl
 execute tasks, and manage its lifecycle.
 """
 
+import datetime
 import json
 from unittest import mock
 from uuid import uuid4
 
 import pytest
 from aio_pika.abc import AbstractIncomingMessage
+from tacoq.core.encoding.pydantic import PydanticDecoder
 from tacoq.core.infra.broker import BrokerConfig, WorkerBrokerClient
 from tacoq.core.models import (
     TaskAssignmentUpdate,
-    TaskInput,
-    TaskOutput,
 )
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
+
+from tests.conftest import (
+    TestInputPydanticModel,
+    TestOutputPydanticModel,
+)
+
 
 # =========================================
 # Fixtures
@@ -49,6 +55,8 @@ def sample_task_assignment():
         input_data=json.dumps({"value": 5}).encode("utf-8"),
         priority=0,
         ttl_duration=60 * 60 * 24 * 7,
+        created_at=datetime.datetime.now(),
+        otel_ctx_carrier={},
     )
 
 
@@ -62,47 +70,30 @@ def sample_task_assignment():
 async def test_register_single_task(worker_app: WorkerApplication):
     """Test registering a single task handler."""
 
-    async def task_handler(input_data: TaskInput) -> TaskOutput:
-        if input_data is None:
-            return None
+    async def task_handler(
+        input_data: TestInputPydanticModel,
+    ) -> TestOutputPydanticModel:
+        return TestOutputPydanticModel(value=input_data.value * 2)
 
-        return json.dumps(
-            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
-        ).encode("utf-8")
+    worker_app.register_task(
+        "test_task",
+        task_handler,
+    )
 
-    worker_app.register_task("test_task", task_handler)
     assert "test_task" in worker_app._registered_tasks
-    assert worker_app._registered_tasks["test_task"] == task_handler
+    assert worker_app._registered_tasks["test_task"].task_function == task_handler
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_register_multiple_tasks(worker_app: WorkerApplication):
-    """Test registering multiple task handlers."""
+async def test_register_task_without_hints_or_encoders(worker_app: WorkerApplication):
+    """Test registering a task without type hints or specified encoders raises ValueError."""
 
-    async def task1(input_data: TaskInput) -> TaskOutput:
-        if input_data is None:
-            return None
+    async def task_without_hints(input_data):  # type: ignore
+        return {"value": input_data["value"] * 2}  # type: ignore
 
-        return json.dumps(
-            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
-        ).encode("utf-8")
-
-    async def task2(input_data: TaskInput) -> TaskOutput:
-        if input_data is None:
-            return None
-
-        return json.dumps(
-            {"result": json.loads(input_data.decode("utf-8"))["value"] + 1}
-        ).encode("utf-8")
-
-    worker_app.register_task("task1", task1)
-    worker_app.register_task("task2", task2)
-
-    assert "task1" in worker_app._registered_tasks
-    assert "task2" in worker_app._registered_tasks
-    assert worker_app._registered_tasks["task1"] == task1
-    assert worker_app._registered_tasks["task2"] == task2
+    with pytest.raises(ValueError) as _:
+        worker_app.register_task("test_task_no_hints", task_without_hints)  # type: ignore
 
 
 @pytest.mark.unit
@@ -110,17 +101,17 @@ async def test_register_multiple_tasks(worker_app: WorkerApplication):
 async def test_task_decorator_registration(worker_app: WorkerApplication):
     """Test registering tasks using the decorator."""
 
-    @worker_app.task("decorated_task")
-    async def task_handler(input_data: TaskInput) -> TaskOutput:
-        if input_data is None:
-            return None
-
-        return json.dumps(
-            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
-        ).encode("utf-8")
+    @worker_app.task(
+        "decorated_task",
+        PydanticDecoder(TestInputPydanticModel),
+    )
+    async def task_handler(
+        input_data: TestInputPydanticModel,
+    ) -> TestOutputPydanticModel:
+        return TestOutputPydanticModel(value=input_data.value * 2)
 
     assert "decorated_task" in worker_app._registered_tasks
-    assert worker_app._registered_tasks["decorated_task"] == task_handler
+    assert worker_app._registered_tasks["decorated_task"].task_function == task_handler
 
 
 @pytest.mark.unit
@@ -128,16 +119,20 @@ async def test_task_decorator_registration(worker_app: WorkerApplication):
 async def test_reregister_task(worker_app: WorkerApplication):
     """Test re-registering a task (should overwrite)."""
 
-    async def task1(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": 1}).encode("utf-8")
+    async def task1(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
+        return TestOutputPydanticModel(value=input_data.value * 2)
 
-    async def task2(input_data: TaskInput) -> TaskOutput:
-        return json.dumps({"result": 2}).encode("utf-8")
+    async def task2(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
+        return TestOutputPydanticModel(value=input_data.value * 2)
 
-    worker_app.register_task("same_kind", task1)
-    worker_app.register_task("same_kind", task2)
+    worker_app.register_task(
+        "same_kind", task1, PydanticDecoder(TestInputPydanticModel)
+    )
+    worker_app.register_task(
+        "same_kind", task2, PydanticDecoder(TestInputPydanticModel)
+    )
 
-    assert worker_app._registered_tasks["same_kind"] == task2
+    assert worker_app._registered_tasks["same_kind"].task_function == task2
 
 
 # =========================================
@@ -154,19 +149,21 @@ async def test_execute_registered_task(
     executed = False
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
 
-    async def task_handler(input_data: TaskInput) -> TaskOutput:
+    async def task_handler(
+        input_data: TestInputPydanticModel,
+    ) -> TestOutputPydanticModel:
         nonlocal executed
         executed = True
         assert input_data == sample_task_assignment.input_data
 
-        if input_data is None:
-            return None
+        return TestOutputPydanticModel(value=input_data.value * 2)
 
-        return json.dumps(
-            {"result": json.loads(input_data.decode("utf-8"))["value"] * 2}
-        ).encode("utf-8")
+    worker_app.register_task(
+        sample_task_assignment.task_kind,
+        task_handler,
+        input_decoder=PydanticDecoder(TestInputPydanticModel),
+    )
 
-    worker_app.register_task(sample_task_assignment.task_kind, task_handler)  # type: ignore
     await worker_app._execute_task_assignment(
         sample_task_assignment,
         mock.create_autospec(AbstractIncomingMessage, instance=True),
@@ -199,10 +196,14 @@ async def test_execute_task_with_error(
     """Test executing a task that raises an exception."""
     worker_app._broker_client = mock.create_autospec(WorkerBrokerClient, instance=True)
 
-    async def failing_task(_: TaskInput) -> TaskOutput:
+    async def failing_task(_: TestInputPydanticModel) -> TestOutputPydanticModel:
         raise ValueError("Task failed")
 
-    worker_app.register_task(sample_task_assignment.task_kind, failing_task)  # type: ignore
+    worker_app.register_task(
+        sample_task_assignment.task_kind,
+        failing_task,
+        PydanticDecoder(TestInputPydanticModel),
+    )
     await worker_app._execute_task_assignment(
         sample_task_assignment,
         mock.create_autospec(AbstractIncomingMessage, instance=True),

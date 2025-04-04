@@ -73,10 +73,11 @@ mod tests {
             task_kind: "test_task".to_string(),
             worker_kind: "test_worker".to_string(),
             created_at: Local::now().naive_local(),
-            input_data: Some(vec![1, 2, 3]),
+            input_data: vec![1, 2, 3],
             priority: 1,
             ttl_duration: 3600000000,
             otel_ctx_carrier: otel_ctx,
+            update_type: "Assignment".to_string(),
         }
     }
 
@@ -84,8 +85,9 @@ mod tests {
         TaskCompletedUpdate {
             id: Uuid::new_v4(),
             completed_at: Local::now().naive_local(),
-            output_data: Some(vec![4, 5, 6]),
+            output_data: vec![4, 5, 6],
             is_error: 0,
+            update_type: "Completed".to_string(),
         }
     }
 
@@ -94,6 +96,7 @@ mod tests {
             id: Uuid::new_v4(),
             started_at: Local::now().naive_local(),
             executed_by: "test_worker".to_string(),
+            update_type: "Running".to_string(),
         }
     }
 
@@ -259,6 +262,7 @@ mod tests {
         let delivery = create_delivery(avro_bytes, create_headers(EventType::Completed.into()));
 
         let result = Event::try_from(delivery);
+        println!("result: {:?}", result);
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),

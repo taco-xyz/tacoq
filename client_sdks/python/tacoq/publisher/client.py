@@ -5,16 +5,23 @@ the broker and relay. This is a public-facing class that can
 be used to publish tasks.
 """
 
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any, Dict, Optional, TypeVar, Union
 from uuid import UUID, uuid4
 
 from opentelemetry.propagate import inject
 from pydantic import BaseModel
 from typing_extensions import Self
 
+from tacoq.core.encoding import (
+    Encoder,
+    create_encoder,
+)
 from tacoq.core.infra.broker import BrokerConfig, PublisherBrokerClient
-from tacoq.core.models import Task, TaskAssignmentUpdate, TaskInput
+from tacoq.core.models import Task, TaskAssignmentUpdate
 from tacoq.core.telemetry import TracerManager
+
+InputType = TypeVar("InputType", bound=Union[bytes, str, Dict[str, Any], BaseModel])
 
 
 class PublisherClient(BaseModel):
@@ -59,7 +66,8 @@ class PublisherClient(BaseModel):
         self: Self,
         task_kind: str,
         worker_kind: str,
-        input_data: TaskInput = b"",
+        input_data: InputType,
+        encoder: Optional[Encoder[InputType]] = None,
         task_id: Optional[UUID] = None,
         priority: int = 0,
         ttl_duration: int = 60 * 60 * 24 * 7,
@@ -68,34 +76,52 @@ class PublisherClient(BaseModel):
         """Publish a task to the broker.
 
         ### Arguments:
-        - task_kind: The kind of the task. Can either be in the format of `worker_kind:task_name` string or a `TaskKind` object.
+        - task_kind: The kind of the task. Can either be in the format of
+          `worker_kind:task_name` string or a `TaskKind` object.
         - worker_kind: The kind of worker that will execute the task.
-        - input_data: The data to publish.
-        - task_id: The ID of the task. If not provided, a new UUID will be generated.
+        - input_data: The data to publish. The type of this data must be able
+          to be encoded using the `encoder` function. By default, it accepts a
+          Pydantic model.
+        - encoder: The encoder function to use to encode the input data. If not
+          provided, type hints will be used to infer the encoding logic.
+        - task_id: The ID of the task. If not provided, a new UUID will be
+          generated.
         - priority: The priority of the task.
-        - ttl_duration: For how long the task should live after its done. Default value of 7 days.
-        - otel_ctx_carrier: The OpenTelemetry context carrier to be added to the task. This will track the entire task's lifecycle. If none is provided, a new one will be created. If one is provided, the context is expected to already be injected.
+        - ttl_duration: For how long the task should live after its done.
+          Default value of 7 days.
+        - otel_ctx_carrier: The OpenTelemetry context carrier to be added to
+          the task. This will track the entire task's lifecycle. If none is
+          provided, a new one will be created. If one is provided, the context
+          is expected to already be injected.
 
         ### Returns
-        - `TaskInstance`: The task instance.
+        - `Task`: The task instance.
+
+        ### Behaviour
+        - If you don't specify `encoder`, type hints are used to infer which
+          encoder to use, fabricating one based on the types.
+        - See more in `tacoq.core.encoding.polymorphic`.
 
         ### Usage
-        You can publish a task with the following code:
         ```python
+        class TestInput(BaseModel):
+            name: str
+
+        # Using default encoder (inferred from type hints)
         task = await publisher.publish_task(
             task_kind="task_name",
             worker_kind="worker_kind",
-            input_data="Hello, world!",
+            input_data=TestInput(name="input_data"),
             priority=5,
         )
-        ```
-        You can also inject the OpenTelemetry context carrier to track the task's lifecycle:
-        ```python
-        otel_ctx_carrier = {"trace_id": "1234567890", "span_id": "1234567890"}
+
+        # Using custom encoder
         task = await publisher.publish_task(
             task_kind="task_name",
             worker_kind="worker_kind",
-            otel_ctx_carrier=otel_ctx_carrier,
+            input_data=TestInput(name="input_data"),
+            encoder=CustomEncoder(),
+            priority=5,
         )
         ```
         """
@@ -115,25 +141,33 @@ class PublisherClient(BaseModel):
                 otel_ctx_carrier = {}
             inject(otel_ctx_carrier)
 
+            # Create encoder if not provided
+            if encoder is None:
+                encoder = create_encoder(type(input_data))
+
             # Create a task with base values
+            encoded_input_data = encoder.encode(input_data)
+            created_at = datetime.now()
             task = Task(
                 id=task_id or uuid4(),
                 task_kind=task_kind,
                 worker_kind=worker_kind,
-                input_data=input_data,
+                input_data=encoded_input_data,
                 priority=priority,
                 ttl_duration=ttl_duration,
                 otel_ctx_carrier=otel_ctx_carrier,
+                created_at=created_at,
             )
 
             task_assignment_update = TaskAssignmentUpdate(
                 id=task.id,
                 task_kind=task_kind,
                 worker_kind=worker_kind,
-                input_data=input_data,
+                input_data=encoded_input_data,
                 priority=priority,
                 ttl_duration=ttl_duration,
                 otel_ctx_carrier=otel_ctx_carrier,
+                created_at=created_at,
             )
 
             # Set the attributes of the span so it can be identified

@@ -13,7 +13,6 @@ docker compose up -d
 ```
 """
 
-import json
 import time
 import uuid
 from asyncio import create_task, gather, sleep
@@ -26,13 +25,18 @@ import asyncio
 import pytest
 from opentelemetry.trace import get_current_span
 from tacoq.core.infra.broker import BrokerConfig
-from tacoq.core.models import Task, TaskInput, TaskOutput, TaskStatus
+from tacoq.core.models import Task, TaskStatus
+from tacoq.core.encoding import PydanticDecoder
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.core.telemetry import StructuredMessage as _
 from tacoq.publisher import PublisherClient
 from tacoq.relay import RelayClient
 from tacoq.worker import WorkerApplication, WorkerApplicationConfig
 
+from tests.conftest import (
+    TestInputPydanticModel,
+    TestOutputPydanticModel,
+)
 
 # =========================================
 # Tasks
@@ -42,7 +46,9 @@ DELAYED_INSTRUMENTED_TASK = "delayed_instrumented_task"
 """Non-blocking task that emits spans and logs as it goes."""
 
 
-async def delayed_instrumented_task(input_data: TaskInput) -> TaskOutput:
+async def delayed_instrumented_task(
+    input_data: TestInputPydanticModel,
+) -> TestOutputPydanticModel:
     await sleep(0.4)
 
     # We will emit a span an two logs so we can see in Grafana if these are being properly chained together
@@ -81,45 +87,36 @@ async def delayed_instrumented_task(input_data: TaskInput) -> TaskOutput:
 
     await sleep(0.4)
 
-    return json.dumps(
-        {
-            "message": "Task completed",
-            "input": input_data.decode("utf-8") if input_data else None,
-        }
-    ).encode("utf-8")
+    return TestOutputPydanticModel(value=1)
 
 
 DELAYED_TASK_BLOCKING = "delayed_task_blocking"
 """Blocking task to test multiple processes."""
 
 
-async def delayed_task_blocking(input_data: TaskInput) -> TaskOutput:
+async def delayed_task_blocking(
+    input_data: TestInputPydanticModel,
+) -> TestOutputPydanticModel:
     time.sleep(2)
 
-    return json.dumps(
-        {
-            "message": "Task completed",
-            "input": json.loads(input_data) if input_data else {},
-        }
-    ).encode("utf-8")
+    return TestOutputPydanticModel(value=input_data.value)
 
 
 VARIABLE_TASK = "variable_task"
 """ Task whose duration varies with the input data. """
 
 
-async def variable_task(input_data: TaskInput) -> TaskOutput:
-    input: dict[str, Any] = json.loads(input_data) if input_data else {}
-    await sleep(input.get("delay", 0.1))
+async def variable_task(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
+    await sleep(input_data.value)
 
-    return json.dumps({"message": "Task completed", "input": input}).encode("utf-8")
+    return TestOutputPydanticModel(value=input_data.value)
 
 
 FAILING_TASK = "failing_task"
 """Fails immediately."""
 
 
-async def failing_task(input_data: TaskInput) -> TaskOutput:
+async def failing_task(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
     """Failing task."""
     raise ValueError("Task failed successfully")
 
@@ -131,10 +128,13 @@ BENCHMARK_TASK = "benchmark_task"
 BENCHMARK_TASK_STARTED = asyncio.Event()
 
 
-async def benchmark_task(input_data: TaskInput) -> TaskOutput:
+async def benchmark_task(
+    input_data: TestInputPydanticModel,
+) -> TestOutputPydanticModel:
     """Benchmark task."""
     BENCHMARK_TASK_STARTED.set()
-    return json.dumps({"message": "Task completed"}).encode("utf-8")
+
+    return TestOutputPydanticModel(value=1)
 
 
 # =========================================
@@ -175,12 +175,25 @@ class WorkerContext:
 
         # Register appropriate task handler
         self._worker_app.register_task(
-            DELAYED_INSTRUMENTED_TASK, delayed_instrumented_task
+            DELAYED_INSTRUMENTED_TASK,
+            delayed_instrumented_task,
         )
-        self._worker_app.register_task(FAILING_TASK, failing_task)
-        self._worker_app.register_task(DELAYED_TASK_BLOCKING, delayed_task_blocking)
-        self._worker_app.register_task(VARIABLE_TASK, variable_task)
-        self._worker_app.register_task(BENCHMARK_TASK, benchmark_task)
+        self._worker_app.register_task(
+            FAILING_TASK,
+            failing_task,
+        )
+        self._worker_app.register_task(
+            DELAYED_TASK_BLOCKING,
+            delayed_task_blocking,
+        )
+        self._worker_app.register_task(
+            VARIABLE_TASK,
+            variable_task,
+        )
+        self._worker_app.register_task(
+            BENCHMARK_TASK,
+            benchmark_task,
+        )
 
     async def __aenter__(self: Self) -> WorkerApplication:
         # Run worker in background
@@ -243,11 +256,11 @@ async def test_delayed_instrumented_task_e2e(
 
     async with WorkerContext(broker_prefetch_count=10) as worker:
         current_span.set_attribute("worker.kind", worker.config.kind)
-        input_data = {"test": "data"}
+        input_data = TestInputPydanticModel(value=1)
         task = await publisher_client.publish_task(
             task_kind=DELAYED_INSTRUMENTED_TASK,
             worker_kind=worker.config.kind,
-            input_data=json.dumps(input_data).encode("utf-8"),
+            input_data=input_data,
         )
 
         print(f"Published task {task}")
@@ -261,10 +274,16 @@ async def test_delayed_instrumented_task_e2e(
         assert completed_task.is_error == 0
         assert completed_task.output_data is not None
 
-        output_data = json.loads(completed_task.output_data.decode("utf-8"))
+        assert (
+            completed_task.get_decoded_input_data(
+                decoder=PydanticDecoder(TestInputPydanticModel)
+            )
+            == input_data
+        )
 
-        assert output_data["message"] == "Task completed"
-        assert json.loads(output_data["input"]) == input_data
+        assert completed_task.get_decoded_output_data(
+            decoder=PydanticDecoder(TestOutputPydanticModel)
+        ) == TestOutputPydanticModel(value=1)
 
 
 @pytest.mark.e2e
@@ -285,14 +304,12 @@ async def test_parallel_delayed_tasks(
     async with WorkerContext(broker_prefetch_count=TOTAL_TASKS + 1) as worker:
         current_span.set_attribute("worker.kind", worker.config.kind)
         coroutines: list[Coroutine[Any, Any, Task]] = []
-        for i in range(TOTAL_TASKS):
+        for _ in range(TOTAL_TASKS):
             coroutines.append(
                 publisher_client.publish_task(
                     task_kind=VARIABLE_TASK,
                     worker_kind=worker.config.kind,
-                    input_data=json.dumps(
-                        {"delay": TIME_PER_TASK, "task_num": i}
-                    ).encode("utf-8"),
+                    input_data=TestInputPydanticModel(value=TIME_PER_TASK),
                 )
             )
 
@@ -329,7 +346,7 @@ async def test_error_task_e2e(
         task = await publisher_client.publish_task(
             task_kind=FAILING_TASK,
             worker_kind=worker.config.kind,
-            input_data="".encode("utf-8"),
+            input_data=TestInputPydanticModel(value=1),
         )
 
         task_status = await get_completed_task(relay_client, task.id)
@@ -372,7 +389,7 @@ async def test_priority_task(
         await publisher_client.publish_task(
             task_kind=VARIABLE_TASK,
             worker_kind=worker.config.kind,
-            input_data=json.dumps({"delay": 3}).encode("utf-8"),
+            input_data=TestInputPydanticModel(value=3),
             priority=1,
         )
         print("Published initial task!")
@@ -386,7 +403,7 @@ async def test_priority_task(
                 publisher_client.publish_task(
                     task_kind=VARIABLE_TASK,
                     worker_kind=worker.config.kind,
-                    input_data=json.dumps({"delay": 0.1}).encode("utf-8"),
+                    input_data=TestInputPydanticModel(value=0.1),
                     priority=priority,
                 )
             )
@@ -462,7 +479,7 @@ async def test_multiple_workers_execute_tasks_in_parallel(
             publisher_client.publish_task(
                 task_kind=VARIABLE_TASK,
                 worker_kind=worker_contexts[0].worker_kind,
-                input_data=json.dumps({"delay": TIME_PER_TASK}).encode("utf-8"),
+                input_data=TestInputPydanticModel(value=TIME_PER_TASK),
             )
         )
 
@@ -501,7 +518,7 @@ async def test_benchmark_task(
         warmup_task = await publisher_client.publish_task(
             task_kind=VARIABLE_TASK,
             worker_kind=worker.config.kind,
-            input_data=json.dumps({"delay": 0.1}).encode("utf-8"),
+            input_data=TestInputPydanticModel(value=0.1),
         )
         await get_completed_task(relay_client, warmup_task.id)
 
@@ -511,7 +528,7 @@ async def test_benchmark_task(
         task = await publisher_client.publish_task(
             task_kind=BENCHMARK_TASK,
             worker_kind=worker.config.kind,
-            input_data=None,
+            input_data=TestInputPydanticModel(value=0.1),
         )
         publish_end = time.perf_counter_ns()
         await BENCHMARK_TASK_STARTED.wait()

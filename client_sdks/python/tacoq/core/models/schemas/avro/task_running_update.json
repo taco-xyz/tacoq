@@ -20,6 +20,10 @@
       {
         "name": "executed_by",
         "type": "string"
+      },
+      {
+        "name": "update_type",
+        "type": "string"
       }
     ]
 }

@@ -27,7 +27,7 @@
       },
       {
         "name": "input_data",
-        "type": ["null", "bytes"]
+        "type": "bytes"
       },
       {
         "name": "priority",
@@ -43,6 +43,10 @@
             "type": "map",
             "values": "string"
         }
+      },
+      {
+        "name": "update_type",
+        "type": "string"
       }
     ]
 }

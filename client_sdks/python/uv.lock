@@ -740,7 +740,7 @@ wheels = [
 
 [[package]]
 name = "tacoq"
-version = "0.3.0"
+version = "0.4.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "aio-pika" },
@@ -751,7 +751,6 @@ dependencies = [
     { name = "fastavro" },
     { name = "opentelemetry-api" },
     { name = "pydantic" },
-    { name = "pytest-timeout" },
     { name = "tenacity" },
     { name = "uuid" },
     { name = "watchfiles" },
@@ -763,6 +762,7 @@ dev = [
     { name = "opentelemetry-sdk" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-timeout" },
     { name = "pytest-xdist" },
 ]
 
@@ -776,7 +776,6 @@ requires-dist = [
     { name = "fastavro", specifier = ">=1.10.0" },
     { name = "opentelemetry-api", specifier = ">=1.30.0" },
     { name = "pydantic", specifier = ">=2.10.5" },
-    { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "uuid", specifier = ">=1.30" },
     { name = "watchfiles", specifier = ">=1.0.3" },
@@ -788,6 +787,7 @@ dev = [
     { name = "opentelemetry-sdk", specifier = ">=1.30.0" },
     { name = "pytest", specifier = ">=8.3.5" },
     { name = "pytest-asyncio", specifier = ">=0.25.3" },
+    { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "pytest-xdist", specifier = ">=3.6.1" },
 ]
 

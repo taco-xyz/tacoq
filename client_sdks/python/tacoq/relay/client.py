@@ -168,7 +168,13 @@ class RelayClient(BaseModel):
 
         ### Returns:
         Task: The task details
+
+        ### Example:
+        ```python
+        task = await relay.get_task(task_id)
+        ```
         """
+
         tracer = TracerManager.get_tracer()
         with tracer.start_as_current_span("get_task") as span:
             span.set_attributes({"task.id": str(task_id)})

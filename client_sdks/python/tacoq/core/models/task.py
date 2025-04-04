@@ -11,19 +11,21 @@ from typing import Optional, Self
 from uuid import UUID
 
 from pydantic import Field
+from tacoq.core.encoding.models import Decoder
 from tacoq.core.models.avro_serializable_base_model import (
     AvroSerializableBaseModel,
     avro_schema_path,
 )
+from typing_extensions import TypeVar
 
 # Types ================================
 
-TaskInput = Optional[bytes]
+TaskRawInput = bytes
 """ Task input data defined by the user - they can use whatever format they 
 want, but they must handle the serialization and deserialization of the data
 themselves."""
 
-TaskOutput = Optional[bytes]
+TaskRawOutput = bytes
 """ Task output data defined by the user - they can use whatever format they
 want, but they must handle the serialization and deserialization of the data 
 themselves. """
@@ -40,6 +42,9 @@ class TaskStatus(str, Enum):
 
     COMPLETED = "completed"
     """ The task has completed. This does not imply the task was successful. """
+
+
+DecodedData = TypeVar("DecodedData")
 
 
 @avro_schema_path("schemas/avro/task.json")
@@ -103,11 +108,11 @@ class Task(AvroSerializableBaseModel):
     executed_by: Optional[str] = Field(default=None)
     """ The name of the worker that executed the task. """
 
-    input_data: TaskInput = Field(default=None)
-    """ The input data of the task."""
+    input_data: Optional[TaskRawInput] = Field(default=None)
+    """ The raw input data of the task. To decode it, use the `get_decoded_input_data` method. """
 
-    output_data: TaskOutput = Field(default=None)
-    """ The data output by the task."""
+    output_data: Optional[TaskRawOutput] = Field(default=None)
+    """ The raw output data of the task. To decode it, use the `get_decoded_output_data` method. """
 
     is_error: Optional[int] = Field(default=None)
     """ Whether the task failed. Used primarly for the dead letter queue."""
@@ -163,3 +168,60 @@ class Task(AvroSerializableBaseModel):
         if self.completed_at is None or self.started_at is None:
             return None
         return self.completed_at - self.started_at
+
+    # Decoding the data
+
+    def get_decoded_input_data(
+        self: Self, decoder: Decoder[DecodedData]
+    ) -> DecodedData:
+        """Get the decoded input data of the task.
+
+        ### Arguments:
+        - decoder: The decoder to use to decode the input data.
+
+        ### Returns:
+        The decoded input data of the task.
+
+        ### Raises:
+        - `ValueError` if the input data is not set.
+
+        ### Example:
+        ```python
+        from tacoq.core.encoding import create_decoder
+
+        decoder = create_decoder(MyModel)
+        task = await relay.get_task(task_id)
+        decoded_data = task.get_decoded_input_data(decoder)
+        ```
+        """
+        if self.input_data is None:
+            raise ValueError("Input data is not set but you are trying to decode it")
+        return decoder.decode(self.input_data)
+
+    def get_decoded_output_data(
+        self: Self, decoder: Decoder[DecodedData]
+    ) -> DecodedData:
+        """Get the decoded output data of the task.
+
+        ### Arguments:
+        - decoder: The decoder to use to decode the output data.
+
+        ### Returns:
+        The decoded output data of the task.
+
+        ### Raises:
+        - `ValueError` if the output data is not set.
+
+        ### Example:
+        ```python
+        from tacoq.core.encoding import create_decoder
+
+        decoder = create_decoder(MyModel)
+        task = await relay.get_task(task_id)
+        decoded_data = task.get_decoded_output_data(decoder)
+        ```
+        """
+
+        if self.output_data is None:
+            raise ValueError("Output data is not set but you are trying to decode it")
+        return decoder.decode(self.output_data)
