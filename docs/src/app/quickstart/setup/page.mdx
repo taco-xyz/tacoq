@@ -146,8 +146,8 @@ from tacoq import WorkerApplication, WorkerApplicationConfig
 
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 worker_config = WorkerApplicationConfig(
-    name="worker_waiter_1", # The name of the worker for observability purposes.
-    kind="worker_waiter_kind", # The kind of worker to route tasks to.
+    name="my_worker_1", # The name of the worker for observability purposes.
+    kind="my_worker_kind", # The kind of worker to route tasks to.
     broker_config=broker_config,
     broker_prefetch_count=5, # How many tasks to prefetch and execute concurrently.
 )
@@ -156,7 +156,7 @@ worker_app = WorkerApplication(config=worker_config)
 ```
 
 <Note>
-  Note that the worker field `kind` is set to `"worker_waiter_kind"`. This field
+  Note that the worker field `kind` is set to `"my_worker_kind"`. This field
   will be used by the publisher to know which set of workers to send the task
   to. We recommend using environment variables to align these values.
 </Note>
@@ -188,7 +188,7 @@ import asyncio
 
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 worker_config = WorkerApplicationConfig(
-    name="worker_waiter_1", # The name of the worker for observability purposes.
+    name="my_worker_1", # The name of the worker for observability purposes.
     kind="my_worker_kind", # The kind of worker to route tasks to.
     broker_config=broker_config,
     broker_prefetch_count=5, # How many tasks to prefetch and execute concurrently.
