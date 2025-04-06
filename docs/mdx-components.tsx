@@ -4,11 +4,10 @@ import Image from "next/image";
 
 // Types Imports
 import type { MDXComponents } from "mdx/types";
-import { HeadingTypes, getHeaderId } from "@/types/page/Heading";
 import { Card, CardGroup } from "@/components/mdx/Card";
 
 // Components Imports
-import { Heading } from "@/components/mdx/heading/Heading";
+import { Header } from "@/components/mdx/header/Header";
 import {
   Blockquote,
   Important,
@@ -20,70 +19,71 @@ import {
 
 // Utils Imports
 import clsx from "clsx";
+import { getHeaderId } from "@/utils/getHeaderId";
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
     ...components,
 
-    // HEADINGS ------------------------------------------------------------
+    // Headers ------------------------------------------------------------
     h1: ({ children, className }) => (
-      <Heading
-        id={getHeaderId({ type: HeadingTypes.H1, name: children })}
-        Level={HeadingTypes.H1}
+      <Header
+        id={getHeaderId({ type: "h1", title: children })}
+        Level={"h1"}
         className={className}
       >
         {children}
-      </Heading>
+      </Header>
     ),
 
     h2: ({ children, className }) => (
-      <Heading
-        id={getHeaderId({ type: HeadingTypes.H2, name: children })}
-        Level={HeadingTypes.H2}
+      <Header
+        id={getHeaderId({ type: "h2", title: children })}
+        Level={"h2"}
         className={className}
       >
         {children}
-      </Heading>
+      </Header>
     ),
 
     h3: ({ children, className }) => (
-      <Heading
-        id={getHeaderId({ type: HeadingTypes.H3, name: children })}
-        Level={HeadingTypes.H3}
+      <Header
+        id={getHeaderId({ type: "h3", title: children })}
+        Level={"h3"}
         className={className}
       >
         {children}
-      </Heading>
+      </Header>
     ),
 
     h4: ({ children, className }) => (
-      <Heading
-        id={getHeaderId({ type: HeadingTypes.H4, name: children })}
-        Level={HeadingTypes.H4}
+      <Header
+        id={getHeaderId({ type: "h4", title: children })}
+        Level={"h4"}
         className={className}
       >
         {children}
-      </Heading>
+      </Header>
     ),
 
     h5: ({ children, className }) => (
-      <Heading
-        id={getHeaderId({ type: HeadingTypes.H5, name: children })}
-        Level={HeadingTypes.H5}
+      <Header
+        id={getHeaderId({ type: "h5", title: children })}
+        Level={"h5"}
         className={className}
       >
         {children}
-      </Heading>
+      </Header>
     ),
 
     h6: ({ children, className }) => (
-      <Heading
-        id={getHeaderId({ type: HeadingTypes.H6, name: children })}
-        Level={HeadingTypes.H6}
+      <Header
+        id={getHeaderId({ type: "h6", title: children })}
+        Level={"h6"}
         className={className}
       >
         {children}
-      </Heading>
+      </Header>
     ),
 
     // Cards ---------------------------------------------------

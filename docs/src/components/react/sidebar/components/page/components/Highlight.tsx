@@ -15,11 +15,11 @@ import clsx from "clsx";
 import { usePageTree } from "@/contexts/PageTreeContext";
 
 // Types Imports
-import type { Page } from "@/types/page/Page";
+import type { PageTreeElement } from "@/types/page-tree-element/PageTreeElement";
 
 interface HighlightProps {
   title: string;
-  children: Page[];
+  children: PageTreeElement[];
   parentElementRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -28,14 +28,15 @@ export const Highlight: FC<HighlightProps> = ({
   children,
   parentElementRef,
 }) => {
-  const { breadcrumbs, isPageExpanded, visiblePagesTitles } = usePageTree();
+  const { breadcrumbs, isFolderExpanded, visibleElementsTitles } =
+    usePageTree();
 
   // Find which child is in the breadcrumb path
   const focusedChildIndex = useMemo(
     () =>
       children.findIndex((child) =>
         breadcrumbs.some(
-          (page) => page.metadata.title === child.metadata.title,
+          (page) => page && page.metadata.title === child.metadata.title,
         ),
       ),
     [children, breadcrumbs],
@@ -82,7 +83,7 @@ export const Highlight: FC<HighlightProps> = ({
     }, 16); // ~60fps
 
     return () => clearInterval(interval);
-  }, [updateHighlightPosition, visiblePagesTitles]);
+  }, [updateHighlightPosition, visibleElementsTitles]);
 
   return (
     <div
@@ -94,7 +95,7 @@ export const Highlight: FC<HighlightProps> = ({
       )}
       style={{
         top:
-          isPageExpanded(title) && highlightPosition !== null
+          isFolderExpanded(title) && highlightPosition !== null
             ? `${highlightPosition}px`
             : "32px",
       }}

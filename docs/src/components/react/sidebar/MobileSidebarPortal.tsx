@@ -37,7 +37,7 @@ export const MobileSidebarPortal: FC = () => {
   const { isSidebarOpen, closeSidebar, dialogRef } = useMobileSidebarModal();
 
   // Extract the Page Tree Context
-  const { pages } = usePageTree();
+  const { pageTreeElements } = usePageTree();
 
   return (
     <SidebarPortal>
@@ -99,11 +99,11 @@ export const MobileSidebarPortal: FC = () => {
               <div className="-ml-2 flex flex-col gap-y-3">
                 <nav className="relative flex flex-col gap-y-1.5 outline-hidden">
                   {/* Pages */}
-                  {pages.map((page) => (
+                  {pageTreeElements.map((pageTreeElement) => (
                     <MobilePageComponent
-                      key={page.metadata.title}
+                      key={pageTreeElement.metadata.title}
                       childOf="root"
-                      {...page}
+                      pageTreeElement={pageTreeElement}
                     />
                   ))}
                 </nav>

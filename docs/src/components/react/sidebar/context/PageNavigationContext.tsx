@@ -2,7 +2,6 @@
 
 // React Imports
 import {
-  FC,
   createContext,
   useContext,
   useState,
@@ -21,118 +20,118 @@ import { useRouter } from "next/navigation";
 import { usePageTree } from "../../../../contexts/PageTreeContext";
 
 /**
- * Context for managing page navigation and focus state
+ * Context for managing page tree element navigation and focus state
  */
 interface PageNavigationContextType {
-  /** Focus a specific page by its title when it's hovered */
-  startHoverFocus: (pageTitle: string) => void;
+  /** Focus a specific page tree element by its title when it's hovered */
+  startHoverFocus: (elementTitle: string) => void;
   /** Start keyboard focus mode on the sidebar, focusing current page or first available */
   startKeyboardFocus: () => void;
   /** End keyboard focus mode on the sidebar */
   endKeyboardFocus: () => void;
   /** End hover focus on the sidebar */
   endHoverFocus: () => void;
-  /** Title of currently focused page, or null if none focused */
-  focusedPageTitle: string | null;
-  /** Ref to the page container element, to unfocus the page navigation when clicking outside of it's container */
-  pageContainerRef: RefObject<HTMLDivElement | null>;
-  /** Ref to the sidebar container element, to avoid focusing pages that are hidden by this element's scroll */
+  /** Title of currently focused page tree element, or null if none focused */
+  focusedElementTitle: string | null;
+  /** Ref to the page tree element container element, to unfocus the page tree element navigation when clicking outside of it's container */
+  elementContainerRef: RefObject<HTMLDivElement | null>;
+  /** Ref to the sidebar container element, to avoid focusing page tree elements that are hidden by this element's scroll */
   sidebarContainerRef: RefObject<HTMLDivElement | null>;
-  /** Ref to the current focused page element*/
-  currentFocusedPageRef: RefObject<HTMLDivElement | null>;
+  /** Ref to the current focused page tree element*/
+  currentFocusedElementRef: RefObject<HTMLDivElement | null>;
 }
 
 const PageNavigationContext = createContext<PageNavigationContextType | null>(
   null,
 );
 
-export const PageNavigationProvider: FC<PropsWithChildren> = ({
-  children,
-}) => {
+export function PageNavigationProvider({ children }: PropsWithChildren) {
   const router = useRouter();
 
-  const pageContainerRef = useRef<HTMLDivElement>(null);
+  const elementContainerRef = useRef<HTMLDivElement>(null);
 
   const sidebarContainerRef = useRef<HTMLDivElement>(null);
 
-  const currentFocusedPageRef = useRef<HTMLDivElement>(null);
+  const currentFocusedElementRef = useRef<HTMLDivElement>(null);
 
   // Extract page tree context
   const {
-    visiblePagesTitles,
-    currentPageTitle,
-    getPageByTitle,
-    expandPage,
-    collapsePage,
-    isPageExpanded,
+    visibleElementsTitles,
+    currentElementTitle,
+    getElementByTitle,
+    isFolder,
+    isFolderExpanded,
+    expandFolder,
+    collapseFolder,
   } = usePageTree();
 
-  /** Title of currently focused page, or null if none focused */
-  const [focusedPageTitle, setFocusedPageTitle] = useState<string | null>(null);
+  /** Title of currently focused page tree element, or null if none focused */
+  const [focusedElementTitle, setFocusedElementTitle] = useState<string | null>(
+    null,
+  );
 
   /** Ref for managing hover focus timeout */
   const hoverFocusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
-   * Focus a specific page by its title
+   * Focus a specific page tree element by its title
    */
-  const startHoverFocus = useCallback((pageTitle: string) => {
+  const startHoverFocus = useCallback((elementTitle: string) => {
     if (hoverFocusTimeoutRef.current) {
       clearTimeout(hoverFocusTimeoutRef.current);
     }
 
-    setFocusedPageTitle(pageTitle);
+    setFocusedElementTitle(elementTitle);
   }, []);
 
   /**
    * Handle hover focus on the sidebar
    */
   const endHoverFocus = useCallback(() => {
-    if (!focusedPageTitle) return;
+    if (!focusedElementTitle) return;
 
     if (hoverFocusTimeoutRef.current) {
       clearTimeout(hoverFocusTimeoutRef.current);
     }
 
     hoverFocusTimeoutRef.current = setTimeout(() => {
-      setFocusedPageTitle(null);
+      setFocusedElementTitle(null);
     }, 150);
-  }, [focusedPageTitle]);
+  }, [focusedElementTitle]);
 
   /**
    * Start keyboard focus mode on the sidebar
-   * If no page is focused, focuses either the current page or first available page
+   * If no element is focused, focuses either the current page tree element or first available element
    */
   const startKeyboardFocus = useCallback(() => {
-    if (focusedPageTitle || visiblePagesTitles.length === 0) return;
+    if (focusedElementTitle || visibleElementsTitles.length === 0) return;
 
-    const currentPageIndex = currentPageTitle
-      ? visiblePagesTitles.indexOf(currentPageTitle)
+    const currentElementIndex = currentElementTitle
+      ? visibleElementsTitles.indexOf(currentElementTitle)
       : -1;
 
     // Set the focused page to the current page or the first available page
-    setFocusedPageTitle(
-      currentPageIndex >= 0 ? currentPageTitle : visiblePagesTitles[0],
+    setFocusedElementTitle(
+      currentElementIndex >= 0 ? currentElementTitle : visibleElementsTitles[0],
     );
-  }, [visiblePagesTitles, currentPageTitle, focusedPageTitle]);
+  }, [visibleElementsTitles, currentElementTitle, focusedElementTitle]);
 
   /**
    * End keyboard focus mode on the sidebar by clearing focused page
    */
   const endKeyboardFocus = useCallback(() => {
-    if (!focusedPageTitle) return;
-    setFocusedPageTitle(null);
-  }, [focusedPageTitle]);
+    if (!focusedElementTitle) return;
+    setFocusedElementTitle(null);
+  }, [focusedElementTitle]);
 
   /**
-   * Exit focus mode when clicking outside page container
-
+   * Exit focus mode when clicking outside page tree element container
    */
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
       if (
-        !pageContainerRef.current ||
-        pageContainerRef.current.contains(e.target as Node)
+        !elementContainerRef.current ||
+        elementContainerRef.current.contains(e.target as Node)
       )
         return;
 
@@ -144,9 +143,9 @@ export const PageNavigationProvider: FC<PropsWithChildren> = ({
   /**
    * Handle keyboard navigation in the sidebar
    * - Ctrl+0 (or Cmd+0 on Mac): Start focus mode
-   * - Arrow Up/Down: Navigate between visible pages
-   * - Space/Arrow Right/Left: Expand/collapse pages with children
-   * - Enter: Navigate to page URL
+   * - Arrow Up/Down: Navigate between visible page tree elements
+   * - Space/Arrow Right/Left: Expand/collapse page tree elements with children
+   * - Enter: Navigate to page tree element URL
    * - Escape: Exit focus mode
    */
   const handleKeyDown = useCallback(
@@ -157,22 +156,22 @@ export const PageNavigationProvider: FC<PropsWithChildren> = ({
         return;
       }
 
-      if (!focusedPageTitle) return;
+      if (!focusedElementTitle) return;
 
-      const currentIndex = visiblePagesTitles.indexOf(focusedPageTitle);
-      const currentPage = getPageByTitle(focusedPageTitle);
+      const currentIndex = visibleElementsTitles.indexOf(focusedElementTitle);
+      const currentElement = getElementByTitle(focusedElementTitle);
 
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          // Check if the current page is not the last page
-          if (currentIndex < visiblePagesTitles.length - 1) {
-            // Set the focused page to the next page
-            setFocusedPageTitle(visiblePagesTitles[currentIndex + 1]);
+          // Check if the current element is not the last page tree element
+          if (currentIndex < visibleElementsTitles.length - 1) {
+            // Set the focused element to the next page tree element
+            setFocusedElementTitle(visibleElementsTitles[currentIndex + 1]);
             return;
           } else {
-            // Set the focused page to the first page
-            setFocusedPageTitle(visiblePagesTitles[0]);
+            // Set the focused element to the first page tree element
+            setFocusedElementTitle(visibleElementsTitles[0]);
             return;
           }
 
@@ -180,56 +179,64 @@ export const PageNavigationProvider: FC<PropsWithChildren> = ({
           e.preventDefault();
           // Check if the current page is not the first page
           if (currentIndex > 0) {
-            // Set the focused page to the previous page
-            setFocusedPageTitle(visiblePagesTitles[currentIndex - 1]);
+            // Set the focused element to the previous page tree element
+            setFocusedElementTitle(visibleElementsTitles[currentIndex - 1]);
             return;
           } else {
-            // Set the focused page to the last page
-            setFocusedPageTitle(
-              visiblePagesTitles[visiblePagesTitles.length - 1],
+            // Set the focused element to the last page tree element
+            setFocusedElementTitle(
+              visibleElementsTitles[visibleElementsTitles.length - 1],
             );
             return;
           }
 
         case " ":
           e.preventDefault();
-          // Check if the current page has children
-          if (!currentPage?.children) return;
+          // Check if the current element is a folder
+          if (!currentElement || !isFolder(currentElement)) return;
 
-          // Toggle the expansion state of the current page
-          if (isPageExpanded(focusedPageTitle)) {
-            collapsePage(focusedPageTitle);
+          // Toggle the expansion state of the folder
+          if (isFolderExpanded(focusedElementTitle)) {
+            collapseFolder(focusedElementTitle);
             return;
           } else {
-            expandPage(focusedPageTitle);
+            expandFolder(focusedElementTitle);
             return;
           }
 
         case "ArrowRight":
           e.preventDefault();
-          // Check if the current page has children and is not expanded
-          if (!currentPage?.children || isPageExpanded(focusedPageTitle))
+          // Check if the current element is a folder and is expanded
+          if (
+            !currentElement ||
+            !isFolder(currentElement) ||
+            isFolderExpanded(focusedElementTitle)
+          )
             return;
 
-          expandPage(focusedPageTitle);
+          expandFolder(focusedElementTitle);
           return;
 
         case "ArrowLeft":
           e.preventDefault();
-          // Check if the current page has children and is expanded
-          if (!currentPage?.children || !isPageExpanded(focusedPageTitle))
+          // Check if the current element is a folder and is expanded
+          if (
+            !currentElement ||
+            !isFolder(currentElement) ||
+            !isFolderExpanded(focusedElementTitle)
+          )
             return;
 
-          collapsePage(focusedPageTitle);
+          collapseFolder(focusedElementTitle);
           return;
 
         case "Enter":
           e.preventDefault();
-          // Check if the current page has a URL
-          if (!currentPage?.url) return;
+          // Check if the current element is a not a folder
+          if (!currentElement || isFolder(currentElement)) return;
 
-          // Navigate to the current page's URL
-          router.push(currentPage.url);
+          // Navigate to the current element's URL
+          router.push(currentElement.url);
           return;
 
         case "Escape":
@@ -239,29 +246,30 @@ export const PageNavigationProvider: FC<PropsWithChildren> = ({
       }
     },
     [
-      focusedPageTitle,
-      visiblePagesTitles,
-      expandPage,
-      collapsePage,
-      isPageExpanded,
-      getPageByTitle,
+      focusedElementTitle,
+      visibleElementsTitles,
+      expandFolder,
+      collapseFolder,
+      isFolderExpanded,
+      getElementByTitle,
       router,
       startKeyboardFocus,
       endKeyboardFocus,
+      isFolder,
     ],
   );
 
-  // Scroll to current focused page if it's hidden by the sidebar scroll
+  // Scroll to current focused element if it's hidden by the sidebar scroll
   useLayoutEffect(() => {
     if (
-      !focusedPageTitle ||
-      !currentFocusedPageRef.current ||
+      !focusedElementTitle ||
+      !currentFocusedElementRef.current ||
       !sidebarContainerRef.current
     )
       return;
 
     // Get the current focused page element and the sidebar container element
-    const pageElement = currentFocusedPageRef.current;
+    const pageElement = currentFocusedElementRef.current;
     const sidebarElement = sidebarContainerRef.current;
 
     const pageRect = pageElement.getBoundingClientRect();
@@ -280,7 +288,7 @@ export const PageNavigationProvider: FC<PropsWithChildren> = ({
         top: pageRect.top - sidebarRect.top - 18, // Overscroll slightly
       });
     }
-  }, [focusedPageTitle]);
+  }, [focusedElementTitle]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
@@ -298,10 +306,10 @@ export const PageNavigationProvider: FC<PropsWithChildren> = ({
         startKeyboardFocus,
         endKeyboardFocus,
         endHoverFocus,
-        focusedPageTitle,
-        pageContainerRef,
+        focusedElementTitle,
+        elementContainerRef,
         sidebarContainerRef,
-        currentFocusedPageRef,
+        currentFocusedElementRef,
       }}
     >
       {children}

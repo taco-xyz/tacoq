@@ -154,13 +154,13 @@ export const Tooltip: FC = () => {
           <div
             className={clsx(
               "transition-all duration-100 ease-in-out",
-              content.isUrl ? "opacity-100" : "opacity-0",
+              !content.isFolder ? "opacity-100" : "opacity-0",
             )}
           >
             <div
               className={clsx(
                 "flex flex-row items-center gap-x-1.5 transition-all duration-200 ease-in-out",
-                content.isUrl ? "w-[142px] pr-10" : "w-0",
+                !content.isFolder ? "w-[142px] pr-10" : "w-0",
               )}
             >
               <div className="flex cursor-pointer items-center justify-center rounded-md bg-zinc-200/40 px-1.5 py-0.5 font-mono text-xs font-medium whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-150 ease-in-out dark:bg-zinc-950/70 dark:text-white/70 dark:ring-white/5">

@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { FC, useRef } from "react";
+import { FC, useRef, useMemo } from "react";
 
 // Next Imports
 import Link from "next/link";
@@ -9,43 +9,56 @@ import Link from "next/link";
 // Lucide Icons
 import { ChevronRight } from "lucide-react";
 
-// Tailwind Imports
+// Utils Imports
 import clsx from "clsx";
+import { getIcon } from "@/utils/getIcon";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/components/react/sidebar/context/PageNavigationContext";
 
 // Types Imports
-import type { Page } from "@/types/page/Page";
+import type { PageTreeElement } from "@/types/page-tree-element/PageTreeElement";
 
 // Components Imports
 import { Highlight } from "./components/Highlight";
 
-export interface PageComponentProps extends Page {
+export interface PageComponentProps {
   childOf: string;
+  pageTreeElement: PageTreeElement;
 }
 
 export const DesktopPageComponent: FC<PageComponentProps> = ({
   childOf,
-  url,
-  children,
-  metadata: { title, sidebar },
+  pageTreeElement,
 }) => {
   // Extract the page tree context
-  const { currentPageTitle, isPageExpanded, expandPage, collapsePage } =
-    usePageTree();
+  const {
+    currentElementTitle,
+    isFolderExpanded,
+    expandFolder,
+    collapseFolder,
+    isFolder,
+  } = usePageTree();
 
   // Extract the page navigation context
   const {
-    focusedPageTitle,
+    focusedElementTitle,
     startHoverFocus,
     endHoverFocus,
-    currentFocusedPageRef,
+    currentFocusedElementRef,
   } = usePageNavigation();
 
   // Ref for the current item
   const elementRef = useRef<HTMLDivElement>(null);
+
+  // Get the current icon component
+  const Icon = useMemo(() => {
+    if (pageTreeElement.metadata.icon) {
+      return getIcon(pageTreeElement.metadata.icon);
+    }
+    return null;
+  }, [pageTreeElement.metadata.icon]);
 
   return (
     <div
@@ -55,152 +68,148 @@ export const DesktopPageComponent: FC<PageComponentProps> = ({
         "relative flex flex-col overflow-hidden text-sm outline-hidden",
       )}
     >
-      {/* If the item has a url, it's a link */}
-      {url ? (
-        <div
-          ref={focusedPageTitle === title ? currentFocusedPageRef : undefined}
-        >
-          <Link
-            onMouseEnter={() => startHoverFocus(title)}
+      {/* If the element is not a folder, we render a link */}
+      {!isFolder(pageTreeElement) ? (
+        <>
+          {/* Page Sidebar Item */}
+          <div
+            ref={
+              focusedElementTitle === pageTreeElement.metadata.title
+                ? currentFocusedElementRef
+                : undefined
+            }
+          >
+            <Link
+              onMouseEnter={() =>
+                startHoverFocus(pageTreeElement.metadata.title)
+              }
+              onMouseLeave={() => endHoverFocus()}
+              href={pageTreeElement.url}
+              className={clsx(
+                focusedElementTitle === pageTreeElement.metadata.title &&
+                  currentElementTitle === pageTreeElement.metadata.title &&
+                  "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
+                focusedElementTitle === pageTreeElement.metadata.title &&
+                  currentElementTitle !== pageTreeElement.metadata.title &&
+                  "bg-zinc-800/5 text-zinc-800 hover:bg-zinc-800/5 dark:bg-white/5 dark:text-white dark:hover:bg-white/5",
+                focusedElementTitle !== pageTreeElement.metadata.title &&
+                  currentElementTitle === pageTreeElement.metadata.title &&
+                  "bg-zinc-800/5 font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/5 dark:text-white dark:hover:bg-white/[0.075]",
+                focusedElementTitle !== pageTreeElement.metadata.title &&
+                  currentElementTitle !== pageTreeElement.metadata.title &&
+                  "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
+                "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden select-none",
+              )}
+              tabIndex={-1}
+            >
+              {Icon && (
+                <Icon
+                  className={clsx(
+                    "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
+                    currentElementTitle === pageTreeElement.metadata.title
+                      ? "text-zinc-950 dark:text-white/100"
+                      : "text-zinc-500 dark:text-white/50",
+                  )}
+                />
+              )}
+              {pageTreeElement.metadata.title}
+            </Link>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Folder Sidebar Item */}
+          <div
+            ref={
+              focusedElementTitle === pageTreeElement.metadata.title
+                ? currentFocusedElementRef
+                : undefined
+            }
+            onMouseEnter={() => startHoverFocus(pageTreeElement.metadata.title)}
             onMouseLeave={() => endHoverFocus()}
-            href={url}
+            onClick={() => {
+              if (!isFolderExpanded(pageTreeElement.metadata.title)) {
+                expandFolder(pageTreeElement.metadata.title);
+              } else {
+                collapseFolder(pageTreeElement.metadata.title);
+              }
+            }}
             className={clsx(
-              focusedPageTitle === title &&
-                currentPageTitle === title &&
+              focusedElementTitle === pageTreeElement.metadata.title &&
+                currentElementTitle === pageTreeElement.metadata.title &&
                 "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
-              focusedPageTitle === title &&
-                currentPageTitle !== title &&
+              focusedElementTitle === pageTreeElement.metadata.title &&
+                currentElementTitle !== pageTreeElement.metadata.title &&
                 "bg-zinc-800/5 text-zinc-800 hover:bg-zinc-800/5 dark:bg-white/5 dark:text-white dark:hover:bg-white/5",
-              focusedPageTitle !== title &&
-                currentPageTitle === title &&
+              focusedElementTitle !== pageTreeElement.metadata.title &&
+                currentElementTitle === pageTreeElement.metadata.title &&
                 "bg-zinc-800/5 font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/5 dark:text-white dark:hover:bg-white/[0.075]",
-              focusedPageTitle !== title &&
-                currentPageTitle !== title &&
+              focusedElementTitle !== pageTreeElement.metadata.title &&
+                currentElementTitle !== pageTreeElement.metadata.title &&
                 "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
               "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden select-none",
             )}
-            tabIndex={-1}
           >
-            {sidebar?.Icon && (
-              <sidebar.Icon
+            {Icon && (
+              <Icon
                 className={clsx(
                   "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
-                  currentPageTitle === title
+                  currentElementTitle === pageTreeElement.metadata.title
                     ? "text-zinc-950 dark:text-white/100"
                     : "text-zinc-500 dark:text-white/50",
                 )}
               />
             )}
-            {sidebar?.title ?? title}
-            {children && (
-              <ChevronRight
-                onClick={(e) => {
-                  // Prevent this form triggering the link navigation
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (isPageExpanded(title)) {
-                    collapsePage(title);
-                  } else {
-                    expandPage(title);
-                  }
-                }}
-                className={clsx(
-                  "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
-                  isPageExpanded(title) && "rotate-90",
-                )}
-              />
-            )}
-          </Link>
-        </div>
-      ) : (
-        // If the item doesn't have a url, it doesn't contain a page
-        <div
-          ref={focusedPageTitle === title ? currentFocusedPageRef : undefined}
-          onMouseEnter={() => startHoverFocus(title)}
-          onMouseLeave={() => endHoverFocus()}
-          onClick={() => {
-            if (children) {
-              if (!isPageExpanded(title)) {
-                expandPage(title);
-              } else {
-                collapsePage(title);
-              }
-            }
-          }}
-          className={clsx(
-            focusedPageTitle === title &&
-              currentPageTitle === title &&
-              "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
-            focusedPageTitle === title &&
-              currentPageTitle !== title &&
-              "bg-zinc-800/5 text-zinc-800 hover:bg-zinc-800/5 dark:bg-white/5 dark:text-white dark:hover:bg-white/5",
-            focusedPageTitle !== title &&
-              currentPageTitle === title &&
-              "bg-zinc-800/5 font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/5 dark:text-white dark:hover:bg-white/[0.075]",
-            focusedPageTitle !== title &&
-              currentPageTitle !== title &&
-              "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
-            "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden select-none",
-          )}
-        >
-          {sidebar?.Icon && (
-            <sidebar.Icon
-              className={clsx(
-                "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
-                currentPageTitle === title
-                  ? "text-zinc-950 dark:text-white/100"
-                  : "text-zinc-500 dark:text-white/50",
-              )}
-            />
-          )}
-          {sidebar?.title ?? title}
-          {children && (
+            {pageTreeElement.metadata.title}
+
             <ChevronRight
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (isPageExpanded(title)) {
-                  collapsePage(title);
+                if (isFolderExpanded(pageTreeElement.metadata.title)) {
+                  collapseFolder(pageTreeElement.metadata.title);
                 } else {
-                  expandPage(title);
+                  expandFolder(pageTreeElement.metadata.title);
                 }
               }}
               className={clsx(
                 "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
-                isPageExpanded(title) && "rotate-90",
+                isFolderExpanded(pageTreeElement.metadata.title) && "rotate-90",
               )}
             />
-          )}
-        </div>
-      )}
-
-      {children && (
-        <div
-          className={clsx(
-            "ml-3.5 border-l-[1px] border-zinc-300 pl-2.5 dark:border-zinc-700",
-            "grid transition-all duration-300 ease-in-out",
-            isPageExpanded(title)
-              ? "mt-1.5 grid-rows-[1fr] opacity-100"
-              : "grid-rows-[0fr] opacity-0",
-          )}
-        >
-          {/* Selected highlight */}
-          <Highlight title={title} parentElementRef={elementRef}>
-            {children}
-          </Highlight>
+          </div>
 
           {/* Child items */}
-          <div className="flex flex-col gap-y-2 overflow-hidden">
-            {children.map((child) => (
-              <DesktopPageComponent
-                key={child.metadata.title}
-                {...child}
-                childOf={title}
-              />
-            ))}
+          <div
+            className={clsx(
+              "ml-3.5 border-l-[1px] border-zinc-300 pl-2.5 dark:border-zinc-700",
+              "grid transition-all duration-300 ease-in-out",
+              isFolderExpanded(pageTreeElement.metadata.title)
+                ? "mt-1.5 grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0",
+            )}
+          >
+            {/* Selected highlight */}
+            <Highlight
+              title={pageTreeElement.metadata.title}
+              parentElementRef={elementRef}
+            >
+              {pageTreeElement.children}
+            </Highlight>
+
+            {/* Child items */}
+            <div className="flex flex-col gap-y-2 overflow-hidden">
+              {pageTreeElement.children.map((child, index) => (
+                <DesktopPageComponent
+                  key={index}
+                  pageTreeElement={child}
+                  childOf={pageTreeElement.metadata.title}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
-}
+};

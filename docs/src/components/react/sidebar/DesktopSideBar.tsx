@@ -23,14 +23,14 @@ interface DesktopSideBarProps {
 
 export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
   // Extract the page tree context
-  const { pages } = usePageTree();
+  const { pageTreeElements } = usePageTree();
 
   // Extract the page navigation context
   const {
-    focusedPageTitle,
+    focusedElementTitle,
     startKeyboardFocus,
     endKeyboardFocus,
-    pageContainerRef,
+    elementContainerRef,
     sidebarContainerRef,
   } = usePageNavigation();
 
@@ -52,13 +52,13 @@ export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
           ))}
         </nav> */}
 
-        <div ref={pageContainerRef} className="flex flex-col gap-y-3">
+        <div ref={elementContainerRef} className="flex flex-col gap-y-3">
           <div className="relative h-7">
             <button
               onClick={startKeyboardFocus}
               tabIndex={-1}
               className={`absolute left-0 cursor-pointer rounded-md bg-zinc-100/80 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-100 ease-in-out ring-inset hover:bg-zinc-100 hover:text-zinc-700 hover:ring-zinc-300 dark:bg-zinc-900/80 dark:text-white/70 dark:ring-white/10 dark:hover:bg-zinc-900 dark:hover:text-white/90 dark:hover:ring-white/15 ${
-                focusedPageTitle
+                focusedElementTitle
                   ? "pointer-events-none opacity-0"
                   : "pointer-events-auto opacity-100"
               }`}
@@ -70,7 +70,7 @@ export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
               onClick={endKeyboardFocus}
               tabIndex={-1}
               className={`absolute left-0 cursor-pointer rounded-md bg-zinc-100/80 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-100 ease-in-out ring-inset hover:bg-zinc-100 hover:text-zinc-700 hover:ring-zinc-300 dark:bg-zinc-900/80 dark:text-white/70 dark:ring-white/10 dark:hover:bg-zinc-900 dark:hover:text-white/90 dark:hover:ring-white/15 ${
-                !focusedPageTitle
+                !focusedElementTitle
                   ? "pointer-events-none opacity-0"
                   : "pointer-events-auto opacity-100"
               }`}
@@ -96,11 +96,11 @@ export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
             <Tooltip />
 
             {/* Pages */}
-            {pages.map((page) => (
+            {pageTreeElements.map((pageTreeElement) => (
               <DesktopPageComponent
-                key={page.metadata.title}
+                key={pageTreeElement.metadata.title}
                 childOf="root"
-                {...page}
+                pageTreeElement={pageTreeElement}
               />
             ))}
           </nav>
