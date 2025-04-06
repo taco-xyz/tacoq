@@ -1,5 +1,5 @@
 // React Imports
-import { type PropsWithChildren } from "react";
+import { FC, PropsWithChildren } from "react";
 
 // Lucide Icons
 import {
@@ -37,10 +37,10 @@ import clsx from "clsx";
  * Note callout for general information and neutral content.
  * Uses blue color scheme with information icon.
  */
-export function Note({
+export const Note: FC<PropsWithChildren<{ className?: string }>> = ({
   children,
   className,
-}: PropsWithChildren<{ className?: string }>) {
+}) => {
   return (
     <blockquote
       className={clsx(
@@ -54,16 +54,16 @@ export function Note({
       </div>
     </blockquote>
   );
-}
+};
 
 /**
  * Tip callout for helpful advice and suggestions.
  * Uses green color scheme with lightbulb icon.
  */
-export function Tip({
+export const Tip: FC<PropsWithChildren<{ className?: string }>> = ({
   children,
   className,
-}: PropsWithChildren<{ className?: string }>) {
+}) => {
   return (
     <blockquote
       className={clsx(
@@ -77,16 +77,16 @@ export function Tip({
       </div>
     </blockquote>
   );
-}
+};
 
 /**
  * Important callout for key information that shouldn't be missed.
  * Uses indigo color scheme with exclamation circle icon.
  */
-export function Important({
+export const Important: FC<PropsWithChildren<{ className?: string }>> = ({
   children,
   className,
-}: PropsWithChildren<{ className?: string }>) {
+}) => {
   return (
     <blockquote
       className={clsx(
@@ -100,16 +100,16 @@ export function Important({
       </div>
     </blockquote>
   );
-}
+};
 
 /**
  * Warning callout for potential issues that need attention.
  * Uses yellow color scheme with exclamation triangle icon.
  */
-export function Warning({
+export const Warning: FC<PropsWithChildren<{ className?: string }>> = ({
   children,
   className,
-}: PropsWithChildren<{ className?: string }>) {
+}) => {
   return (
     <blockquote
       className={clsx(
@@ -123,16 +123,16 @@ export function Warning({
       </div>
     </blockquote>
   );
-}
+};
 
 /**
  * Caution callout for dangerous operations or critical warnings.
  * Uses red color scheme with shield exclamation icon.
  */
-export function Caution({
+export const Caution: FC<PropsWithChildren<{ className?: string }>> = ({
   children,
   className,
-}: PropsWithChildren<{ className?: string }>) {
+}) => {
   return (
     <blockquote
       className={clsx(
@@ -146,16 +146,16 @@ export function Caution({
       </div>
     </blockquote>
   );
-}
+};
 
 /**
  * Default blockquote component for standard quotes.
  * Uses neutral gray styling with information icon.
  */
-export function Blockquote({
+export const Blockquote: FC<PropsWithChildren<{ className?: string }>> = ({
   children,
   className,
-}: PropsWithChildren<{ className?: string }>) {
+}) => {
   return (
     <blockquote
       className={clsx(
@@ -169,4 +169,4 @@ export function Blockquote({
       </div>
     </blockquote>
   );
-}
+};

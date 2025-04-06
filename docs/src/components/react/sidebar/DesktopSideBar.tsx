@@ -1,5 +1,8 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/components/react/sidebar/context/PageNavigationContext";
@@ -8,7 +11,6 @@ import { usePlatform } from "@/contexts/PlatformContext";
 // Components Imports
 import { Tooltip } from "@/components/react/sidebar/components/Tooltip";
 import { DesktopPageComponent } from "@/components/react/sidebar/components/page/DesktopPage";
-// import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
 // Utils Imports
 import clsx from "clsx";
@@ -18,16 +20,16 @@ interface DesktopSideBarProps {
   className?: string;
 }
 
-export function DesktopSideBar({ className }: DesktopSideBarProps) {
+export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
   // Extract the page tree context
-  const { pages } = usePageTree();
+  const { pageTreeElements } = usePageTree();
 
   // Extract the page navigation context
   const {
-    focusedPageTitle,
+    focusedElementTitle,
     startKeyboardFocus,
     endKeyboardFocus,
-    pageContainerRef,
+    elementContainerRef,
     sidebarContainerRef,
   } = usePageNavigation();
 
@@ -43,19 +45,13 @@ export function DesktopSideBar({ className }: DesktopSideBarProps) {
           className,
         )}
       >
-        {/* <nav className="flex flex-col gap-y-3.5">
-          {anchors.map((anchor) => (
-            <AnchorComponent key={anchor.title} {...anchor} />
-          ))}
-        </nav> */}
-
-        <div ref={pageContainerRef} className="flex flex-col gap-y-3">
+        <div ref={elementContainerRef} className="flex flex-col gap-y-3">
           <div className="relative h-7">
             <button
               onClick={startKeyboardFocus}
               tabIndex={-1}
               className={`absolute left-0 cursor-pointer rounded-md bg-zinc-100/80 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-100 ease-in-out ring-inset hover:bg-zinc-100 hover:text-zinc-700 hover:ring-zinc-300 dark:bg-zinc-900/80 dark:text-white/70 dark:ring-white/10 dark:hover:bg-zinc-900 dark:hover:text-white/90 dark:hover:ring-white/15 ${
-                focusedPageTitle
+                focusedElementTitle
                   ? "pointer-events-none opacity-0"
                   : "pointer-events-auto opacity-100"
               }`}
@@ -67,7 +63,7 @@ export function DesktopSideBar({ className }: DesktopSideBarProps) {
               onClick={endKeyboardFocus}
               tabIndex={-1}
               className={`absolute left-0 cursor-pointer rounded-md bg-zinc-100/80 px-2 py-1 font-mono text-xs font-semibold whitespace-nowrap text-zinc-500 ring-1 ring-zinc-200 transition-all duration-100 ease-in-out ring-inset hover:bg-zinc-100 hover:text-zinc-700 hover:ring-zinc-300 dark:bg-zinc-900/80 dark:text-white/70 dark:ring-white/10 dark:hover:bg-zinc-900 dark:hover:text-white/90 dark:hover:ring-white/15 ${
-                !focusedPageTitle
+                !focusedElementTitle
                   ? "pointer-events-none opacity-0"
                   : "pointer-events-auto opacity-100"
               }`}
@@ -93,11 +89,11 @@ export function DesktopSideBar({ className }: DesktopSideBarProps) {
             <Tooltip />
 
             {/* Pages */}
-            {pages.map((page) => (
+            {pageTreeElements.map((pageTreeElement) => (
               <DesktopPageComponent
-                key={page.metadata.title}
+                key={pageTreeElement.metadata.title}
                 childOf="root"
-                {...page}
+                pageTreeElement={pageTreeElement}
               />
             ))}
           </nav>
@@ -109,4 +105,4 @@ export function DesktopSideBar({ className }: DesktopSideBarProps) {
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
     </div>
   );
-}
+};

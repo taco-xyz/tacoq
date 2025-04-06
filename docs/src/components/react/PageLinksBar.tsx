@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, FC } from "react";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
@@ -25,14 +25,14 @@ interface PageLinksBarProps {
 /**
 
  * Renders a nested table of contents for the current page
- * Scrolls to the corresponding heading when clicked
+ * Scrolls to the corresponding header when clicked
  * Highlights the current section based on scroll position
  */
-export function PageLinksBar({ className }: PageLinksBarProps) {
+export const PageLinksBar: FC<PageLinksBarProps> = ({ className }) => {
   const router = useRouter();
 
   // Extract the page tree context
-  const { breadcrumbs } = usePageTree();
+  const { breadcrumbs, isFolder } = usePageTree();
 
   // Memoize the current page (the last breadcrumb)
   const currentPage = useMemo(() => {
@@ -40,10 +40,10 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     return breadcrumbs[breadcrumbs.length - 1];
   }, [breadcrumbs]);
 
-  // Set the active heading to the first heading in the current page
-  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  // Set the active header to the first header in the current page
+  const [activeHeaderId, setActiveHeaderId] = useState<string | null>(null);
 
-  // Clicking on a heading title will scroll to it
+  // Clicking on a header title will scroll to it
   const handleClick = useCallback(
     (id: string) => {
       // Get the document element
@@ -59,10 +59,10 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     [router],
   );
 
-  // Effect to track the active heading based on the distance to the top of the viewport (94px offset)
+  // Effect to track the active header based on the distance to the top of the viewport (94px offset)
   // Runs once on mount
   useEffect(() => {
-    if (!currentPage?.headers) return;
+    if (!currentPage || isFolder(currentPage)) return;
 
     // Check URL hash on initial load
     const hash = window.location.hash.slice(1); // Remove the # symbol
@@ -75,32 +75,32 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
       }
     }
 
-    // We want to check what's the closest heading to the 94px mark to set it as the active heading
-    let closestHeading = null;
+    // We want to check what's the closest header to the 94px mark to set it as the active header
+    let closestHeader = null;
     let closestDistance = Infinity;
 
     currentPage.headers.forEach((header) => {
       const element = document.getElementById(getHeaderId(header));
       if (!element) return;
 
-      // Calculate the distance between the heading and the 94px mark
+      // Calculate the distance between the header and the 94px mark
       const distance = Math.abs(element.getBoundingClientRect().top - 94);
       if (distance >= closestDistance) return;
 
-      // Update the closest heading and distance
+      // Update the closest header and distance
       closestDistance = distance;
-      closestHeading = element.id;
+      closestHeader = element.id;
     });
 
-    if (closestHeading) {
-      setActiveHeadingId(closestHeading);
+    if (closestHeader) {
+      setActiveHeaderId(closestHeader);
     }
 
     // Set up intersection observer for scroll updates
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
-        setActiveHeadingId(entry.target.id);
+        setActiveHeaderId(entry.target.id);
       },
       {
         // Calculate percentage that gives us exactly 40px zone below the 94px header:
@@ -118,7 +118,7 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
       },
     );
 
-    // Start observing all heading elements
+    // Start observing all header elements
     currentPage.headers.forEach((header) => {
       const element = document.getElementById(getHeaderId(header));
       if (!element) return;
@@ -126,9 +126,10 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     });
 
     return () => observer.disconnect();
-  }, [currentPage?.headers]);
+  }, [currentPage, isFolder]);
 
-  if (!currentPage?.headers) return null;
+  if (!currentPage || isFolder(currentPage) || !currentPage.headers.length)
+    return null;
 
   return (
     <div className="relative h-full w-full">
@@ -149,12 +150,12 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
         {/* Links */}
         <div className="flex flex-col gap-y-2">
           {currentPage.headers.map((header, index) => {
-            const headingId = getHeaderId(header);
-            const isActive = headingId === activeHeadingId;
+            const headerId = getHeaderId(header);
+            const isActive = headerId === activeHeaderId;
             return (
               <button
                 key={index}
-                onClick={() => handleClick(headingId)}
+                onClick={() => handleClick(headerId)}
                 className={clsx(
                   "custom-tab-outline-offset-0 w-fit cursor-pointer rounded-md text-left transition-all duration-150 ease-in-out hover:text-zinc-800 dark:hover:text-white",
 
@@ -176,4 +177,4 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
     </div>
   );
-}
+};

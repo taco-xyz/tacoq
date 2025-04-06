@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, FC } from "react";
 import { createPortal } from "react-dom";
 
 // Next Imports
@@ -32,7 +32,7 @@ const SearchPortal = dynamic<PropsWithChildren>(
  * - Search results
  * - Search suggestions
  */
-export function SearchDialog() {
+export const SearchDialog: FC = () => {
   // Extract the Search Context
   const { isSearchOpen, closeSearch, dialogRef, inputRef } = useSearchModal();
 
@@ -94,4 +94,4 @@ export function SearchDialog() {
       </div>
     </SearchPortal>
   );
-}
+};

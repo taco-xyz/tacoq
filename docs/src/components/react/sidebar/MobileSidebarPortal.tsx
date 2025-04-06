@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, FC } from "react";
 import { createPortal } from "react-dom";
 
 // Next Imports
@@ -21,7 +21,6 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 import { ThemeToggle } from "../topbar/components/ThemeToggle";
 import { MobilePageComponent } from "./components/page/MobilePage";
 import { Logo } from "../Logo";
-//import AnchorComponent from "./components/Anchor";
 
 // Dynamic Components Imports
 const SidebarPortal = dynamic<PropsWithChildren>(
@@ -32,12 +31,12 @@ const SidebarPortal = dynamic<PropsWithChildren>(
   { ssr: false },
 );
 
-export function MobileSidebarPortal() {
+export const MobileSidebarPortal: FC = () => {
   // Extract the Mobile Sidebar Modal Context
   const { isSidebarOpen, closeSidebar, dialogRef } = useMobileSidebarModal();
 
   // Extract the Page Tree Context
-  const { pages } = usePageTree();
+  const { pageTreeElements } = usePageTree();
 
   return (
     <SidebarPortal>
@@ -90,20 +89,14 @@ export function MobileSidebarPortal() {
           {/* Sidebar Content */}
           <div className="px-8 py-8">
             <div className="flex h-fit w-full flex-col gap-y-10">
-              {/*<nav className="flex flex-col gap-y-3.5">
-                {anchors.map((anchor) => (
-                  <AnchorComponent key={anchor.title} {...anchor} />
-                ))}
-              </nav>*/}
-
               <div className="-ml-2 flex flex-col gap-y-3">
                 <nav className="relative flex flex-col gap-y-1.5 outline-hidden">
                   {/* Pages */}
-                  {pages.map((page) => (
+                  {pageTreeElements.map((pageTreeElement) => (
                     <MobilePageComponent
-                      key={page.metadata.title}
+                      key={pageTreeElement.metadata.title}
                       childOf="root"
-                      {...page}
+                      pageTreeElement={pageTreeElement}
                     />
                   ))}
                 </nav>
@@ -114,4 +107,4 @@ export function MobileSidebarPortal() {
       </div>
     </SidebarPortal>
   );
-}
+};

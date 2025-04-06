@@ -1,12 +1,15 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Lucide Icons
 import { Search } from "lucide-react";
 
 // Context Imports
 import { useSearchModal } from "../context/SearchModalContext";
 
-export function MobileSearchButton() {
+export const MobileSearchButton: FC = () => {
   // Extract the Search Context
   const { openSearch } = useSearchModal();
 
@@ -18,4 +21,4 @@ export function MobileSearchButton() {
       <Search className="size-5" />
     </button>
   );
-}
+};

@@ -2,6 +2,7 @@
 
 // React Imports
 import {
+  FC,
   createContext,
   useContext,
   useCallback,
@@ -37,7 +38,9 @@ const MobileSidebarModalContext = createContext<
  * Provider component for the MobileSidebarContext
  * @param {PropsWithChildren} children - The children components to render within the context
  */
-export function MobileSidebarModalProvider({ children }: PropsWithChildren) {
+export const MobileSidebarModalProvider: FC<PropsWithChildren> = ({
+  children,
+}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -108,7 +111,7 @@ export function MobileSidebarModalProvider({ children }: PropsWithChildren) {
       {children}
     </MobileSidebarModalContext.Provider>
   );
-}
+};
 
 /**
  * Hook to use the MobileSidebarContext

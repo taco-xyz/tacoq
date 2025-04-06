@@ -1,3 +1,6 @@
+// React Imports
+import { FC } from "react";
+
 // Component Imports
 import { Logo } from "../Logo";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -21,7 +24,7 @@ import { SearchModalProvider } from "./components/search/context/SearchModalCont
  * - Theme toggle
  * - GitHub link
  */
-export function TopBar() {
+export const TopBar: FC = () => {
   return (
     <div className="flex h-fit w-full flex-col items-center justify-center overflow-hidden border-b border-b-zinc-200 bg-white/50 backdrop-blur-lg transition-all duration-150 ease-in-out md:h-[80px] md:flex-row md:backdrop-blur-md dark:border-b-white/10 dark:bg-zinc-950/50">
       <div className="relative flex w-full max-w-(--breakpoint-2xl) flex-row items-center justify-center px-8 py-5">
@@ -89,4 +92,4 @@ export function TopBar() {
       </div>
     </div>
   );
-}
+};

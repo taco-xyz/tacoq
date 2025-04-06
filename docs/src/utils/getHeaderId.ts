@@ -1,5 +1,5 @@
 // Types Imports
-import type { Header } from "@/types/PageTree";
+import type { Header } from "@/types/page-tree-element/Header";
 
 /**
  * Generates a unique ID for a header based on its type and title

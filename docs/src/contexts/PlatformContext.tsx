@@ -1,11 +1,13 @@
 "use client";
 
+// React Imports
 import {
   createContext,
   useContext,
   useEffect,
   useState,
   PropsWithChildren,
+  FC,
 } from "react";
 
 type PlatformContextType = {
@@ -16,7 +18,7 @@ const PlatformContext = createContext<PlatformContextType>({
   isAppleDevice: false,
 });
 
-export function PlatformProvider({ children }: PropsWithChildren) {
+export const PlatformProvider: FC<PropsWithChildren> = ({ children }) => {
   const [isAppleDevice, setIsAppleDevice] = useState(false);
 
   useEffect(() => {
@@ -31,6 +33,12 @@ export function PlatformProvider({ children }: PropsWithChildren) {
       {children}
     </PlatformContext.Provider>
   );
-}
+};
 
-export const usePlatform = () => useContext(PlatformContext);
+export function usePlatform() {
+  const context = useContext(PlatformContext);
+  if (!context) {
+    throw new Error("usePlatform must be used within a PlatformProvider");
+  }
+  return context;
+}

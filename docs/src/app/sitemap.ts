@@ -2,25 +2,25 @@
 import { MetadataRoute } from "next";
 
 // Types Imports
-import type { Page, PageTree } from "@/types/PageTree";
+import type { PageTree } from "@/types/PageTree";
+import type { PageTreeElement } from "@/types/page-tree-element/PageTreeElement";
 
 // Data Imports
 import pageTreeJson from "@/page-tree.json";
 
 /**
  * Recursively extracts all URLs from the page tree
- * @param pages - Array of Page objects from the page tree
+ * @param elements - Array of PageTreeElement objects from the page tree
  * @returns Array of URL strings
  */
-function getAllUrls(pages: Page[]): string[] {
+function getAllUrls(elements: PageTreeElement[]): string[] {
   let urls: string[] = [];
 
-  for (const page of pages) {
-    if (page.url) {
-      urls.push(page.url);
-    }
-    if (page.children) {
-      urls = urls.concat(getAllUrls(page.children));
+  for (const element of elements) {
+    if ("children" in element) {
+      urls = urls.concat(getAllUrls(element.children));
+    } else {
+      urls.push(element.url);
     }
   }
 

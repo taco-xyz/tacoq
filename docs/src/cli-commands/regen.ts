@@ -1,17 +1,16 @@
 // Types ---------------------------------
-import type {
-  MetadataJson,
-  Header,
-  Page,
-  PageTree,
-  HeaderType,
-} from "@/types/PageTree";
+import type { PageTree } from "@/types/PageTree";
+import type { PageTreeElement } from "@/types/page-tree-element/PageTreeElement";
+import type { Metadata } from "@/types/page-tree-element/Metadata";
+import type { Header, HeaderType } from "@/types/page-tree-element/Header";
 
 // Imports ---------------------------------
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import chalk from "chalk";
+import { Page } from "@/types/page-tree-element/Page";
+import { Folder } from "@/types/page-tree-element/Folder";
 
 // Constants ---------------------------------
 const __filename = fileURLToPath(import.meta.url);
@@ -21,11 +20,11 @@ const APP_DIR = path.join(__dirname, "..", "app");
 // Helper Functions ---------------------------------
 
 /**
- * Extracts headings from MDX content
+ * Extracts headers from MDX content
  * @param content - The raw MDX content
- * @returns Array of content rows containing headings
+ * @returns Array of content rows containing headers
  */
-function extractHeadings(content: string): Header[] {
+function extractHeaders(content: string): Header[] {
   const rows: Header[] = [];
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   let inCodeBlock = false;
@@ -56,7 +55,7 @@ function extractHeadings(content: string): Header[] {
  * @param filePath - Path to the metadata.json file
  * @returns The parsed metadata or null if file doesn't exist
  */
-function readMetadata(filePath: string): MetadataJson | null {
+function readMetadata(filePath: string): Metadata | null {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
     return JSON.parse(content);
@@ -89,8 +88,8 @@ function scanDirectory(
   dirPath: string,
   isRoot: boolean = false,
   depth: number = 0,
-): Page[] {
-  const entries: Page[] = [];
+): PageTreeElement[] {
+  const entries: PageTreeElement[] = [];
   const dirEntries = fs.readdirSync(dirPath, { withFileTypes: true });
   const indent = "  ".repeat(depth);
 
@@ -116,7 +115,7 @@ function scanDirectory(
   }
 
   // Scan subdirectories first
-  const children: Page[] = [];
+  const children: PageTreeElement[] = [];
   for (const entry of dirEntries) {
     if (!entry.isDirectory()) continue;
 
@@ -129,75 +128,32 @@ function scanDirectory(
     console.log(
       chalk.green(`\n✨ Found ${children.length} top-level sections`),
     );
-    return children.sort(
-      (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0),
-    );
+    return children.sort((a, b) => a.metadata.index - b.metadata.index);
   }
 
   // If we have children, add them as a folder entry
   if (children.length > 0) {
-    entries.push({
+    const element: Folder = {
       metadata: metadata || {
         title: path.basename(dirPath),
-        description: "",
-        icon: "",
         index: 0,
       },
-      children: children.sort(
-        (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0),
-      ),
-    });
-  }
-
-  // If we have a page.mdx and metadata, add it as a page entry
-  if (content && metadata) {
-    entries.push({
+      children: children.sort((a, b) => a.metadata.index - b.metadata.index),
+    };
+    entries.push(element);
+  } else if (content && metadata) {
+    const element: Page = {
       url: `/${relativePath.replace(/\\/g, "/")}`,
       metadata,
       rawContent: content,
-      headers: extractHeadings(content),
-    });
-  }
-
-  // Also scan for any .mdx files in the current directory
-  const additionalMdxFiles = dirEntries.filter(
-    (entry) =>
-      !entry.isDirectory() &&
-      entry.name.endsWith(".mdx") &&
-      entry.name !== "page.mdx",
-  );
-
-  if (additionalMdxFiles.length > 0) {
-    console.log(
-      chalk.gray(
-        `${indent}  📄 Found ${additionalMdxFiles.length} additional MDX files`,
-      ),
-    );
-
-    for (const entry of additionalMdxFiles) {
-      const fullPath = path.join(dirPath, entry.name);
-      const relativePath = path.relative(APP_DIR, fullPath);
-      const content = readPageContent(fullPath);
-      if (!content) continue;
-
-      entries.push({
-        url: `/${relativePath.replace(/\\/g, "/").replace(/\.mdx$/, "")}`,
-        metadata: {
-          title: entry.name.replace(/\.mdx$/, ""),
-          description: "",
-          icon: "",
-          index: 999,
-        },
-        rawContent: content,
-        headers: extractHeadings(content),
-      });
-    }
+      headers: extractHeaders(content),
+      lastUpdated: new Date().toISOString(),
+    };
+    entries.push(element);
   }
 
   // Sort entries by index before returning
-  return entries.sort(
-    (a, b) => (a.metadata.index ?? 0) - (b.metadata.index ?? 0),
-  );
+  return entries.sort((a, b) => a.metadata.index - b.metadata.index);
 }
 
 /**
@@ -205,19 +161,20 @@ function scanDirectory(
  * @param entries - Array of entries to print
  * @param depth - Current depth for indentation
  */
-function printSummaryTree(entries: Page[], depth: number = 0): void {
+function printSummaryTree(entries: PageTreeElement[], depth: number = 0): void {
   const indent = "  ".repeat(depth);
   for (const entry of entries) {
-    const icon = entry.children ? "📚" : "📄";
-    const headers = entry.headers
-      ? ` (${chalk.gray(entry.headers.length)} headings)`
+    const isFolder = "children" in entry;
+    const icon = isFolder ? "📚" : "📄";
+    const headers = isFolder
+      ? ` (${chalk.gray(entry.children.length)} children)`
       : "";
     console.log(
       `${indent}${icon} ${chalk.bold(entry.metadata.title)}${
-        entry.url ? ` (${chalk.gray(entry.url)})` : ""
+        !isFolder ? ` (${chalk.gray(entry.url)})` : ""
       }${headers}`,
     );
-    if (entry.children) {
+    if (isFolder) {
       printSummaryTree(entry.children, depth + 1);
     }
   }

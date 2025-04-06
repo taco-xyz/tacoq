@@ -1,8 +1,4 @@
-export enum Status {
-  SOON = "Soon",
-  WORK_IN_PROGRESS = "WIP",
-  COMPLETED = "Completed",
-}
+export type Status = "Soon" | "WIP" | "Completed";
 
 export interface FooterLink {
   linkName: string;
@@ -10,12 +6,12 @@ export interface FooterLink {
 }
 
 export interface CompletedFooterLink extends FooterLink {
-  status: Status.COMPLETED;
+  status: "Completed";
   url: string;
 }
 
 export interface SoonFooterLink extends FooterLink {
-  status: Status.SOON | Status.WORK_IN_PROGRESS;
+  status: "Soon" | "WIP";
 }
 
 export interface FooterLinkGroup {
@@ -23,6 +19,6 @@ export interface FooterLinkGroup {
   links: (CompletedFooterLink | SoonFooterLink)[];
 }
 
-export interface FooterContent {
+export interface Footer {
   linkGroups: FooterLinkGroup[];
 }

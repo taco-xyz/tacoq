@@ -1,22 +1,25 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Link from "next/link";
 
 // Components Imports
 import { DivisionLogo } from "./Logo";
 
-// Context Imports
-import { usePageTree } from "@/contexts/PageTreeContext";
-
 // Utils Imports
 import clsx from "clsx";
-import { Status } from "@/types/FooterContent";
 
-export function Footer() {
-  // Extract footer content from the context
-  const { footerContent } = usePageTree();
+// Types Imports
+import type { Footer as FooterType } from "@/types/Footer";
 
+// Data Imports
+import footerJson from "@/footer.json";
+const footer = footerJson as FooterType;
+
+export const Footer: FC = () => {
   return (
     <div className="absolute flex w-full flex-col items-center justify-center border-t border-t-zinc-200 bg-white/50 transition-all duration-150 ease-in-out dark:border-t-white/10 dark:bg-zinc-950/50">
       <div className="relative flex w-full max-w-(--breakpoint-2xl) flex-col gap-y-10 overflow-hidden border-b border-zinc-200 px-8 py-10 transition-colors duration-150 ease-in-out md:py-20 dark:border-white/10">
@@ -30,7 +33,7 @@ export function Footer() {
 
           {/* Link Groups */}
           <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-20 gap-y-8 rounded-lg">
-            {footerContent.linkGroups?.map((group, idx) => (
+            {footer.linkGroups.map((group, idx) => (
               <div
                 key={idx}
                 className="flex flex-col gap-y-3 text-sm whitespace-nowrap"
@@ -40,7 +43,7 @@ export function Footer() {
                 </h3>
                 <div className="flex flex-col gap-y-2">
                   {group.links.map((link, linkIdx) =>
-                    link.status === Status.COMPLETED ? (
+                    link.status === "Completed" ? (
                       <Link
                         key={linkIdx}
                         href={link.url}
@@ -59,7 +62,7 @@ export function Footer() {
                         <span
                           className={clsx(
                             "rounded-md px-1.5 py-0.5 text-xs ring-1 ring-inset",
-                            link.status === Status.WORK_IN_PROGRESS
+                            link.status === "WIP"
                               ? "bg-yellow-400/10 text-yellow-900 ring-yellow-400/25 dark:text-yellow-100"
                               : "bg-blue-400/10 text-blue-900 ring-blue-400/30 dark:text-blue-200",
                           )}
@@ -88,4 +91,4 @@ export function Footer() {
       </div>
     </div>
   );
-}
+};

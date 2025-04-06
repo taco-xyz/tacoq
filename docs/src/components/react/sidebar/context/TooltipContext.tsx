@@ -1,7 +1,8 @@
 "use client";
 
 // React Imports
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useCallback,
@@ -26,8 +27,6 @@ export interface TooltipContent {
   title: string;
   /** Optional description text shown in tooltip */
   description?: string;
-  /** Whether the page the tooltip is currently displaying has an url */
-  isUrl: boolean;
   /** Whether the tooltip is for a folder */
   isFolder: boolean;
 }
@@ -84,18 +83,18 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  * </TooltipProvider>
  * ```
  */
-export function TooltipProvider({ children }: PropsWithChildren) {
+export const TooltipProvider: FC<PropsWithChildren> = ({ children }) => {
   // Extract the pathname
   const pathname = usePathname();
 
   // Extract the page tree context
-  const { getPageByTitle, visiblePagesTitles } = usePageTree();
+  const { getElementByTitle, visibleElementsTitles, isFolder } = usePageTree();
 
   // Extract the page navigation context
   const {
-    focusedPageTitle,
+    focusedElementTitle,
     sidebarContainerRef,
-    currentFocusedPageRef,
+    currentFocusedElementRef,
     endKeyboardFocus,
   } = usePageNavigation();
 
@@ -106,7 +105,6 @@ export function TooltipProvider({ children }: PropsWithChildren) {
   }>({
     current: {
       title: "",
-      isUrl: false,
       isFolder: false,
     },
   });
@@ -199,24 +197,29 @@ export function TooltipProvider({ children }: PropsWithChildren) {
 
   // Show/Hide the tooltip when the focused page changes
   useEffect(() => {
-    if (!focusedPageTitle) {
+    if (!focusedElementTitle) {
       hideTooltip();
       return;
     }
 
-    const focusedPage = getPageByTitle(focusedPageTitle);
-    if (!focusedPage) {
+    const focusedElement = getElementByTitle(focusedElementTitle);
+    if (!focusedElement) {
       hideTooltip();
       return;
     }
 
     showTooltip({
-      title: focusedPage.metadata.title,
-      description: focusedPage.metadata.description,
-      isUrl: focusedPage.url !== undefined,
-      isFolder: focusedPage.children !== undefined,
+      title: focusedElement.metadata.title,
+      description: focusedElement.metadata.description,
+      isFolder: isFolder(focusedElement),
     });
-  }, [focusedPageTitle, showTooltip, hideTooltip, getPageByTitle]);
+  }, [
+    focusedElementTitle,
+    showTooltip,
+    hideTooltip,
+    getElementByTitle,
+    isFolder,
+  ]);
 
   // Set the tooltip opacity to 50 when the pathname changes in order to better see the new page
   // If the tooltip was hidden, keep it hidden
@@ -235,7 +238,7 @@ export function TooltipProvider({ children }: PropsWithChildren) {
     const resizeObserver = new ResizeObserver((entries) => {
       // Return if any of the dependencies are not available or if the tooltip is not visible
       if (
-        !currentFocusedPageRef.current ||
+        !currentFocusedElementRef.current ||
         !sidebarContainerRef.current ||
         !contentContainerRef.current ||
         appearanceState.opacity === 0
@@ -250,7 +253,7 @@ export function TooltipProvider({ children }: PropsWithChildren) {
 
         // Get the position of the target page element and the sidebar container element
         const targetRect =
-          currentFocusedPageRef.current.getBoundingClientRect();
+          currentFocusedElementRef.current.getBoundingClientRect();
         const sidebarRect = sidebarContainerRef.current.getBoundingClientRect();
 
         // Calculate the whole height of the tooltip including the fixed height content (Hot-keys)
@@ -274,8 +277,8 @@ export function TooltipProvider({ children }: PropsWithChildren) {
           if (!previousTitle || currentTitle === previousTitle) return null;
 
           // Fetch the index of the current and previous focused page
-          const currentIndex = visiblePagesTitles.indexOf(currentTitle);
-          const previousIndex = visiblePagesTitles.indexOf(previousTitle);
+          const currentIndex = visibleElementsTitles.indexOf(currentTitle);
+          const previousIndex = visibleElementsTitles.indexOf(previousTitle);
 
           // If the current index is greater than the previous index, the tooltip should animate down
           if (currentIndex > previousIndex) return "down";
@@ -306,9 +309,9 @@ export function TooltipProvider({ children }: PropsWithChildren) {
   }, [
     contentState,
     appearanceState.opacity,
-    currentFocusedPageRef,
+    currentFocusedElementRef,
     sidebarContainerRef,
-    visiblePagesTitles,
+    visibleElementsTitles,
   ]);
 
   return (
@@ -322,7 +325,7 @@ export function TooltipProvider({ children }: PropsWithChildren) {
       {children}
     </TooltipContext.Provider>
   );
-}
+};
 
 /**
  * Hook for accessing tooltip context

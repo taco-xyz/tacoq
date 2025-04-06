@@ -1,13 +1,13 @@
 "use client";
 
 // React Imports
-import { useCallback, PropsWithChildren } from "react";
+import { FC, useCallback, PropsWithChildren } from "react";
 
 // Next Imports
 import { useRouter } from "next/navigation";
 
 // Types Imports
-import { HeadingTypes } from "@/types/page/Heading";
+import { HeaderType } from "@/types/page-tree-element/Header";
 
 // Components Imports
 import { CopyLinkButton } from "./components/CopyLinkButton";
@@ -15,39 +15,33 @@ import { CopyLinkButton } from "./components/CopyLinkButton";
 // Utils Imports
 import clsx from "clsx";
 
-// Interface for the Heading component props
-interface HeadingProps {
+// Interface for the Header component props
+interface HeaderProps {
   id: string;
-  Level: HeadingTypes;
+  Level: HeaderType;
   className: string;
 }
 
-// Styles for different heading levels
-const headingStyles = {
-  [HeadingTypes.H1]:
-    "text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-4",
-  [HeadingTypes.H2]:
-    "text-3xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-3",
-  [HeadingTypes.H3]:
-    "text-2xl font-medium tracking-tight dark:text-white text-zinc-800 text-start mt-2",
-  [HeadingTypes.H4]:
-    "text-xl font-medium tracking-normal dark:text-white text-zinc-800 text-start mt-1",
-  [HeadingTypes.H5]:
-    "text-lg font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start mt-0.5",
-  [HeadingTypes.H6]:
-    "text-base font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start",
+// Styles for different header levels
+const headerStyles = {
+  h1: "text-4xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-4",
+  h2: "text-3xl font-semibold tracking-tight dark:text-white text-zinc-800 text-start mt-3",
+  h3: "text-2xl font-medium tracking-tight dark:text-white text-zinc-800 text-start mt-2",
+  h4: "text-xl font-medium tracking-normal dark:text-white text-zinc-800 text-start mt-1",
+  h5: "text-lg font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start mt-0.5",
+  h6: "text-base font-[450] tracking-normal dark:text-zinc-300 text-zinc-700 text-start",
 };
 
-// Heading component
-export function Heading({
+// Header component
+export const Header: FC<PropsWithChildren<HeaderProps>> = ({
   id,
   Level,
   children,
   className,
-}: PropsWithChildren<HeadingProps>) {
+}) => {
   const router = useRouter();
 
-  // Clicking on a heading title will scroll to it
+  // Clicking on a header title will scroll to it
   const handleClick = useCallback(() => {
     // Get the document element
     const element = document.getElementById(id);
@@ -61,13 +55,13 @@ export function Heading({
     }
   }, [id, router]);
 
-  // Render the Heading component
+  // Render the Header component
   return (
     <Level
       id={id}
       onClick={handleClick}
       className={clsx(
-        headingStyles[Level],
+        headerStyles[Level],
         "group relative w-fit cursor-pointer scroll-mt-[94px] outline-hidden transition-colors duration-150 ease-in-out", // 94px scroll offset to account for the topbar
         className,
       )}
@@ -78,4 +72,4 @@ export function Heading({
       </div>
     </Level>
   );
-}
+};

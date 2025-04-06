@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { useState, useCallback } from "react";
+import { FC, useState, useCallback } from "react";
 
 // Lucide Icons Imports
 import { Link, Check } from "lucide-react";
@@ -15,7 +15,7 @@ interface CopyLinkButtonProps {
 }
 
 // CopyLinkButton component
-export function CopyLinkButton({ headerId }: CopyLinkButtonProps) {
+export const CopyLinkButton: FC<CopyLinkButtonProps> = ({ headerId }) => {
   const [isCopied, setIsCopied] = useState(false);
 
   // Handle the click event on the CopyLinkButton
@@ -54,4 +54,4 @@ export function CopyLinkButton({ headerId }: CopyLinkButtonProps) {
       />
     </div>
   );
-}
+};

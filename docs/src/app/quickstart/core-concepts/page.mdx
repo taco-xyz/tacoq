@@ -71,7 +71,7 @@ Here are some core properties of tasks that you should know about:
   will no longer matter and it will be executed no matter what its priority is.
 - When generated, tasks get an `id`, which is a unique identifier for the task
   that can be later used to retrieve the task's status and results.
-  
+
 ## Message Broker
 
 **The message broker carries task assignments, status updates, and results across the
@@ -95,12 +95,13 @@ TacoQ uses [Postgres](https://www.postgresql.org/) as its database.
 
 ## Publisher Client
 
-To publish a task, you can use a publisher client that abstracts away the 
+To publish a task, you can use a publisher client that abstracts away the
 message broker and **allows you to send a task to the workers and database.**
 
 <Tip>
   The publisher does not need to be a dedicated application. Instead, any
-  service can embed the publisher in its code to publish tasks, **even workers**.
+  service can embed the publisher in its code to publish tasks, **even
+  workers**.
 </Tip>
 
 ## Relay
@@ -111,9 +112,7 @@ core engine**, and has the following characteristics:
 - It **abstracts away the data store** where tasks are registered **behind a REST API**.
 - It consumes messages from the broker to **continuously update the data store**.
 
-<Note>
-  The relay is horizontally scalable and can be easily replicated.
-</Note>
+<Note>The relay is horizontally scalable and can be easily replicated.</Note>
 
 # What makes TacoQ different?
 
