@@ -11,7 +11,6 @@ import { usePlatform } from "@/contexts/PlatformContext";
 // Components Imports
 import { Tooltip } from "@/components/react/sidebar/components/Tooltip";
 import { DesktopPageComponent } from "@/components/react/sidebar/components/page/DesktopPage";
-// import AnchorComponent from "@/app/components/sidebar/components/Anchor";
 
 // Utils Imports
 import clsx from "clsx";
@@ -46,12 +45,6 @@ export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
           className,
         )}
       >
-        {/* <nav className="flex flex-col gap-y-3.5">
-          {anchors.map((anchor) => (
-            <AnchorComponent key={anchor.title} {...anchor} />
-          ))}
-        </nav> */}
-
         <div ref={elementContainerRef} className="flex flex-col gap-y-3">
           <div className="relative h-7">
             <button
@@ -112,4 +105,4 @@ export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-white to-transparent transition-[--tw-gradient-from] duration-150 ease-in-out dark:from-zinc-950" />
     </div>
   );
-}
+};

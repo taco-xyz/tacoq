@@ -21,7 +21,6 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 import { ThemeToggle } from "../topbar/components/ThemeToggle";
 import { MobilePageComponent } from "./components/page/MobilePage";
 import { Logo } from "../Logo";
-//import AnchorComponent from "./components/Anchor";
 
 // Dynamic Components Imports
 const SidebarPortal = dynamic<PropsWithChildren>(
@@ -90,12 +89,6 @@ export const MobileSidebarPortal: FC = () => {
           {/* Sidebar Content */}
           <div className="px-8 py-8">
             <div className="flex h-fit w-full flex-col gap-y-10">
-              {/*<nav className="flex flex-col gap-y-3.5">
-                {anchors.map((anchor) => (
-                  <AnchorComponent key={anchor.title} {...anchor} />
-                ))}
-              </nav>*/}
-
               <div className="-ml-2 flex flex-col gap-y-3">
                 <nav className="relative flex flex-col gap-y-1.5 outline-hidden">
                   {/* Pages */}

@@ -1,0 +1,42 @@
+{
+  "linkGroups": [
+    {
+      "groupName": "Frameworks",
+      "links": [
+        {
+          "linkName": "TacoQ",
+          "url": "https://github.com/taco-xyz/tacoq",
+          "status": "Completed"
+        },
+        { "linkName": "TacoDocs", "status": "WIP" },
+        { "linkName": "TacoFlow", "status": "Soon" },
+        { "linkName": "TacoBI", "status": "Soon" },
+        { "linkName": "TacoCI", "status": "Soon" }
+      ]
+    },
+    {
+      "groupName": "Taco Plus",
+      "links": [
+        { "linkName": "Docs Templates", "status": "WIP" },
+        { "linkName": "Early Access", "status": "Soon" },
+        { "linkName": "Priority Support", "status": "Soon" },
+        { "linkName": "BI Templates", "status": "Soon" }
+      ]
+    },
+    {
+      "groupName": "Community",
+      "links": [
+        {
+          "linkName": "Discord",
+          "url": "https://discord.gg/NXwBEtZSUq",
+          "status": "Completed"
+        },
+        {
+          "linkName": "Github",
+          "url": "https://github.com/taco-xyz/tacoq",
+          "status": "Completed"
+        }
+      ]
+    }
+  ]
+}

@@ -19,56 +19,10 @@ import { usePathname } from "next/navigation";
 import type { PageTree } from "@/types/PageTree";
 import type { PageTreeElement } from "@/types/page-tree-element/PageTreeElement";
 import type { Folder } from "@/types/page-tree-element/Folder";
-//import type { Anchor } from "@/types/Anchor";
-import { FooterContent, Status } from "@/types/FooterContent";
 
 // Data imports
 import pageTreeJson from "@/page-tree.json";
-
 const pageTree = pageTreeJson as PageTree;
-
-const footerContent: FooterContent = {
-  linkGroups: [
-    {
-      groupName: "Frameworks",
-      links: [
-        {
-          linkName: "TacoQ",
-          url: "https://github.com/taco-xyz/tacoq",
-          status: Status.COMPLETED,
-        },
-        { linkName: "TacoDocs", status: Status.WORK_IN_PROGRESS },
-        { linkName: "TacoFlow", status: Status.SOON },
-        { linkName: "TacoBI", status: Status.SOON },
-        { linkName: "TacoCI", status: Status.SOON },
-      ],
-    },
-    {
-      groupName: "Taco Plus",
-      links: [
-        { linkName: "Docs Templates", status: Status.WORK_IN_PROGRESS },
-        { linkName: "Early Access", status: Status.SOON },
-        { linkName: "Priority Support", status: Status.SOON },
-        { linkName: "BI Templates", status: Status.SOON },
-      ],
-    },
-    {
-      groupName: "Community",
-      links: [
-        {
-          linkName: "Discord",
-          url: "https://discord.gg/NXwBEtZSUq",
-          status: Status.COMPLETED,
-        },
-        {
-          linkName: "Github",
-          url: "https://github.com/taco-xyz/tacoq",
-          status: Status.COMPLETED,
-        },
-      ],
-    },
-  ],
-};
 
 /**
  * Context for managing the page navigation tree state
@@ -90,10 +44,6 @@ interface PageTreeContextType {
   visibleElementsTitles: string[];
   /** Nested array of all page tree elements in the navigation tree */
   pageTreeElements: PageTreeElement[];
-  /** Array of anchor links */
-  // anchors: Anchor[];
-  /** Footer content */
-  footerContent: FooterContent;
   /** Array of page tree element titles that are the breadcrumbs for the current page */
   breadcrumbs: (PageTreeElement | null)[];
   /** Previous page tree element in navigation sequence, null if none */
@@ -337,11 +287,9 @@ export const PageTreeProvider: FC<PropsWithChildren> = ({ children }) => {
         currentElementTitle,
         visibleElementsTitles,
         pageTreeElements: pageTree.children,
-        footerContent,
         breadcrumbs,
         previousElement,
         nextElement,
-        //anchors
       }}
     >
       {children}
