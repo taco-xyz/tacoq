@@ -50,8 +50,8 @@ export const metadata = {
 };
 
 <Warning>
-  This section assumes you have a basic understanding of the core concepts of
-  task queues and TacoQ. Read the [Core Concepts](/quickstart/core-concepts)
+  This section assumes you have a **basic understanding of the core concepts of
+  task queues and TacoQ**. Read the [Core Concepts](/quickstart/core-concepts)
   section if you haven't already.
 </Warning>
 
@@ -72,19 +72,7 @@ TacoQ requires Postgres, RabbitMQ, and the Relay to be running. Let's start
 by creating a `docker-compose.yml` file to launch them:
 
 ```yml
-volumes:
-  rabbitmq_data: {}
-  postgres_data: {}
-
 services:
-  # ================================================
-  # TacoQ Relay
-  # The relay has two functions:
-  # 1. Reads task updates from the message broker
-  #    and writes them to the database.
-  # 2. Has a REST API for getting tasks by ID.
-  # ================================================
-
   relay:
     image: ghcr.io/taco-xyz/tacoq-relay:latest
     ports:
@@ -94,21 +82,9 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     environment:
       TACOQ_DATABASE_URL: postgresql://user:password@postgres:5432/tacoq
       TACOQ_BROKER_URL: amqp://user:password@rabbitmq:5672
-
-  # ================================================
-  # Broker
-  # This is the message broker where all tasks get
-  # routed through to the appropriate worker and to
-  # the relay so it can save them to the database.
-  # ================================================
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -118,18 +94,6 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # ================================================
-  # Storage
-  # This is the database where all tasks get saved.
-  # ================================================
 
   postgres:
     image: postgres:latest
@@ -139,16 +103,9 @@ services:
       POSTGRES_DB: tacoq
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d tacoq"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 ```
 
-Run `docker compose up` to start the services and we're ready to go!
+Run `docker compose up` to start the services, and we're ready to go!
 
 # Client
 
@@ -169,63 +126,97 @@ uv add tacoq
 ```
 
 The worker must know how to receive new task assignments and send updates
-through the broker, so let's start by configuring that:
+through the broker. We'll begin by creating a new script with the worker 
+application.
+
+To start, **configure the broker** so that the worker knows where to send
+tasks to.
 
 ```python
-from tacoq import (
-    WorkerApplication,
-    BrokerConfig,
-    WorkerApplicationConfig,
-)
+from tacoq import BrokerConfig
+
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+```
+
+Next, we'll **configure the worker application**.
+
+```python {2,5-12} 
+from tacoq import BrokerConfig
+from tacoq import WorkerApplication, WorkerApplicationConfig
 
 broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 worker_config = WorkerApplicationConfig(
-    name="worker_waiter_1",
-    kind="worker_waiter_kind",
+    name="my_worker_1", # The name of the worker for observability purposes.
+    kind="my_worker_kind", # The kind of worker to route tasks to.
     broker_config=broker_config,
-    broker_prefetch_count=5,
+    broker_prefetch_count=5, # How many tasks to prefetch and execute concurrently.
 )
 
 worker_app = WorkerApplication(config=worker_config)
 ```
 
 <Note>
-  Note that the worker field `kind` is set to `"worker_waiter_kind"`. This field
+  Note that the worker field `kind` is set to `"my_worker_kind"`. This field
   will be used by the publisher to know which set of workers to send the task
   to. We recommend using environment variables to align these values.
 </Note>
 
 The worker application has been created, but it doesn't know how to handle any
-tasks that come its way. So, let's teach it to handle a task:
+tasks that come its way. So, **let's teach it to handle a task**.
+
+We'll **create some models for the task input and output**. These will be used
+throughout our application.
 
 ```python
-from tacoq import TaskInput, TaskOutput
 from pydantic import BaseModel
-import asyncio
 
 # Create Pydantic models for the task input and output.
 
 class TestInputPydanticModel(BaseModel):
-    seconds: int
+    name: str
 
 class TestOutputPydanticModel(BaseModel):
-    result: str
-    seconds: int
+    message: str
+```
 
-# Task input is automatically decoded from bytes to the input type.
+Then, we'll **create a handler function for the task**.
 
-@worker_app.task(kind="task_wait_n_seconds")
-async def task_wait_n_seconds(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
-    seconds = input_data.seconds
+```python {3,26-37}
+from tacoq import WorkerApplication, WorkerApplicationConfig, BrokerConfig
+from pydantic import BaseModel
+import asyncio
 
-    # The task is now executed. Here we simply wait for the specified number of
-    # seconds and then return a results dictionary.
-    await asyncio.sleep(seconds)
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+worker_config = WorkerApplicationConfig(
+    name="my_worker_1", # The name of the worker for observability purposes.
+    kind="my_worker_kind", # The kind of worker to route tasks to.
+    broker_config=broker_config,
+    broker_prefetch_count=5, # How many tasks to prefetch and execute concurrently.
+)
+
+worker_app = WorkerApplication(config=worker_config)
+
+# Models
+
+class TestInputPydanticModel(BaseModel):
+    name: str
+
+class TestOutputPydanticModel(BaseModel):
+    message: str
+
+# Define the task handler
+
+@worker_app.task(kind="task_hello_world")
+async def task_hello_world(input_data: TestInputPydanticModel) -> TestOutputPydanticModel:
+    # Extract the input data.
+    name = input_data.name
+
+    # Simulate some work.
+    await asyncio.sleep(3)
 
     # The results are automatically encoded into bytes and sent back to the broker
     return TestOutputPydanticModel(
-        result=f"Hello, world! You waited for {seconds} seconds",
-        seconds=seconds,
+        message=f"Hello, {name}!",
     )
 ```
 
@@ -233,26 +224,28 @@ async def task_wait_n_seconds(input_data: TestInputPydanticModel) -> TestOutputP
   When a task's input and output data reach the broker, **they must be encoded
   in byte format.**
 
-TacoQ provides a **default encoder and decoder that can handle JSON** objects
-with the language's most commonly used libraries. These are **well tested**
-and should work for most use cases.
+  TacoQ provides a **default encoder and decoder that can handle JSON** objects
+  with the language's most commonly used libraries. These are **well tested** 
+  and should work for most use cases.
+  
+  - **Python**: `pydantic`
+  - **Rust**: `serde_json`
 
-- **Python**: `pydantic`
-- **Rust**: `serde_json`
-
-You can also **write your own encoders and decoders**. Simply peek into the
-source code of the default ones and implement the required methods.
-
+  You can also **write your own encoders and decoders**. Simply peek into the
+  source code of the default ones and implement the required methods.
 </Tip>
 
 <Note>
-  Note the task field `kind` is set to `"task_wait_n_seconds"`. You can think
-  about it the following way: - **Worker Kind**: Helps the publisher know which
-  set of workers to send the task to. - **Task Kind**: Helps the worker know
-  which method to use to handle a task. If you're familiar with task queues,
-  you're probably used to only specifying the task kind and not the worker kind.
-  You can read about this design decision in the [System
-  Architecture](/technical-reference/system-architecture#h2-worker) section.
+  Note the task field `kind` is set to `"task_hello_world"`. You can think
+  about it the following way: 
+  - **Worker Kind**: Helps the publisher know which set of workers to send the
+    task to. 
+  - **Task Kind**: Helps the worker know which method to use to handle a task. 
+    
+  If you're familiar with task queues, you're probably used to only specifying
+  the task kind and not the worker kind. You can read about this design decision
+  in the [System Architecture](/technical-reference/system-architecture#h2-worker)
+  section.
 </Note>
 
 Now that our worker is ready to handle tasks, we can boot it up via its
@@ -266,11 +259,15 @@ if __name__ == "__main__":
 The worker is running and ready to handle tasks. Now, let's publish some tasks
 for it to take care of!
 
-## PublisherClient
+## Publisher Client
 
 We'll start by setting up the publisher and its configuration. The publisher's
-one and only responsibility is to publish tasks via the message broker so that
-the relay and the worker can take care of the rest.
+one and only responsibility is to **publish tasks via the message broker so 
+that the relay can register them and the worker can execute them**.
+
+Begin by **creating a new file for the publisher and configuring it**. Because
+the publisher must send tasks via the broker, it will also need the broker
+configuration.
 
 ```python
 from tacoq import PublisherClient, BrokerConfig
@@ -285,53 +282,100 @@ Instead, we will use the object to publish the task.
 Let's publish a new task, wait for it to complete, and finally, retrieve the
 results:
 
-```python
-# The task is published to the message broker. Note that the worker kind and
-# task kind must be properly configured and match the worker and task kinds
-# in the worker application.
-task = await publisher.publish_task(
-    worker_kind="worker_waiter_kind",
-    task_kind="task_wait_n_seconds",
-    input_data=TestInputPydanticModel(seconds=2),
-)
+```python {8-15}
+from tacoq import PublisherClient, BrokerConfig
+import asyncio
 
-# The task's ID is important so we can later retrieve it!
-task_id = task.id
+# Configure the publisher
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+publisher = PublisherClient(broker_config=broker_config)
+
+async def task_hello_world():
+  # Publish the task. It's important to save the object so that we can later
+  # retrieve the task's status and results based on its ID.
+  task = await publisher.publish_task(
+      worker_kind="my_worker_kind",
+      task_kind="task_hello_world",
+      input_data=TestInputPydanticModel(name="Pedro"),
+  )
 ```
 
 Our task has now been published and is being worked on. But how do we retrieve
 the task's status and results?
 
-## RelayClient
+## Relay Client
 
 When the worker is done with the task, it sends the results to the relay, who
 saves them in the database. The relay can be queried via REST for the task's
 current state.
 
-To communicate with the relay, we can use the `RelayClient` class:
+To communicate with the relay, we can use the `RelayClient` class. We can
+configure it with the Relay's URL.
 
-```python
-from tacoq import RelayClient, PydanticDecoder
+```python {2,9-11}
+from tacoq import PublisherClient, BrokerConfig
+from tacoq import RelayClient, RelayConfig,PydanticDecoder
 
-# The relay's URL is passed as an argument to the constructor.
-relay_client = RelayClient(url="http://localhost:3000")
+# Configure the publisher
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+publisher = PublisherClient(broker_config=broker_config)
 
-# We can now fetch retrieve the task's status and results. You can optionally
-# set `retry_until_complete` to `True` to have the publisher retry the request
-# until the task has been completed by the worker.
-completed_task = await relay_client.get_task(task_id)
+# Configure the relay
+relay_config = RelayConfig(url="http://localhost:3000")
+relay_client = RelayClient(relay_config=relay_config)
 
-# Let's load the results into a dictionary and print them.
-# It's important for the decoder to know which Pydantic model to use
-# to decode the results, and this is impossible to infer automatically,
-# so you must be explicit about which decoder and model to use.
-result = completed_task.get_decoded_output_data(
-    decoder=PydanticDecoder(TestOutputPydanticModel)
-)
-print(result)
-
-# Hurray!
+async def task_hello_world():
+  # Publish the task. It's important to save the object so that we can later
+  # retrieve the task's status and results based on its ID.
+  task = await publisher.publish_task(
+      worker_kind="my_worker_kind",
+      task_kind="task_hello_world",
+      input_data=TestInputPydanticModel(name="Pedro"),
+  )
 ```
+
+Now, we will use the `RelayClient` to **retrieve the task's results** after 
+they are completed and **decode the results** into the correct object.
+
+```python {3, 22-36}
+from tacoq import PublisherClient, BrokerConfig
+from tacoq import RelayClient, RelayConfig,PydanticDecoder
+import asyncio
+
+# Configure the publisher
+broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
+publisher = PublisherClient(broker_config=broker_config)
+
+# Configure the relay
+relay_config = RelayConfig(url="http://localhost:3000")
+relay_client = RelayClient(relay_config=relay_config)
+
+async def task_hello_world():
+  # Publish the task. It's important to save the object so that we can later
+  # retrieve the task's status and results based on its ID.
+  task = await publisher.publish_task(
+      worker_kind="my_worker_kind",
+      task_kind="task_hello_world",
+      input_data=TestInputPydanticModel(name="Pedro"),
+  )
+
+  # Wait for the task to complete.
+  await asyncio.sleep(5)
+
+  # Fetch the current task state based on its ID.
+  completed_task = await relay_client.get_task(task.id)
+
+  # Decode the results into the correct result.
+  result = completed_task.get_decoded_output_data(
+    decoder=PydanticDecoder(TestOutputPydanticModel)
+  )
+
+  print(result)
+
+if __name__ == "__main__":
+    asyncio.run(task_hello_world())
+```
+
 
 Congratulations! You've just published, executed, and retrieved a task using
 TacoQ. You can keep learning more about TacoQ in the [Technical Reference](/technical-reference)
