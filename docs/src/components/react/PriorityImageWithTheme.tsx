@@ -1,3 +1,6 @@
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Image from "next/image";
 
@@ -27,13 +30,13 @@ interface PriorityImageWithThemeProps extends ImageProps {
 }
 
 // Priority Image Component
-export function PriorityImage({
+export const PriorityImage: FC<PriorityImageProps> = ({
   src,
   alt,
   width,
   height,
   className,
-}: PriorityImageProps) {
+}) => {
   return (
     <Image
       src={src}
@@ -48,10 +51,10 @@ export function PriorityImage({
       blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSQtJSEkLUEwLi0tLTAtQFBGRkBQRi4tMCY4PTo+OTFFRkpLRk45OUVFRUX/2wBDAR"
     />
   );
-}
+};
 
 // Default Export for Priority Image With Theme Component
-export function PriorityImageWithTheme({
+export const PriorityImageWithTheme: FC<PriorityImageWithThemeProps> = ({
   darkSrc,
   lightSrc,
   alt,
@@ -60,7 +63,7 @@ export function PriorityImageWithTheme({
   lightClassName,
   darkClassName,
   commonClassName,
-}: PriorityImageWithThemeProps) {
+}) => {
   return (
     <>
       <Image

@@ -1,3 +1,6 @@
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Link from "next/link";
 
@@ -8,7 +11,7 @@ import { PriorityImageWithTheme } from "./PriorityImageWithTheme";
  * Logo component that displays the application logo and title
  * Links to the home page when clicked
  */
-export function Logo() {
+export const Logo: FC = () => {
   return (
     <Link
       href="/"
@@ -31,7 +34,7 @@ export function Logo() {
 /**
  * Logo component that displays the company logo and title
  */
-export function DivisionLogo() {
+export const DivisionLogo: FC = () => {
   return (
     <Link
       href="https://github.com/taco-xyz"

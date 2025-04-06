@@ -1,5 +1,8 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 import { usePageNavigation } from "@/components/react/sidebar/context/PageNavigationContext";
@@ -18,7 +21,7 @@ interface DesktopSideBarProps {
   className?: string;
 }
 
-export function DesktopSideBar({ className }: DesktopSideBarProps) {
+export const DesktopSideBar: FC<DesktopSideBarProps> = ({ className }) => {
   // Extract the page tree context
   const { pages } = usePageTree();
 

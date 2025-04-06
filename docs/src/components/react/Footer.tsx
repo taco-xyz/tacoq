@@ -1,5 +1,8 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Link from "next/link";
 
@@ -13,7 +16,7 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 import clsx from "clsx";
 import { Status } from "@/types/FooterContent";
 
-export function Footer() {
+export const Footer: FC = () => {
   // Extract footer content from the context
   const { footerContent } = usePageTree();
 
@@ -88,4 +91,4 @@ export function Footer() {
       </div>
     </div>
   );
-}
+};

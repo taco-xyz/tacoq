@@ -1,5 +1,12 @@
 // React Imports
-import { RefObject, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FC,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 // Tailwind Imports
 import clsx from "clsx";
@@ -10,15 +17,17 @@ import { usePageTree } from "@/contexts/PageTreeContext";
 // Types Imports
 import type { Page } from "@/types/page/Page";
 
-export function Highlight({
-  title,
-  children,
-  parentElementRef,
-}: {
+interface HighlightProps {
   title: string;
   children: Page[];
   parentElementRef: RefObject<HTMLDivElement | null>;
-}) {
+}
+
+export const Highlight: FC<HighlightProps> = ({
+  title,
+  children,
+  parentElementRef,
+}) => {
   const { breadcrumbs, isPageExpanded, visiblePagesTitles } = usePageTree();
 
   // Find which child is in the breadcrumb path
@@ -91,4 +100,4 @@ export function Highlight({
       }}
     />
   );
-}
+};

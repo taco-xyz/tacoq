@@ -1,5 +1,8 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Lucide Icons
 import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 
@@ -9,7 +12,7 @@ import clsx from "clsx";
 // Context Imports
 import { useTooltip } from "@/components/react/sidebar/context/TooltipContext";
 
-export function Tooltip() {
+export const Tooltip: FC = () => {
   // Extract the tooltip context
   const {
     tooltipProps: {
@@ -172,4 +175,4 @@ export function Tooltip() {
       </div>
     </div>
   );
-}
+};

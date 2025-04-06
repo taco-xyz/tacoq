@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { useCallback, PropsWithChildren } from "react";
+import { FC, useCallback, PropsWithChildren } from "react";
 
 // Next Imports
 import { useRouter } from "next/navigation";
@@ -39,12 +39,12 @@ const headingStyles = {
 };
 
 // Heading component
-export function Heading({
+export const Heading: FC<PropsWithChildren<HeadingProps>> = ({
   id,
   Level,
   children,
   className,
-}: PropsWithChildren<HeadingProps>) {
+}) => {
   const router = useRouter();
 
   // Clicking on a heading title will scroll to it
@@ -78,4 +78,4 @@ export function Heading({
       </div>
     </Level>
   );
-}
+};

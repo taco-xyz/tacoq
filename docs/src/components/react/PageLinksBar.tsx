@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, FC } from "react";
 
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
@@ -28,7 +28,7 @@ interface PageLinksBarProps {
  * Scrolls to the corresponding heading when clicked
  * Highlights the current section based on scroll position
  */
-export function PageLinksBar({ className }: PageLinksBarProps) {
+export const PageLinksBar: FC<PageLinksBarProps> = ({ className }) => {
   const router = useRouter();
 
   // Extract the page tree context
@@ -128,7 +128,7 @@ export function PageLinksBar({ className }: PageLinksBarProps) {
     return () => observer.disconnect();
   }, [currentPage?.headers]);
 
-  if (!currentPage?.headers) return null;
+  if (!currentPage?.headers?.length) return null;
 
   return (
     <div className="relative h-full w-full">

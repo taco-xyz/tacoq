@@ -1,10 +1,13 @@
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Link from "next/link";
 
 // Types Imports
 import type { Anchor } from "@/types/Anchor";
 
-export function AnchorComponent({ url, title, Icon }: Anchor) {
+export const AnchorComponent: FC<Anchor> = ({ url, title, Icon }) => {
   return (
     <Link
       href={url}
@@ -18,4 +21,4 @@ export function AnchorComponent({ url, title, Icon }: Anchor) {
       </p>
     </Link>
   );
-}
+};

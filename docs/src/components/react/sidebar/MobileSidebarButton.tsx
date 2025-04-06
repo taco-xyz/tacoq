@@ -1,12 +1,15 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Lucide Icons
 import { Text } from "lucide-react";
 
 // Context Imports
 import { useMobileSidebarModal } from "./context/MobileSidebarModalContext";
 
-export function MobileSidebarButton() {
+export const MobileSidebarButton: FC = () => {
   // Extract the mobile sidebar context
   const { openSidebar } = useMobileSidebarModal();
 
@@ -18,4 +21,4 @@ export function MobileSidebarButton() {
       <Text className="size-5" />
     </button>
   );
-}
+};

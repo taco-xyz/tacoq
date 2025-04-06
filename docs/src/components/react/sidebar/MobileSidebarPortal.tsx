@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, FC } from "react";
 import { createPortal } from "react-dom";
 
 // Next Imports
@@ -32,7 +32,7 @@ const SidebarPortal = dynamic<PropsWithChildren>(
   { ssr: false },
 );
 
-export function MobileSidebarPortal() {
+export const MobileSidebarPortal: FC = () => {
   // Extract the Mobile Sidebar Modal Context
   const { isSidebarOpen, closeSidebar, dialogRef } = useMobileSidebarModal();
 
@@ -114,4 +114,4 @@ export function MobileSidebarPortal() {
       </div>
     </SidebarPortal>
   );
-}
+};

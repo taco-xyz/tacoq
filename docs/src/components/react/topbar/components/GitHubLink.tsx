@@ -1,3 +1,6 @@
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Link from "next/link";
 
@@ -8,7 +11,7 @@ import { GithubIcon } from "../../icons/social";
  * GitHub link component that links to the repository
  * Opens in a new tab when clicked
  */
-export function GitHubLink() {
+export const GitHubLink: FC = () => {
   return (
     <Link
       href="https://github.com/taco-xyz/tacoq"
@@ -18,4 +21,4 @@ export function GitHubLink() {
       <GithubIcon className="size-5" />
     </Link>
   );
-}
+};

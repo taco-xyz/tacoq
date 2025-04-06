@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import React, { useRef } from "react";
+import { FC, useRef } from "react";
 
 // Next Imports
 import Link from "next/link";
@@ -26,12 +26,12 @@ export interface PageComponentProps extends Page {
   childOf: string;
 }
 
-export function MobilePageComponent({
+export const MobilePageComponent: FC<PageComponentProps> = ({
   childOf,
   url,
   children,
   metadata: { title, sidebar },
-}: PageComponentProps) {
+}) => {
   // Extract the page tree context
   const { currentPageTitle, isPageExpanded, expandPage, collapsePage } =
     usePageTree();

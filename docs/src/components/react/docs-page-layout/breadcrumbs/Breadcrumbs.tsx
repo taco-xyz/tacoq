@@ -1,5 +1,8 @@
 "use client";
 
+// React Imports
+import { FC } from "react";
+
 // Next Imports
 import Link from "next/link";
 
@@ -12,7 +15,7 @@ import clsx from "clsx";
 // Context Imports
 import { usePageTree } from "@/contexts/PageTreeContext";
 
-export function Breadcrumbs() {
+export const Breadcrumbs: FC = () => {
   // Extract the breadcrumbs from the page tree context
   const { breadcrumbs } = usePageTree();
 
@@ -56,4 +59,4 @@ export function Breadcrumbs() {
       ))}
     </nav>
   );
-}
+};

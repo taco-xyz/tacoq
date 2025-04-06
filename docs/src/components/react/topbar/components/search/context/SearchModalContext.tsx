@@ -2,6 +2,7 @@
 
 // React Imports
 import {
+  FC,
   createContext,
   useContext,
   useCallback,
@@ -39,7 +40,7 @@ const SearchModalContext = createContext<SearchModalContextType | undefined>(
  * Provider component for the SearchModalContext
  * @param {PropsWithChildren} children - The children components to be wrapped by the provider
  */
-export function SearchModalProvider({ children }: PropsWithChildren) {
+export const SearchModalProvider: FC<PropsWithChildren> = ({ children }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Ref for the dialog element, used to listen for click events outside of it
@@ -150,7 +151,7 @@ export function SearchModalProvider({ children }: PropsWithChildren) {
       {children}
     </SearchModalContext.Provider>
   );
-}
+};
 
 /**
  * Hook to use the SearchModalContext

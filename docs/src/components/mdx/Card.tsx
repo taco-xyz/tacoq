@@ -1,7 +1,13 @@
+// React Imports
 import { FC, ComponentType, PropsWithChildren } from "react";
-import clsx from "clsx";
+
+// Next Imports
 import Link from "next/link";
 
+// Utils Imports
+import clsx from "clsx";
+
+// Lucide Icons
 import {
   Rocket,
   BookOpen,
@@ -31,7 +37,7 @@ interface CardProps {
   img?: string;
 }
 
-const Card: FC<CardProps> = ({ title, description, icon, href }: CardProps) => {
+const Card: FC<CardProps> = ({ title, description, icon, href }) => {
   const Icon = icon ? getIcon(icon) : null;
 
   const content = (
@@ -77,10 +83,10 @@ interface CardGroupProps {
   columns: 2 | 3 | 4;
 }
 
-const CardGroup = ({
+const CardGroup: FC<PropsWithChildren<CardGroupProps>> = ({
   columns,
   children,
-}: PropsWithChildren<CardGroupProps>) => {
+}) => {
   return (
     <div
       className={clsx(

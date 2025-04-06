@@ -1,7 +1,7 @@
 "use client";
 
 // React Imports
-import { useCallback } from "react";
+import { useCallback, FC } from "react";
 
 // Lucide Icons
 import { Sun, MoonStar } from "lucide-react";
@@ -10,7 +10,7 @@ import { Sun, MoonStar } from "lucide-react";
  * Theme toggle component that switches between light and dark modes
  * Uses localStorage to persist theme preference
  */
-export function ThemeToggle() {
+export const ThemeToggle: FC = () => {
   const toggleTheme = useCallback(() => {
     if (document.documentElement.classList.contains("dark")) {
       localStorage.setItem("theme", "light");
@@ -35,4 +35,4 @@ export function ThemeToggle() {
       <div className="absolute left-1 -z-1 size-7 rounded-full bg-zinc-200 transition-all duration-150 ease-in-out group-hover:bg-zinc-200/90 dark:translate-x-9 dark:bg-zinc-800 dark:group-hover:bg-zinc-700" />
     </button>
   );
-}
+};

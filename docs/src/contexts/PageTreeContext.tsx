@@ -2,6 +2,7 @@
 
 // React Imports
 import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -165,7 +166,7 @@ function getFlattenedPages(pages: Page[]): Page[] {
   return flattened;
 }
 
-export function PageTreeProvider({ children }: PropsWithChildren) {
+export const PageTreeProvider: FC<PropsWithChildren> = ({ children }) => {
   const pathname = usePathname();
 
   const [expandedPages, setExpandedPages] = useState<Set<string>>(() => {

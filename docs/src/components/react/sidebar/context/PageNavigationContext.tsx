@@ -2,6 +2,7 @@
 
 // React Imports
 import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -45,7 +46,9 @@ const PageNavigationContext = createContext<PageNavigationContextType | null>(
   null,
 );
 
-export function PageNavigationProvider({ children }: PropsWithChildren) {
+export const PageNavigationProvider: FC<PropsWithChildren> = ({
+  children,
+}) => {
   const router = useRouter();
 
   const pageContainerRef = useRef<HTMLDivElement>(null);

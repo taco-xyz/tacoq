@@ -1,7 +1,8 @@
 "use client";
 
 // React Imports
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useCallback,
@@ -84,7 +85,7 @@ const TooltipContext = createContext<TooltipContextType | null>(null);
  * </TooltipProvider>
  * ```
  */
-export function TooltipProvider({ children }: PropsWithChildren) {
+export const TooltipProvider: FC<PropsWithChildren> = ({ children }) => {
   // Extract the pathname
   const pathname = usePathname();
 
