@@ -31,4 +31,4 @@ export const DesktopSearchButton: FC = () => {
       </p>
     </button>
   );
-}
+};

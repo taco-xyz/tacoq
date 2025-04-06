@@ -54,12 +54,12 @@ export const DocsPageLayout: FC<PropsWithChildren> = ({ children }) => {
       </div>
 
       {!isFolder(currentPage) && (
-        <p className="flex w-full justify-start text-left text-xs text-zinc-400 transition-colors duration-150 ease-in-out dark:text-zinc-700">
+        <p className="flex w-full justify-start text-left text-xs text-zinc-400 transition-colors duration-150 ease-in-out dark:text-zinc-600">
           Last updated: {new Date(currentPage.lastUpdated).toLocaleDateString()}
         </p>
       )}
 
-      <div className="mt-3 flex w-full flex-col items-center justify-between gap-x-4 border-t border-zinc-200 transition-colors duration-150 ease-in-out sm:flex-row dark:border-zinc-800">
+      <div className="mt-2.5 flex w-full flex-col items-center justify-between gap-x-4 border-t border-zinc-200 transition-colors duration-150 ease-in-out sm:flex-row dark:border-zinc-800">
         {previousElement && !isFolder(previousElement) && (
           <Link
             href={previousElement.url}

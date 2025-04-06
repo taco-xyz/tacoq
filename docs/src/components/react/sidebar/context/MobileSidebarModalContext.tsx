@@ -111,7 +111,7 @@ export const MobileSidebarModalProvider: FC<PropsWithChildren> = ({
       {children}
     </MobileSidebarModalContext.Provider>
   );
-}
+};
 
 /**
  * Hook to use the MobileSidebarContext
@@ -124,4 +124,4 @@ export function useMobileSidebarModal() {
       "useMobileSidebarModal must be used within MobileSidebarModalProvider",
     );
   return context;
-};
+}

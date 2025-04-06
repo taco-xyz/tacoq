@@ -29,7 +29,7 @@ export const Logo: FC = () => {
       />
     </Link>
   );
-}
+};
 
 /**
  * Logo component that displays the company logo and title
@@ -52,4 +52,4 @@ export const DivisionLogo: FC = () => {
       />
     </Link>
   );
-}
+};

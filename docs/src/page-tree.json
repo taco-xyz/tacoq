@@ -51,7 +51,7 @@
               "type": "h1"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.577Z"
+          "lastUpdated": "2025-04-06T20:57:38.429Z"
         },
         {
           "url": "/quickstart/setup",
@@ -88,7 +88,7 @@
               "type": "h2"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.578Z"
+          "lastUpdated": "2025-04-06T20:57:38.430Z"
         }
       ]
     },
@@ -175,7 +175,7 @@
               "type": "h2"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.580Z"
+          "lastUpdated": "2025-04-06T20:57:38.432Z"
         },
         {
           "url": "/technical-reference/versioning",
@@ -204,7 +204,7 @@
               "type": "h1"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.581Z"
+          "lastUpdated": "2025-04-06T20:57:38.432Z"
         },
         {
           "url": "/technical-reference/relay-environment-vars",
@@ -237,29 +237,19 @@
               "type": "h2"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.580Z"
+          "lastUpdated": "2025-04-06T20:57:38.431Z"
         },
         {
+          "url": "/technical-reference/benchmarks",
           "metadata": {
             "title": "Benchmarks",
             "description": "Learn how TacoQ compares to other task queues in terms of performance and scalability.",
             "icon": "ChartNoAxesCombined",
             "index": 4
           },
-          "children": [
-            {
-              "url": "/technical-reference/benchmarks/test",
-              "metadata": {
-                "title": "Test",
-                "description": "Test",
-                "icon": "ChartNoAxesCombined",
-                "index": 1
-              },
-              "rawContent": "hehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\nhehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\nhehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\nhehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\nhehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\nhehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\nhehehehehehehehehehehheheheheheheheheheheheheheheehehehehhehehe\r\n",
-              "headers": [],
-              "lastUpdated": "2025-04-06T19:58:20.579Z"
-            }
-          ]
+          "rawContent": "export const metadata = {\n  title: \"Benchmarks\",\n  description:\n    \"Learn how TacoQ compares to other task queues in terms of performance and scalability.\",\n  keywords: [\n    \"benchmarks\",\n    \"performance metrics\",\n    \"task queue comparison\",\n    \"scalability tests\",\n    \"performance testing\",\n    \"system performance\",\n    \"throughput\",\n    \"latency\",\n    \"comparative analysis\",\n    \"queue performance\",\n    \"system metrics\",\n    \"performance evaluation\",\n    \"task processing speed\",\n    \"scaling benchmarks\",\n  ],\n  openGraph: {\n    type: \"website\",\n    locale: \"en_US\",\n    siteName: \"TacoQ Docs\",\n    title: \"Benchmarks | TacoQ Docs\",\n    description:\n      \"Learn how TacoQ compares to other task queues in terms of performance and scalability.\",\n  },\n};\n\n<Warning>This section is under construction! Please check back soon :)</Warning>\n",
+          "headers": [],
+          "lastUpdated": "2025-04-06T20:57:38.431Z"
         }
       ]
     },
@@ -334,7 +324,7 @@
               "type": "h1"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.576Z"
+          "lastUpdated": "2025-04-06T20:57:38.428Z"
         },
         {
           "url": "/guides/same-app-worker-pattern",
@@ -355,7 +345,7 @@
               "type": "h1"
             }
           ],
-          "lastUpdated": "2025-04-06T19:58:20.575Z"
+          "lastUpdated": "2025-04-06T20:57:38.427Z"
         }
       ]
     }
