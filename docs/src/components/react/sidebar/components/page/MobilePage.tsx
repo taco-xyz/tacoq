@@ -55,6 +55,11 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
     return null;
   }, [pageTreeElement.metadata.icon]);
 
+  // Get the current title
+  const title = useMemo(() => {
+    return pageTreeElement.metadata.title;
+  }, [pageTreeElement.metadata.title]);
+
   return (
     <div
       data-child-of={childOf}
@@ -69,9 +74,9 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
             <Link
               href={pageTreeElement.url}
               className={clsx(
-                currentElementTitle === pageTreeElement.metadata.title &&
+                currentElementTitle === title &&
                   "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
-                currentElementTitle !== pageTreeElement.metadata.title &&
+                currentElementTitle !== title &&
                   "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
                 "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden transition-all duration-50 ease-in-out select-none",
               )}
@@ -82,13 +87,13 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
                 <Icon
                   className={clsx(
                     "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
-                    currentElementTitle === pageTreeElement.metadata.title
+                    currentElementTitle === title
                       ? "text-zinc-950 dark:text-white/100"
                       : "text-zinc-500 dark:text-white/50",
                   )}
                 />
               )}
-              {pageTreeElement.metadata.title}
+              {title}
             </Link>
           </div>
         </>
@@ -97,16 +102,16 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
           {/* Folder Sidebar Item */}
           <div
             onClick={() => {
-              if (!isFolderExpanded(pageTreeElement.metadata.title)) {
-                expandFolder(pageTreeElement.metadata.title);
+              if (!isFolderExpanded(title)) {
+                expandFolder(title);
               } else {
-                collapseFolder(pageTreeElement.metadata.title);
+                collapseFolder(title);
               }
             }}
             className={clsx(
-              currentElementTitle === pageTreeElement.metadata.title &&
+              currentElementTitle === title &&
                 "bg-zinc-800/[0.075] font-semibold text-zinc-800 hover:bg-zinc-800/[0.075] dark:bg-white/[0.075] dark:text-white dark:hover:bg-white/[0.075]",
-              currentElementTitle !== pageTreeElement.metadata.title &&
+              currentElementTitle !== title &&
                 "font-normal text-zinc-600 hover:bg-zinc-800/5 hover:text-zinc-800 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white",
               "relative flex w-full cursor-pointer flex-row items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap outline-hidden transition-all duration-50 ease-in-out select-none",
             )}
@@ -115,27 +120,27 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
               <Icon
                 className={clsx(
                   "mr-1 size-4 flex-shrink-0 transition-all duration-50 ease-in-out",
-                  currentElementTitle === pageTreeElement.metadata.title
+                  currentElementTitle === title
                     ? "text-zinc-950 dark:text-white/100"
                     : "text-zinc-500 dark:text-white/50",
                 )}
               />
             )}
-            {pageTreeElement.metadata.title}
+            {title}
 
             <ChevronRight
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (isFolderExpanded(pageTreeElement.metadata.title)) {
-                  collapseFolder(pageTreeElement.metadata.title);
+                if (isFolderExpanded(title)) {
+                  collapseFolder(title);
                 } else {
-                  expandFolder(pageTreeElement.metadata.title);
+                  expandFolder(title);
                 }
               }}
               className={clsx(
                 "mt-[3px] size-3 text-zinc-700 opacity-50 transition-all duration-150 ease-in-out dark:text-zinc-300",
-                isFolderExpanded(pageTreeElement.metadata.title) && "rotate-90",
+                isFolderExpanded(title) && "rotate-90",
               )}
             />
           </div>
@@ -145,16 +150,13 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
             className={clsx(
               "ml-3.5 border-l-[1px] border-zinc-300 pl-2.5 dark:border-zinc-700",
               "grid transition-all duration-300 ease-in-out",
-              isFolderExpanded(pageTreeElement.metadata.title)
+              isFolderExpanded(title)
                 ? "mt-1.5 grid-rows-[1fr] opacity-100"
                 : "grid-rows-[0fr] opacity-0",
             )}
           >
             {/* Selected highlight */}
-            <Highlight
-              title={pageTreeElement.metadata.title}
-              parentElementRef={elementRef}
-            >
+            <Highlight title={title} parentElementRef={elementRef}>
               {pageTreeElement.children}
             </Highlight>
 
@@ -164,7 +166,7 @@ export const MobilePageComponent: FC<PageComponentProps> = ({
                 <MobilePageComponent
                   key={index}
                   pageTreeElement={child}
-                  childOf={pageTreeElement.metadata.title}
+                  childOf={title}
                 />
               ))}
             </div>

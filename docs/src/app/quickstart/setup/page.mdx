@@ -126,7 +126,7 @@ uv add tacoq
 ```
 
 The worker must know how to receive new task assignments and send updates
-through the broker. We'll begin by creating a new script with the worker 
+through the broker. We'll begin by creating a new script with the worker
 application.
 
 To start, **configure the broker** so that the worker knows where to send
@@ -140,7 +140,7 @@ broker_config = BrokerConfig(url="amqp://user:password@localhost:5672")
 
 Next, we'll **configure the worker application**.
 
-```python {2,5-12} 
+```python {2,5-12}
 from tacoq import BrokerConfig
 from tacoq import WorkerApplication, WorkerApplicationConfig
 
@@ -224,28 +224,26 @@ async def task_hello_world(input_data: TestInputPydanticModel) -> TestOutputPyda
   When a task's input and output data reach the broker, **they must be encoded
   in byte format.**
 
-  TacoQ provides a **default encoder and decoder that can handle JSON** objects
-  with the language's most commonly used libraries. These are **well tested** 
-  and should work for most use cases.
-  
-  - **Python**: `pydantic`
-  - **Rust**: `serde_json`
+TacoQ provides a **default encoder and decoder that can handle JSON** objects
+with the language's most commonly used libraries. These are **well tested**
+and should work for most use cases.
 
-  You can also **write your own encoders and decoders**. Simply peek into the
-  source code of the default ones and implement the required methods.
+- **Python**: `pydantic`
+- **Rust**: `serde_json`
+
+You can also **write your own encoders and decoders**. Simply peek into the
+source code of the default ones and implement the required methods.
+
 </Tip>
 
 <Note>
-  Note the task field `kind` is set to `"task_hello_world"`. You can think
-  about it the following way: 
-  - **Worker Kind**: Helps the publisher know which set of workers to send the
-    task to. 
-  - **Task Kind**: Helps the worker know which method to use to handle a task. 
-    
-  If you're familiar with task queues, you're probably used to only specifying
-  the task kind and not the worker kind. You can read about this design decision
-  in the [System Architecture](/technical-reference/system-architecture#h2-worker)
-  section.
+  Note the task field `kind` is set to `"task_hello_world"`. You can think about
+  it the following way: - **Worker Kind**: Helps the publisher know which set of
+  workers to send the task to. - **Task Kind**: Helps the worker know which
+  method to use to handle a task. If you're familiar with task queues, you're
+  probably used to only specifying the task kind and not the worker kind. You
+  can read about this design decision in the [System
+  Architecture](/technical-reference/system-architecture#h2-worker) section.
 </Note>
 
 Now that our worker is ready to handle tasks, we can boot it up via its
@@ -262,7 +260,7 @@ for it to take care of!
 ## Publisher Client
 
 We'll start by setting up the publisher and its configuration. The publisher's
-one and only responsibility is to **publish tasks via the message broker so 
+one and only responsibility is to **publish tasks via the message broker so
 that the relay can register them and the worker can execute them**.
 
 Begin by **creating a new file for the publisher and configuring it**. Because
@@ -334,7 +332,7 @@ async def task_hello_world():
   )
 ```
 
-Now, we will use the `RelayClient` to **retrieve the task's results** after 
+Now, we will use the `RelayClient` to **retrieve the task's results** after
 they are completed and **decode the results** into the correct object.
 
 ```python {3, 22-36}
@@ -375,7 +373,6 @@ async def task_hello_world():
 if __name__ == "__main__":
     asyncio.run(task_hello_world())
 ```
-
 
 Congratulations! You've just published, executed, and retrieved a task using
 TacoQ. You can keep learning more about TacoQ in the [Technical Reference](/technical-reference)
