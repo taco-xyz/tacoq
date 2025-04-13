@@ -6,7 +6,7 @@ services:
   # Main App
 
   tacoq-relay:
-    build: ../server/relay
+    build: ../relay
     ports:
       - "3000:3000"
     depends_on:
