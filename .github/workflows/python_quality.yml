@@ -1,0 +1,29 @@
+name: Python SDK Code Quality
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'client_sdks/python/**'
+      - '.github/**'
+
+permissions:
+  contents: read
+
+jobs:
+  python-quality:
+    name: Python Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Check formatting & linting
+        run: |
+          cd client_sdks/python
+          uv tool run ruff format --check .
+          uv tool run ruff check .

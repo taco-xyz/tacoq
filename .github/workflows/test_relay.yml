@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'relay/**'
+      - '.github/**'
 
 permissions:
   contents: read
