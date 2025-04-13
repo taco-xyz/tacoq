@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'client_sdks/**'
+      - 'relay/**'
 
 permissions:
   contents: read
@@ -14,7 +17,7 @@ jobs:
   # Build & Image Upload
   # =================================================
 
-  build:
+  relay-build:
     name: Build Docker image
     runs-on: ubuntu-latest
     steps:
@@ -41,52 +44,6 @@ jobs:
           path: /tmp/app-image.tar
 
   # =================================================
-  # Server Tests
-  # These only depend on the database, so we run the
-  # postgres service in the same container.
-  # =================================================
-
-  server-tests:
-    name: Run server tests
-    needs: [build]
-    runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: test_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: app-image
-          path: /tmp
-
-      - name: Load Docker image
-        run: docker load --input /tmp/app-image.tar
-
-      - name: Run tests in container
-        run: |
-          docker run --network host \
-            -e DATABASE_URL=${DATABASE_URL} \
-            tacoq-relay cargo test --release --all-features
-
-  # =================================================
   # SDK Tests
   # These also act as end-to-end tests for the server
   # so we need to set up both Postgres AND the server
@@ -95,7 +52,7 @@ jobs:
 
   python-sdk-tests:
     name: Python SDK Tests
-    needs: [build]
+    needs: [relay-build]
     runs-on: ubuntu-latest
 
     steps:
