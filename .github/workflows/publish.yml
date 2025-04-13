@@ -12,58 +12,64 @@ jobs:
   # Publish Manager
   # =================================================
 
-  publish_manager:
-    name: Publish Docker image
+  build_amd64:
+    name: Build AMD64 Docker image
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/general@') || startsWith(github.ref, 'refs/tags/relay@')
-    permissions:
-      contents: read
-      packages: write
-
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository_owner }}/tacoq-relay
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      # We must parse the tag version to assign to the Docker image.
-      - name: Extract version from Git tag
-        id: version
-        run: |
-          TAG="${GITHUB_REF_NAME}"  # e.g. tacoq@0.4.0 or relay@0.4.0
-          VERSION="${TAG#*@}"       # strips everything before the @
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Releasing version: $VERSION"
-
-      - name: Build and push
+      - name: Build and push AMD64
         uses: docker/build-push-action@v5
         with:
           context: .
           file: relay/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-amd64
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+
+  build_arm64:
+    name: Build ARM64 Docker image
+    runs-on: [self-hosted, arm64]  # Your ARM runner
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push ARM64
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: relay/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-arm64
+          platforms: linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create_manifest:
+    needs: [build_amd64, build_arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create and push manifest
+        run: |
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-arm64
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
 
   # =================================================
   # Publish Python SDK
