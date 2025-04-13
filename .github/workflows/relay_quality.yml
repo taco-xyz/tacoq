@@ -1,20 +1,20 @@
-name: Code Quality
+name: Relay Code Quality
 
 on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'relay/**'
+      - '.github/**'
 
 permissions:
   contents: read
 
 jobs:
-  # ================================
-  # Rust Formatting & Linting
-  # ================================
 
   rust-fmt:
-    name: Rust Formatting
+    name: Cargo Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
         run: cargo fmt --all -- --check
 
   rust-clippy:
-    name: Rust Clippy
+    name: Cargo Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,23 +47,3 @@ jobs:
         run: cargo sqlx prepare --workspace --check
         env:
           SQLX_OFFLINE: true
-
-  # ================================
-  # Python Formatting & Linting
-  # ================================
-
-  python-quality:
-    name: Python Quality
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: Check formatting & linting
-        run: |
-          cd client_sdks/python
-          uv tool run ruff format --check .
-          uv tool run ruff check .

@@ -4,6 +4,9 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'relay/**'
+      - '.github/**'
 
 permissions:
   contents: read
@@ -14,7 +17,7 @@ jobs:
   # Build & Image Upload
   # =================================================
 
-  build:
+  relay-build:
     name: Build Docker image
     runs-on: ubuntu-latest
     steps:
@@ -41,14 +44,14 @@ jobs:
           path: /tmp/app-image.tar
 
   # =================================================
-  # Server Tests
+  # Relay Tests
   # These only depend on the database, so we run the
   # postgres service in the same container.
   # =================================================
 
-  server-tests:
-    name: Run server tests
-    needs: [build]
+  relay-tests:
+    name: Run relay tests
+    needs: [relay-build]
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
@@ -85,33 +88,3 @@ jobs:
           docker run --network host \
             -e DATABASE_URL=${DATABASE_URL} \
             tacoq-relay cargo test --release --all-features
-
-  # =================================================
-  # SDK Tests
-  # These also act as end-to-end tests for the server
-  # so we need to set up both Postgres AND the server
-  # in the same container.
-  # =================================================
-
-  python-sdk-tests:
-    name: Python SDK Tests
-    needs: [build]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      # Setup
-      - uses: ./.github/actions/setup_sdk_test_environment
-        with:
-          artifact-path: /tmp
-
-      # Python Tests
-      - name: Run Python tests
-        uses: ./.github/actions/test_python_sdk
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # Cleanup
-      - uses: ./.github/actions/cleanup_sdk_test_environment
-        if: always()

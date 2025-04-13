@@ -1,0 +1,75 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'client_sdks/**'
+      - 'relay/**'
+      - '.github/**'
+      
+permissions:
+  contents: read
+  actions: read # Needed for artifact upload/download
+
+jobs:
+  # =================================================
+  # Build & Image Upload
+  # =================================================
+
+  relay-build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: relay/Dockerfile
+          target: builder
+          outputs: type=docker,dest=/tmp/app-image.tar
+          tags: tacoq-relay:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-image
+          path: /tmp/app-image.tar
+
+  # =================================================
+  # SDK Tests
+  # These also act as end-to-end tests for the server
+  # so we need to set up both Postgres AND the server
+  # in the same container.
+  # =================================================
+
+  python-sdk-tests:
+    name: Python SDK Tests
+    needs: [relay-build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Setup
+      - uses: ./.github/actions/setup_sdk_test_environment
+        with:
+          artifact-path: /tmp
+
+      # Python Tests
+      - name: Run Python tests
+        uses: ./.github/actions/test_python_sdk
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Cleanup
+      - uses: ./.github/actions/cleanup_sdk_test_environment
+        if: always()
