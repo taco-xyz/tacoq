@@ -58,6 +58,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platform: linux/amd64
 
   build_arm64:
     name: Build ARM64 Docker image
@@ -91,6 +92,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platform: linux/arm64
 
   create_manifest:
     name: Create multi-arch manifest
