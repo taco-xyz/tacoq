@@ -6,7 +6,6 @@ on:
       - 'general@*' # General Lockstep Release. Releases a new version of everything.
       - 'relay@*' # Relay Release. Only releases a new version of the Relay.
       - 'python@*' # Python Release. Only releases a new version of the Python SDK.
-
 jobs:
   # =================================================
   # Publish Manager
@@ -15,6 +14,12 @@ jobs:
   build_amd64:
     name: Build AMD64 Docker image
     runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
@@ -39,6 +44,12 @@ jobs:
   build_arm64:
     name: Build ARM64 Docker image
     runs-on: ubuntu-24.04-arm
+    env:
+      REGISTRY: ghcr.io
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
