@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   python-quality:
-    name: Python Quality
+    name: Ruff Linting & Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
