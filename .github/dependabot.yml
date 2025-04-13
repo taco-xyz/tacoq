@@ -6,7 +6,7 @@
 version: 2
 updates:
   - package-ecosystem: "cargo"
-    directory: "/server/relay/"
+    directory: "/relay/"
     schedule:
       interval: "daily"
   - package-ecosystem: "pip"

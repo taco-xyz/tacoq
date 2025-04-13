@@ -8,7 +8,7 @@ SCHEMA_SOURCE="schemas"
 # Define target directories where the schema should be copied
 TARGET_DIRS=(
   "client_sdks/python/tacoq/core/models/"
-  "server/relay/src/models/"
+  "relay/src/models/"
 )
 
 echo "Syncing Avro schema to services..."

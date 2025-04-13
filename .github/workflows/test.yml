@@ -27,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: server/relay/Dockerfile
+          file: relay/Dockerfile
           target: builder
           outputs: type=docker,dest=/tmp/app-image.tar
           tags: tacoq-relay:latest
