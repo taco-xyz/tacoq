@@ -70,8 +70,7 @@ jobs:
           platforms: ${{ matrix.config.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }}
+          tags: ${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           
           cache-from: type=gha
