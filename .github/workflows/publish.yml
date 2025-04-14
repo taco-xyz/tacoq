@@ -101,6 +101,10 @@ jobs:
     needs:
       - build
       - extract_version
+    permissions:
+        contents: read
+        packages: write
+
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
