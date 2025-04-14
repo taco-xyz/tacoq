@@ -89,7 +89,8 @@ jobs:
     steps:
       - name: Extract tag version
         uses: ./.github/actions/extract_version
-
+        id: version
+        
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
