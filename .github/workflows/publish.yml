@@ -70,7 +70,7 @@ jobs:
           platforms: ${{ matrix.config.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
-          tags: ${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }}
+          # tags: ${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           
           cache-from: type=gha
@@ -93,8 +93,12 @@ jobs:
   merge:
     name: Merge Docker manifest and publish
     runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository_owner }}/tacoq-relay
     needs:
       - build
+      - extract_version
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -127,7 +131,8 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          docker buildx imagetools create \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }} \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
       - name: Inspect image
