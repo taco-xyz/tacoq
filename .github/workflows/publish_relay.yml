@@ -138,4 +138,4 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *) --tag ${{ env.REGISTRY_IMAGE }}:${{ needs.extract_version.outputs.version }}          
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *) --tag ${{ env.REGISTRY_IMAGE }}:${{ needs.extract_version.outputs.version }} --tag ${{ env.REGISTRY_IMAGE }}:latest
