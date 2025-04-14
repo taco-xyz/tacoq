@@ -1,6 +1,6 @@
 [project]
 name = "tacoq"
-version = "0.4.1-alpha.7"
+version = "0.4.1a7"
 description = "Python SDK to interact with the TacoQ task queue."
 readme = "README.md"
 authors = [
