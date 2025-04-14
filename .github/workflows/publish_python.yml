@@ -1,0 +1,57 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'general@*' # General Lockstep Release. Releases a new version of everything.
+      - 'python@*' # Python Release. Only releases a new version of the Python SDK.
+jobs:
+
+  extract_version:
+    name: Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Extract version from Git tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#*@}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+
+  # =================================================
+  # Publish Python SDK
+  # =================================================
+
+  publish_python_sdk:
+    name: Publish Python SDK
+    runs-on: ubuntu-latest
+    needs: extract_version
+    if: startsWith(github.ref_name, 'general@') || startsWith(github.ref_name, 'python@')
+    permissions:
+      id-token: write # Required for trusted publishing
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Build package
+        run: |
+          cd client_sdks/python
+          uv build
+
+      - name: Publish package to PyPI
+        run: |
+          cd client_sdks/python
+          uv publish
