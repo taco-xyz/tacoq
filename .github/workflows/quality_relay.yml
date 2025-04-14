@@ -1,4 +1,4 @@
-name: Relay Code Quality
+name: Code Quality - Relay
 
 on:
   pull_request:

@@ -1,4 +1,4 @@
-name: Publish Relay
+name: Publish - Relay
 
 on:
   push:
