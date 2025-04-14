@@ -3,8 +3,7 @@ name: Publish Python SDK
 on:
   push:
     tags:
-      - 'general@*' # General Lockstep Release. Releases a new version of everything.
-      - 'python@*' # Python Release. Only releases a new version of the Python SDK.
+      - 'python@*'
 
 jobs:
 

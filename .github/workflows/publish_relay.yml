@@ -3,8 +3,7 @@ name: Publish Relay
 on:
   push:
     tags:
-      - 'general@*' # General Lockstep Release. Releases a new version of everything.
-      - 'relay@*' # Relay Release. Only releases a new version of the Relay.
+      - 'relay@*'
 
 jobs:
 
@@ -90,7 +89,7 @@ jobs:
       - name: Extract tag version
         uses: ./.github/actions/extract_version
         id: version
-        
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
