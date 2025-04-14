@@ -1,4 +1,4 @@
-name: Tests
+name: Tests - Relay
 
 on:
   pull_request:
