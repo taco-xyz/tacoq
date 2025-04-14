@@ -14,14 +14,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
+      packages: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
 
       - name: Extract tag version
         uses: ./.github/actions/extract_version
@@ -29,6 +24,11 @@ jobs:
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Build package
+        run: |
+          cd client_sdks/python
+          uv build
 
       - name: Verify versions match
         run: |
@@ -39,11 +39,6 @@ jobs:
             echo "Please update the version in the release tag and pyproject.toml so that they are compatible and try again."
             exit 1
           fi
-
-      - name: Build package
-        run: |
-          cd client_sdks/python
-          uv build
 
       - name: Publish package to PyPI
         run: |
