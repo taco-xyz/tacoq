@@ -8,27 +8,8 @@ on:
 
 jobs:
 
-  extract_version:
-    name: Extract Version
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Extract version from Git tag
-        id: version
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#*@}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Releasing version: $VERSION"
-
-  # =================================================
-  # Publish Manager
-  # =================================================
-
   build:
     name: Build Docker image
-    needs: extract_version
     env:
       REGISTRY: ghcr.io
       REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/tacoq-relay
@@ -47,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
           
-      - name: Docker meta
+      - name: Set up Docker image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -106,6 +87,9 @@ jobs:
         packages: write
 
     steps:
+      - name: Extract tag version
+        uses: ./.github/actions/extract_version
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -123,7 +107,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Docker meta
+      - name: Configure Docker image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -137,5 +121,9 @@ jobs:
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
         run: |
+          EXTRA_TAG=""
+          if [ "${{ steps.extract_version.outputs.is_prerelease }}" != "true" ]; then
+            EXTRA_TAG="--tag ${{ env.REGISTRY_IMAGE }}:latest"
+          fi
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *) --tag ${{ env.REGISTRY_IMAGE }}:${{ needs.extract_version.outputs.version }} --tag ${{ env.REGISTRY_IMAGE }}:latest
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *) --tag ${{ env.REGISTRY_IMAGE }}:${{ steps.extract_version.outputs.version }} $EXTRA_TAG

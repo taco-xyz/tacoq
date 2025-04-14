@@ -1,0 +1,25 @@
+name: Extract Version
+description: Extracts version from Git tag. For example, if the tag is `general@1.0.0`, the version will be `1.0.0`.
+outputs:
+  version:
+    description: The extracted version from the tag
+    value: ${{ steps.extract_version.outputs.version }}
+  is_prerelease:
+    description: Whether this is a prerelease version (contains a hyphen)
+    value: ${{ steps.extract_version.outputs.is_prerelease }}
+runs:
+  using: "composite"
+  steps:
+    - name: Extract version from Git tag
+      id: extract_version
+      shell: bash
+      run: |
+        TAG="${GITHUB_REF_NAME}"
+        VERSION="${TAG#*@}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+        if [[ "$VERSION" == *-* ]]; then
+          echo "is_prerelease=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_prerelease=false" >> $GITHUB_OUTPUT
+        fi
