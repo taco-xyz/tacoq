@@ -35,7 +35,7 @@ jobs:
         run: |
           cd client_sdks/python
           uv venv
-          uv
+          uv sync
           PACKAGE_VERSION=$(uv pip show tacoq | grep Version | cut -d' ' -f2)
           if [ "$PACKAGE_VERSION" != "${{ steps.version.outputs.version }}" ]; then
             echo "Version mismatch! Tag version: ${{ steps.version.outputs.version }}, Package version: $PACKAGE_VERSION"
