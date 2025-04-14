@@ -61,7 +61,7 @@ jobs:
           file: relay/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }}-${{ matrix.config.arch }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.extract_version.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
