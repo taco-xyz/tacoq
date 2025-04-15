@@ -31,9 +31,14 @@ jobs:
         with:
           context: .
           file: relay/Dockerfile
+          build-args: |
+            ARCH=x86_64-unknown-linux-musl
+
           target: builder
           outputs: type=docker,dest=/tmp/app-image.tar
+
           tags: tacoq-relay:latest
+
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
