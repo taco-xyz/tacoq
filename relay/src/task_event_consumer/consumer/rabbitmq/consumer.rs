@@ -217,6 +217,18 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
                 Ok(msg) => msg,
                 Err(e) => {
                     error!(error = %e, "Error parsing message");
+
+                    // Nack the message when parsing fails
+                    if let Err(nack_err) = channel
+                        .basic_nack(delivery_tag, lapin::options::BasicNackOptions::default())
+                        .await
+                    {
+                        error!(
+                            error = %nack_err,
+                            delivery_tag = %delivery_tag,
+                            "Failed to nack message after parsing error"
+                        );
+                    }
                     continue;
                 }
             };
@@ -224,10 +236,22 @@ impl TaskEventConsumer for RabbitMQTaskEventConsumer {
             // Handle the event. If it fails, we log it, nack it, and continue.
             if let Err(e) = self.handle_events(vec![event]).await {
                 error!(error = %e, "Error handling events");
+
+                // Nack the message when handling fails
+                if let Err(nack_err) = channel
+                    .basic_nack(delivery_tag, lapin::options::BasicNackOptions::default())
+                    .await
+                {
+                    error!(
+                        error = %nack_err,
+                        delivery_tag = %delivery_tag,
+                        "Failed to nack message after handling error"
+                    );
+                }
                 continue;
             }
 
-            // Ackowledge the message so we don't re-process it.
+            // Acknowledge the message when processing is successful
             debug!(queue = %QUEUE_NAME, delivery_tag = %delivery_tag, "Acknowledging message");
             if let Err(e) = channel
                 .basic_ack(delivery_tag, BasicAckOptions::default())
