@@ -83,17 +83,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Log which services are enabled
     info!(
-        task_consumer = config.enable_relay_task_consumer,
-        cleanup = config.enable_relay_cleanup,
-        api = config.enable_relay_api,
+        task_consumer = config.enable_task_consumer,
+        cleanup = config.enable_task_cleanup,
+        api = config.enable_rest_api,
         "Service configuration"
     );
 
     // If no services are enabled, exit gracefully
-    if !config.enable_relay_task_consumer
-        && !config.enable_relay_cleanup
-        && !config.enable_relay_api
-    {
+    if !config.enable_task_consumer && !config.enable_task_cleanup && !config.enable_rest_api {
         warn!("No services are enabled, exiting");
         return Ok(());
     }
