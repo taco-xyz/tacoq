@@ -264,7 +264,7 @@ pub async fn initialize_system(
         // Create server
         debug!("Creating HTTP server on port 3000");
         let shutdown_rx = shutdown_signal.subscribe();
-        components.rest_server = Some(Server::new(app, 3000, shutdown_rx));
+        components.rest_server = Some(Server::new(app, 3000, shutdown_rx, None, None));
         info!(port = 3000, "HTTP server created");
     } else {
         info!("API server is disabled by configuration");
