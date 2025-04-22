@@ -2,8 +2,10 @@ import asyncio
 import os
 from time import sleep
 from typing import AsyncGenerator
+from unittest.mock import AsyncMock
 
 import pytest
+from pytest_mock import MockerFixture
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
@@ -17,7 +19,7 @@ from tacoq.core.encoding.models import Decoder, Encoder
 from tacoq.core.infra.broker import BrokerConfig
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.publisher import PublisherClient
-from tacoq.relay import RelayClient, RelayConfig
+from tacoq.relay import RelayClient, RelayConfig, RelayStates
 from tacoq.worker import WorkerApplicationConfig
 
 RELAY_TEST_URL = os.environ.get("RELAY_TEST_URL", "http://localhost:3000")
@@ -97,9 +99,19 @@ async def relay_client(relay_config: RelayConfig) -> AsyncGenerator[RelayClient,
 
 
 @pytest.fixture
-async def mock_relay_client() -> AsyncGenerator[RelayClient, None]:
-    async with RelayClient(config=RelayConfig(url="http://test")) as client:
-        yield client
+async def mock_relay_client(mocker: MockerFixture) -> AsyncMock:
+    """Fixture that provides a true mock RelayClient instance using pytest-mock."""
+    mock = mocker.AsyncMock(spec=RelayClient)
+
+    mock.config = mocker.MagicMock(spec=RelayConfig)
+    mock.config.url = "http://mocked-relay"
+    mock.__aenter__.return_value = mock
+
+    # Default mock behavior
+    mock.check_health.return_value = RelayStates.HEALTHY
+    mock.get_task.return_value
+
+    return mock
 
 
 ## ==============================

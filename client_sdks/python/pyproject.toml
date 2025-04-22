@@ -26,6 +26,7 @@ dependencies = [
     "uuid>=1.30",
     "watchfiles>=1.0.3",
     "httpx>=0.28.1",
+    "h2>=4.2.0",
 ]
 
 [tool.setuptools]
@@ -64,6 +65,7 @@ dev = [
     "pytest-timeout>=2.3.1",
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-exporter-otlp>=1.30.0",
+    "pytest-mock>=3.14.0",
 ]
 
 [project.scripts]
