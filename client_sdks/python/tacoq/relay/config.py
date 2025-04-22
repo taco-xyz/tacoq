@@ -21,6 +21,16 @@ class RelayConfig(BaseModel):
     url: str
     """ The base URL of the relay (with no paths). """
 
+    ssl_verify: bool = True
+    """ If the client should verify the SSL certificate of the request.
+    Only disable this when testing in development it is not recommended for production """
+
+    retries: int = 3
+    """ The number of retries if failed request """
+
+    timeout: float = 1.0
+    """ The timeout between requests on failed request """
+
     default_retry_options: RetryOptionsBase = ExponentialRetry(
         attempts=3,
         start_timeout=0.2,

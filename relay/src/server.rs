@@ -23,6 +23,8 @@ impl Server {
     /// * `app` - The axum Router to serve
     /// * `port` - The port to listen on
     /// * `shutdown_rx` - Receiver for shutdown signals
+    /// * `cert_path` - Optional path to the TLS certificate
+    /// * `key_path` - Optional path to the TLS key
     pub fn new(
         app: Router,
         port: u16,

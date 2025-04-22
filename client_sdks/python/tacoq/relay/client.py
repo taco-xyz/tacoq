@@ -12,9 +12,10 @@ from uuid import UUID
 from typing_extensions import Self
 from typing import Any
 from pydantic import BaseModel
-from aiohttp import ClientSession, ClientConnectorError
-from aiohttp_retry import RetryClient, RetryOptionsBase
 from opentelemetry.propagate import inject
+
+import httpx
+from httpx import AsyncHTTPTransport, AsyncClient
 
 from tacoq.relay.config import RelayConfig
 from tacoq.core.models.task import Task
@@ -84,26 +85,29 @@ class RelayClient(BaseModel):
     config: RelayConfig
     """Configuration for the relay client."""
 
-    _session: Optional[ClientSession] = None
+    _client: Optional[AsyncClient] = None
     """Internal aiohttp session."""
 
     @property
-    async def session(self) -> ClientSession:
+    async def client(self) -> AsyncClient:
         """Get or create the client session."""
-        if not self._session:
+        if not self._client:
             await self.connect()
-        return self._session  # type: ignore
+        return self._client  # type: ignore
 
     async def connect(self) -> None:
         """Connect to the relay."""
-        if not self._session:
-            self._session = ClientSession()
+        if not self._client:
+            transport = AsyncHTTPTransport(
+                verify=self.config.ssl_verify, http2=True, retries=self.config.retries
+            )
+            self._client = AsyncClient(http2=True, transport=transport)
 
     async def disconnect(self) -> None:
         """Disconnect from the relay."""
-        if self._session:
-            await self._session.close()
-            self._session = None
+        if self._client:
+            await self._client.aclose()
+            self._client = None
 
     # ================================
     # Context Management
@@ -122,9 +126,7 @@ class RelayClient(BaseModel):
     # Health Checking
     # ================================
 
-    async def check_health(
-        self: Self, override_retry_options: Optional[RetryOptionsBase] = None
-    ) -> RelayStates:
+    async def check_health(self: Self) -> RelayStates:
         """Check whether the relay is healthy. This is currently used before
         tests are run to notify the user if the relay is not healthy or even
         running at all.
@@ -136,20 +138,20 @@ class RelayClient(BaseModel):
         RelayStates: Whether the relay is healthy.
         """
         try:
-            session = await self.session
-            retry_client = RetryClient(
-                session,
-                retry_options=override_retry_options
-                or self.config.default_retry_options,
+            client = await self.client
+            resp = await client.get(
+                f"{self.config.url}{HEALTH_PATH}", timeout=self.config.timeout
             )
-            async with retry_client.get(f"{self.config.url}{HEALTH_PATH}") as resp:
-                match resp.status:
-                    case 200:
-                        return RelayStates.HEALTHY
-                    case _:
-                        return RelayStates.UNKNOWN
-        except ClientConnectorError:
+
+            match resp.status_code:
+                case 200:
+                    return RelayStates.HEALTHY
+                case _:
+                    return RelayStates.UNKNOWN
+        except httpx.ConnectError:
             return RelayStates.NOT_REACHABLE
+        except (httpx.RequestError, Exception):
+            return RelayStates.UNKNOWN
 
     # ================================
     # Task Get/Set Operations
@@ -158,7 +160,6 @@ class RelayClient(BaseModel):
     async def get_task(
         self: Self,
         task_id: UUID,
-        override_retry_options: Optional[RetryOptionsBase] = None,
     ) -> Optional[Task]:
         """Get a task by its UUID.
 
@@ -184,18 +185,16 @@ class RelayClient(BaseModel):
             inject(headers)
             headers["Accept"] = "application/avro"
 
-            session = await self.session
-            retry_client = RetryClient(
-                session,
-                retry_options=override_retry_options
-                or self.config.default_retry_options,
+            client = await self.client
+            resp = await client.get(
+                f"{self.config.url}{TASK_PATH}/{task_id}",
+                headers=headers,
+                timeout=self.config.timeout,
             )
 
-            async with retry_client.get(
-                f"{self.config.url}{TASK_PATH}/{task_id}", headers=headers
-            ) as resp:
-                if resp.status == 404:
-                    return None
-                resp.raise_for_status()
-                data = await resp.read()
-                return Task.from_avro_bytes(data)
+            if resp.status_code == 404:
+                return None
+
+            resp.raise_for_status()
+            data = resp.content
+            return Task.from_avro_bytes(data)
