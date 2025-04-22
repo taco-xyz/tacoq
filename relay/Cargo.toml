@@ -43,7 +43,7 @@ thiserror = "2.0.12"
 backoff = { version = "0.4.0", features = ["tokio"] }
 apache-avro = { version = "0.17.0", features = ["derive"] }
 lazy_static = "1.5.0"
-rustls = "0.23.26"
+rustls = { version = "0.23.26", features = ["ring"] }
 axum-server = { version = "0.7.2", features = ["tls-rustls"] }
 clap = { version = "4.5.37", features = ["derive"] }
 

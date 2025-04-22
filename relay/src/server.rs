@@ -1,5 +1,6 @@
 use axum::Router;
 use axum_server::{tls_rustls::RustlsConfig, Handle};
+use rustls::crypto::ring;
 use std::{net::SocketAddr, path::PathBuf};
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
@@ -75,6 +76,11 @@ impl Server {
         // Check if TLS configuration is provided and valid
         if let (Some(cert_path), Some(key_path)) = (&self.cert_path, &self.key_path) {
             info!(address = %addr, "Starting server with TLS (HTTP/1.1 & HTTP/2)");
+
+            // Install a default crypto provider
+            ring::default_provider()
+                .install_default()
+                .expect("Failed to install rustls default crypto provider");
 
             // Configure TLS
             let tls_config = match RustlsConfig::from_pem_file(cert_path, key_path).await {
