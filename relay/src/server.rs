@@ -48,6 +48,17 @@ impl Server {
         }
     }
 
+    /// Spawns a task to listen for the shutdown signal and trigger graceful shutdown.
+    fn spawn_shutdown_listener(handle: Handle, mut shutdown_rx: broadcast::Receiver<()>) {
+        tokio::spawn(async move {
+            match shutdown_rx.recv().await {
+                Ok(_) => info!("Server shutdown signal received, telling axum-server to stop."),
+                Err(e) => error!(error = %e, "Error receiving shutdown signal"),
+            }
+            handle.graceful_shutdown(None); // Use Some(Duration) for timeout
+        });
+    }
+
     /// Runs the server until a shutdown signal is received
     ///
     /// # Returns
@@ -55,7 +66,11 @@ impl Server {
     /// A result indicating success or failure
     pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         let addr = SocketAddr::from(([0, 0, 0, 0], self.port));
-        let mut shutdown_rx = self.shutdown_rx.resubscribe();
+        let shutdown_rx = self.shutdown_rx.resubscribe();
+        let handle = Handle::new();
+
+        // Spawn the shutdown listener task once
+        Self::spawn_shutdown_listener(handle.clone(), shutdown_rx);
 
         // Check if TLS configuration is provided and valid
         if let (Some(cert_path), Some(key_path)) = (&self.cert_path, &self.key_path) {
@@ -70,17 +85,6 @@ impl Server {
                 }
             };
 
-            let handle = Handle::new();
-
-            let handle_clone = handle.clone();
-            tokio::spawn(async move {
-                match shutdown_rx.recv().await {
-                    Ok(_) => info!("Server shutdown signal received, telling axum-server to stop."),
-                    Err(e) => error!(error = %e, "Error receiving shutdown signal"),
-                }
-                handle_clone.graceful_shutdown(None); // Use Some(Duration) for timeout
-            });
-
             // Run the server with TLS
             info!(address = %addr, "Server listening with TLS enabled");
             axum_server::bind_rustls(addr, tls_config)
@@ -94,17 +98,11 @@ impl Server {
         } else {
             info!(address = %addr, "Starting server without TLS (HTTP only)");
 
-            let listener = tokio::net::TcpListener::bind(&addr).await?;
+            // Run the server without TLS using axum_server::bind
             info!(address = %addr, "Server listening");
-
-            // Run the server without TLS
-            axum::serve(listener, self.app.clone())
-                .with_graceful_shutdown(async move {
-                    match shutdown_rx.recv().await {
-                        Ok(_) => info!("Server shutdown signal received."),
-                        Err(e) => error!(error = %e, "Error receiving shutdown signal"),
-                    }
-                })
+            axum_server::bind(addr)
+                .handle(handle) // Pass the handle for graceful shutdown
+                .serve(self.app.clone().into_make_service())
                 .await?;
 
             info!("HTTP Server shut down gracefully.");
