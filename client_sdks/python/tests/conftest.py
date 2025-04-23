@@ -22,7 +22,7 @@ from tacoq.publisher import PublisherClient
 from tacoq.relay import RelayClient, RelayConfig, RelayStates
 from tacoq.worker import WorkerApplicationConfig
 
-RELAY_TEST_URL = os.environ.get("RELAY_TEST_URL", "http://localhost:3000")
+RELAY_TEST_HOSTPORT = os.environ.get("RELAY_TEST_HOSTPORT", "localhost:3000")
 BROKER_TEST_URL = os.environ.get(
     "BROKER_TEST_URL", "amqp://user:password@localhost:5672/"
 )
@@ -31,6 +31,17 @@ WORKER_KIND_NAME = "test_worker_kind"
 WORKER_NAME = "test_worker"
 
 pytest_plugins = ["pytest_asyncio"]
+
+
+# This function serves to decide if I wanna use http or https tests
+def pytest_addoption(parser):
+    parser.addoption(
+        "--relay-protocol",
+        action="store",
+        default="http",
+        choices=("http", "https"),
+        help="Protocol to use for the relay service (http or https)",
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -87,9 +98,11 @@ def create_test_span():
 
 
 @pytest.fixture(scope="session")
-def relay_config() -> RelayConfig:
+def relay_config(request) -> RelayConfig:
     """Fixture that provides a configured RelayConfig instance."""
-    return RelayConfig(url=RELAY_TEST_URL)
+    protocol = request.config.getoption("--relay-protocol")
+    relay_url = f"{protocol}://{RELAY_TEST_HOSTPORT}"
+    return RelayConfig(url=relay_url, ssl_verify=False)
 
 
 @pytest.fixture
