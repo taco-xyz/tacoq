@@ -206,7 +206,7 @@ pub async fn initialize_system(
     };
 
     // Setup task event consumer if enabled
-    if config.enable_relay_task_consumer {
+    if config.enable_task_consumer {
         debug!(
             broker_url = %config.broker_url,
             queue = %RELAY_QUEUE,
@@ -239,7 +239,7 @@ pub async fn initialize_system(
     }
 
     // Setup cleanup job if enabled
-    if config.enable_relay_cleanup {
+    if config.enable_task_cleanup {
         debug!("Creating task cleanup job with 5-minute interval");
         components.task_cleanup_job = Some(Arc::new(TaskCleanupJob::new(
             task_repo.clone(),
@@ -251,7 +251,7 @@ pub async fn initialize_system(
     }
 
     // Setup API server if enabled
-    if config.enable_relay_api {
+    if config.enable_rest_api {
         let broker_core = match components.update_consumer.as_ref() {
             Some(consumer) => Some(consumer.core().await?),
             None => None,
@@ -262,10 +262,16 @@ pub async fn initialize_system(
         let app = setup_app(&db_pools, broker_core).await;
 
         // Create server
-        debug!("Creating HTTP server on port 3000");
+        debug!("Creating HTTP server on port {}", config.api_port);
         let shutdown_rx = shutdown_signal.subscribe();
-        components.rest_server = Some(Server::new(app, 3000, shutdown_rx));
-        info!(port = 3000, "HTTP server created");
+        components.rest_server = Some(Server::new(
+            app,
+            config.api_port,
+            shutdown_rx,
+            config.cert_path.clone(),
+            config.key_path.clone(),
+        ));
+        info!(port = config.api_port, "HTTP server created");
     } else {
         info!("API server is disabled by configuration");
     }

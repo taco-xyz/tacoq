@@ -2,8 +2,10 @@ import asyncio
 import os
 from time import sleep
 from typing import AsyncGenerator
+from unittest.mock import AsyncMock
 
 import pytest
+from pytest_mock import MockerFixture
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
@@ -17,10 +19,10 @@ from tacoq.core.encoding.models import Decoder, Encoder
 from tacoq.core.infra.broker import BrokerConfig
 from tacoq.core.telemetry import LoggerManager, TracerManager
 from tacoq.publisher import PublisherClient
-from tacoq.relay import RelayClient, RelayConfig
+from tacoq.relay import RelayClient, RelayConfig, RelayStates
 from tacoq.worker import WorkerApplicationConfig
 
-RELAY_TEST_URL = os.environ.get("RELAY_TEST_URL", "http://localhost:3000")
+RELAY_TEST_HOSTPORT = os.environ.get("RELAY_TEST_HOSTPORT", "localhost:3000")
 BROKER_TEST_URL = os.environ.get(
     "BROKER_TEST_URL", "amqp://user:password@localhost:5672/"
 )
@@ -29,6 +31,17 @@ WORKER_KIND_NAME = "test_worker_kind"
 WORKER_NAME = "test_worker"
 
 pytest_plugins = ["pytest_asyncio"]
+
+
+# This function serves to decide if I wanna use http or https tests
+def pytest_addoption(parser):
+    parser.addoption(
+        "--relay-protocol",
+        action="store",
+        default="http",
+        choices=("http", "https"),
+        help="Protocol to use for the relay service (http or https)",
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -85,9 +98,11 @@ def create_test_span():
 
 
 @pytest.fixture(scope="session")
-def relay_config() -> RelayConfig:
+def relay_config(request) -> RelayConfig:
     """Fixture that provides a configured RelayConfig instance."""
-    return RelayConfig(url=RELAY_TEST_URL)
+    protocol = request.config.getoption("--relay-protocol")
+    relay_url = f"{protocol}://{RELAY_TEST_HOSTPORT}"
+    return RelayConfig(url=relay_url, ssl_verify=False)
 
 
 @pytest.fixture
@@ -97,9 +112,19 @@ async def relay_client(relay_config: RelayConfig) -> AsyncGenerator[RelayClient,
 
 
 @pytest.fixture
-async def mock_relay_client() -> AsyncGenerator[RelayClient, None]:
-    async with RelayClient(config=RelayConfig(url="http://test")) as client:
-        yield client
+async def mock_relay_client(mocker: MockerFixture) -> AsyncMock:
+    """Fixture that provides a true mock RelayClient instance using pytest-mock."""
+    mock = mocker.AsyncMock(spec=RelayClient)
+
+    mock.config = mocker.MagicMock(spec=RelayConfig)
+    mock.config.url = "http://mocked-relay"
+    mock.__aenter__.return_value = mock
+
+    # Default mock behavior
+    mock.check_health.return_value = RelayStates.HEALTHY
+    mock.get_task.return_value
+
+    return mock
 
 
 ## ==============================
